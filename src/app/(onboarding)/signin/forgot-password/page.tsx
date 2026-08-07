@@ -1,138 +1,78 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-
-type Step = "email" | "confirmation" | "reset";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
-  const [step, setStep] = useState<Step>("email");
-
+  const [sent, setSent] = useState(false);
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | undefined>();
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSendCode(event: FormEvent) {
+  async function sendResetLink() {
+    setSubmitting(true);
+    const supabase = createClient();
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/confirm`,
+    });
+    setSubmitting(false);
+    setSent(true);
+  }
+
+  function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!/^\S+@\S+\.\S+$/.test(email)) {
-      setErrors({ email: "Enter a valid email" });
+      setError("Enter a valid email");
       return;
     }
-    setErrors({});
-    setStep("confirmation");
+    setError(undefined);
+    sendResetLink();
   }
 
-  function handleReset(event: FormEvent) {
-    event.preventDefault();
-    const nextErrors: Record<string, string> = {};
-
-    if (!/^\d{6}$/.test(code)) nextErrors.code = "Enter the 6-digit code";
-    if (newPassword.length < 8) nextErrors.newPassword = "Use at least 8 characters";
-    if (confirmPassword !== newPassword) nextErrors.confirmPassword = "Passwords don't match";
-
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-
-    router.push("/signin");
-  }
-
-  if (step === "email") {
-    return (
-      <div className="flex flex-1 flex-col">
-        <h1 className="font-display mt-8 text-3xl text-foreground">Reset your password</h1>
-        <p className="mt-1 text-sm text-muted">
-          We&apos;ll send a code to your email.
-        </p>
-
-        <form onSubmit={handleSendCode} className="mt-8 flex flex-col gap-5">
-          <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            error={errors.email}
-            autoComplete="email"
-          />
-          <Button type="submit" className="mt-2">
-            Send reset code
-          </Button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted">
-          <Link href="/signin" className="font-heading text-foreground">
-            Back to sign in
-          </Link>
-        </p>
-      </div>
-    );
-  }
-
-  if (step === "confirmation") {
+  if (sent) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <h1 className="font-display text-3xl text-foreground">Check your inbox</h1>
         <p className="mt-2 text-sm text-muted">
-          We sent a 6-digit code to <span className="text-foreground">{email}</span>
+          We sent a password reset link to <span className="text-foreground">{email}</span>.
         </p>
 
-        <Button className="mt-8" onClick={() => setStep("reset")}>
-          I have the code
-        </Button>
-
-        <button
-          type="button"
-          onClick={() => setStep("email")}
-          className="mt-4 text-sm text-accent"
-        >
-          Resend code
-        </button>
+        <div className="mt-8 w-full max-w-xs">
+          <Button variant="ghost" onClick={sendResetLink}>
+            Resend link
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex flex-1 flex-col">
-      <h1 className="font-display mt-8 text-3xl text-foreground">Enter your new password</h1>
-      <p className="mt-1 text-sm text-muted">
-        Check your email for the 6-digit code.
-      </p>
+      <h1 className="font-display mt-8 text-3xl text-foreground">Reset your password</h1>
+      <p className="mt-1 text-sm text-muted">We&apos;ll send a link to your email.</p>
 
-      <form onSubmit={handleReset} className="mt-8 flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <Input
-          label="6-digit code"
-          inputMode="numeric"
-          maxLength={6}
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          error={errors.code}
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          error={error}
+          autoComplete="email"
         />
-        <Input
-          label="New password"
-          isPassword
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          error={errors.newPassword}
-          autoComplete="new-password"
-        />
-        <Input
-          label="Confirm new password"
-          isPassword
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          error={errors.confirmPassword}
-          autoComplete="new-password"
-        />
-
-        <Button type="submit" className="mt-2">
-          Reset password
+        <Button type="submit" className="mt-2" disabled={submitting}>
+          {submitting ? "Sending..." : "Send reset link"}
         </Button>
       </form>
+
+      <p className="mt-6 text-center text-sm text-muted">
+        <Link href="/signin" className="font-heading text-foreground">
+          Back to sign in
+        </Link>
+      </p>
     </div>
   );
 }

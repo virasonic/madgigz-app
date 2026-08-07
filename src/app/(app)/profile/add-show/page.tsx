@@ -4,8 +4,10 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { addShow, getArtistProfile } from "@/lib/artist-data";
-import { getMockUser } from "@/lib/session";
+import { createClient } from "@/lib/supabase/client";
+import { fetchCurrentUser } from "@/lib/supabase/queries";
+import { uploadEventMedia } from "@/lib/supabase/storage";
+import { AppUser } from "@/lib/types";
 
 const ACCENT_SWATCHES = [
   { name: "Orange", value: "#d76616" },
@@ -20,7 +22,7 @@ export default function AddShowPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [authorized, setAuthorized] = useState(false);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
@@ -32,24 +34,31 @@ export default function AddShowPage() {
   const [accentColor, setAccentColor] = useState(ACCENT_SWATCHES[0].value);
   const [ticketingMode, setTicketingMode] = useState<TicketingMode>("internal");
   const [externalUrl, setExternalUrl] = useState("");
+  const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (getMockUser()?.role !== "artist") {
-      router.replace("/profile");
-      return;
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot read of browser-only storage on mount
-    setAuthorized(true);
+    const supabase = createClient();
+    fetchCurrentUser(supabase).then((current) => {
+      if (current?.role !== "artist") {
+        router.replace("/profile");
+        return;
+      }
+      setUser(current);
+    });
   }, [router]);
 
   function handlePosterChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
-    if (file) setPosterPreview(URL.createObjectURL(file));
+    if (file) {
+      setPosterFile(file);
+      setPosterPreview(URL.createObjectURL(file));
+    }
   }
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
 
@@ -76,39 +85,50 @@ export default function AddShowPage() {
     }
 
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    if (Object.keys(nextErrors).length > 0 || !user) return;
 
-    const artistProfile = getArtistProfile();
-    const artistName = artistProfile?.artistName ?? getMockUser()?.username ?? "Artist";
+    setSubmitting(true);
+    const supabase = createClient();
+    const artistName = user.artistName ?? user.username;
 
-    addShow({
+    const imageUrl = posterFile
+      ? await uploadEventMedia(supabase, posterFile, "posters")
+      : `https://picsum.photos/seed/show-${Date.now()}/800/1200`;
+
+    const { error } = await supabase.from("events").insert({
+      artist_id: user.id,
       title: name.trim(),
-      artist: artistName,
+      artist_name: artistName,
       venue: location.trim(),
       city: "Madrid",
-      date,
-      time,
+      event_date: date,
+      event_time: time,
       price: priceNum,
       currency: "EUR",
-      accentColor,
+      accent_color: accentColor,
       category: category.trim() || "Live Music",
-      // No file storage yet - the preview above is local-only, so the saved
-      // show references a placeholder image, same as the rest of mock data.
-      image: `https://picsum.photos/seed/show-${Date.now()}/800/1200`,
+      image_url: imageUrl,
       capacity: capacityNum,
       description: description.trim(),
       lineup: [artistName],
       doors: time,
-      ageRestriction: "18+",
+      age_restriction: "18+",
       rating: 0,
-      ticketing:
-        ticketingMode === "external" ? { mode: "external", url: externalUrl.trim() } : undefined,
+      ticketing_mode: ticketingMode,
+      ticketing_url: ticketingMode === "external" ? externalUrl.trim() : null,
     });
+
+    setSubmitting(false);
+
+    if (error) {
+      setErrors({ name: error.message });
+      return;
+    }
 
     router.push("/profile");
   }
 
-  if (!authorized) return null;
+  if (!user) return null;
 
   return (
     <div className="p-4">
@@ -168,7 +188,7 @@ export default function AddShowPage() {
             className="overflow-hidden rounded-2xl border border-dashed border-muted/30 text-center text-sm text-muted"
           >
             {posterPreview ? (
-              // eslint-disable-next-line @next/next/no-img-element -- local blob preview only, not persisted
+              // eslint-disable-next-line @next/next/no-img-element -- local blob preview only
               <img src={posterPreview} alt="Poster preview" className="h-40 w-full object-cover" />
             ) : (
               <span className="block px-4 py-6">Tap to upload a poster</span>
@@ -250,8 +270,8 @@ export default function AddShowPage() {
           )}
         </div>
 
-        <Button type="submit" className="mt-2">
-          Add show
+        <Button type="submit" className="mt-2" disabled={submitting}>
+          {submitting ? "Adding show..." : "Add show"}
         </Button>
       </form>
     </div>

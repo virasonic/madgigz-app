@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { EventItem } from "@/lib/mock-data";
+import { EventItem } from "@/lib/types";
 
 function HeartIcon({ filled }: { filled: boolean }) {
   return (

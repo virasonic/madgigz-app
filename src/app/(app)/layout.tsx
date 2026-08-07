@@ -1,35 +1,27 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { redirect } from "next/navigation";
 import BottomNav from "@/components/ui/BottomNav";
-import { getMockUser, MockUser } from "@/lib/session";
+import { createClient } from "@/lib/supabase/server";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const [user, setUser] = useState<MockUser | null>(null);
-
-  useEffect(() => {
-    // Reads the browser-only mock session once on mount; useSyncExternalStore
-    // isn't a good fit here since it's a one-shot gate check, not a value that
-    // needs to stay live-synced with localStorage across renders.
-    const mockUser = getMockUser();
-    if (!mockUser) {
-      router.replace("/");
-      return;
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setUser(mockUser);
-  }, [router]);
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    return <div className="min-h-screen bg-background" />;
+    redirect("/");
   }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
 
   return (
     <div className="mx-auto flex h-screen w-full max-w-md flex-col bg-background">
       <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-      <BottomNav role={user.role} />
+      <BottomNav role={profile?.role ?? "fan"} />
     </div>
   );
 }

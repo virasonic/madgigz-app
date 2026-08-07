@@ -2,8 +2,7 @@
 
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-import { EventItem } from "@/lib/mock-data";
-import { Ticket } from "@/lib/session";
+import { EventItem, Ticket } from "@/lib/types";
 
 interface TicketQRModalProps {
   ticket: Ticket;

@@ -2,11 +2,13 @@
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
-import { addShowContent, Show } from "@/lib/artist-data";
-import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile, readFileAsDataUrl } from "@/lib/media";
+import { createClient } from "@/lib/supabase/client";
+import { uploadEventMedia } from "@/lib/supabase/storage";
+import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
+import { EventItem } from "@/lib/types";
 
 interface AddContentModalProps {
-  shows: Show[];
+  shows: EventItem[];
   artistName: string;
   onClose: () => void;
   onPosted: () => void;
@@ -24,6 +26,7 @@ export default function AddContentModal({
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
+  const [posting, setPosting] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -40,7 +43,7 @@ export default function AddContentModal({
       return;
     }
     if (selected.size > MAX_CONTENT_FILE_BYTES) {
-      setError("Choose a smaller file (under 2MB)");
+      setError("Choose a smaller file (under 8MB)");
       return;
     }
 
@@ -65,8 +68,37 @@ export default function AddContentModal({
     const mediaType = mediaTypeForFile(file);
     if (!mediaType) return;
 
-    const dataUrl = await readFileAsDataUrl(file);
-    addShowContent(showId, artistName, show.title, caption.trim(), { dataUrl, mediaType });
+    setPosting(true);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setPosting(false);
+      setError("You need to be signed in to post");
+      return;
+    }
+
+    const mediaUrl = await uploadEventMedia(supabase, file, `content/${showId}`);
+
+    const { error: insertError } = await supabase.from("content_posts").insert({
+      event_id: showId,
+      artist_id: user.id,
+      artist_name: artistName,
+      show_title: show.title,
+      caption: caption.trim(),
+      media_url: mediaUrl,
+      media_type: mediaType,
+    });
+
+    setPosting(false);
+
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+
     onPosted();
     onClose();
   }
@@ -143,7 +175,9 @@ export default function AddContentModal({
             />
             {error && <p className="text-sm text-danger">{error}</p>}
 
-            <Button onClick={handlePost}>Post</Button>
+            <Button onClick={handlePost} disabled={posting}>
+              {posting ? "Posting..." : "Post"}
+            </Button>
           </div>
         )}
       </div>

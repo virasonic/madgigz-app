@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { createClient } from "@/lib/supabase/client";
 
 type Role = "fan" | "artist";
 
@@ -41,8 +42,9 @@ function SignUpForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [dob, setDob] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
 
@@ -61,7 +63,24 @@ function SignUpForm() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    const params = new URLSearchParams({ role, username, email });
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username, role, date_of_birth: dob },
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+      },
+    });
+    setSubmitting(false);
+
+    if (error) {
+      setErrors({ email: error.message });
+      return;
+    }
+
+    const params = new URLSearchParams({ email });
     router.push(`/signup/verify-email?${params.toString()}`);
   }
 
@@ -121,8 +140,8 @@ function SignUpForm() {
           autoComplete="new-password"
         />
 
-        <Button type="submit" className="mt-2">
-          Continue
+        <Button type="submit" className="mt-2" disabled={submitting}>
+          {submitting ? "Creating account..." : "Continue"}
         </Button>
       </form>
 

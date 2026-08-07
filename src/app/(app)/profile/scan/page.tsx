@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
-import { getAllEvents } from "@/lib/artist-data";
-import { EventItem } from "@/lib/mock-data";
-import { addCheckIn, getMockUser, getTickets, isCheckedIn, Ticket } from "@/lib/session";
+import { createClient } from "@/lib/supabase/client";
+import { fetchCurrentUser } from "@/lib/supabase/queries";
+import { EventItem, EventRow, mapEvent, mapTicket, Ticket, TicketRow } from "@/lib/types";
 
 type ScanResult =
   | { status: "valid"; ticket: Ticket; event: EventItem }
@@ -28,12 +28,14 @@ export default function ScanTicketsPage() {
   const [checkedInJustNow, setCheckedInJustNow] = useState(false);
 
   useEffect(() => {
-    if (getMockUser()?.role !== "artist") {
-      router.replace("/profile");
-      return;
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot read of browser-only storage on mount
-    setAuthorized(true);
+    const supabase = createClient();
+    fetchCurrentUser(supabase).then((user) => {
+      if (user?.role !== "artist") {
+        router.replace("/profile");
+        return;
+      }
+      setAuthorized(true);
+    });
   }, [router]);
 
   useEffect(() => {
@@ -85,23 +87,36 @@ export default function ScanTicketsPage() {
       frameRef.current = requestAnimationFrame(scanLoop);
     }
 
-    function handleDecoded(ticketId: string) {
+    async function handleDecoded(ticketId: string) {
       pausedRef.current = true;
-      const tickets = getTickets();
-      const ticket = tickets.find((t) => t.id === ticketId);
-      if (!ticket) {
+      const supabase = createClient();
+
+      const { data: ticketRow } = await supabase
+        .from("tickets")
+        .select("*")
+        .eq("id", ticketId)
+        .maybeSingle();
+
+      if (!ticketRow) {
         setResult({ status: "invalid" });
         return;
       }
-      const event = getAllEvents().find((e) => e.id === ticket.eventId);
-      if (!event) {
+      const ticket = mapTicket(ticketRow as TicketRow);
+
+      const { data: eventRow } = await supabase
+        .from("events")
+        .select("*")
+        .eq("id", ticket.eventId)
+        .maybeSingle();
+
+      if (!eventRow) {
         setResult({ status: "invalid" });
         return;
       }
+      const event = mapEvent(eventRow as EventRow);
+
       setResult(
-        isCheckedIn(ticket.id)
-          ? { status: "duplicate", ticket, event }
-          : { status: "valid", ticket, event }
+        ticket.checkedInAt ? { status: "duplicate", ticket, event } : { status: "valid", ticket, event }
       );
     }
 
@@ -120,9 +135,13 @@ export default function ScanTicketsPage() {
     pausedRef.current = false;
   }
 
-  function handleCheckIn() {
+  async function handleCheckIn() {
     if (result?.status !== "valid") return;
-    addCheckIn(result.ticket.id);
+    const supabase = createClient();
+    await supabase
+      .from("tickets")
+      .update({ checked_in_at: new Date().toISOString() })
+      .eq("id", result.ticket.id);
     setCheckedInJustNow(true);
   }
 

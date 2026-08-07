@@ -1,30 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { lookupRole, setMockUser } from "@/lib/session";
+import { createClient } from "@/lib/supabase/client";
+
+function LinkError() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+  if (!error) return null;
+  return (
+    <p className="-mt-2 mb-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
+      That link didn&apos;t work: {error}
+    </p>
+  );
+}
 
 export default function SignInPage() {
   const router = useRouter();
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
 
-    if (!identifier.trim()) nextErrors.identifier = "Enter your username or email";
+    if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = "Enter a valid email";
     if (!password) nextErrors.password = "Enter your password";
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    setMockUser({ username: identifier, role: lookupRole(identifier) });
+    setSubmitting(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setSubmitting(false);
+
+    if (error) {
+      setErrors({ password: "Incorrect email or password" });
+      return;
+    }
+
     router.push("/feed");
+    router.refresh();
   }
 
   return (
@@ -32,13 +54,18 @@ export default function SignInPage() {
       <h1 className="font-display mt-8 text-3xl text-foreground">Welcome back</h1>
       <p className="mt-1 text-sm text-muted">Sign in to keep the vibe going.</p>
 
+      <Suspense>
+        <LinkError />
+      </Suspense>
+
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <Input
-          label="Username or email"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          error={errors.identifier}
-          autoComplete="username"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          error={errors.email}
+          autoComplete="email"
         />
         <Input
           label="Password"
@@ -56,8 +83,8 @@ export default function SignInPage() {
           Forgot password?
         </Link>
 
-        <Button type="submit" className="mt-2">
-          Sign in
+        <Button type="submit" className="mt-2" disabled={submitting}>
+          {submitting ? "Signing in..." : "Sign in"}
         </Button>
       </form>
 

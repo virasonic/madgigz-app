@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Role } from "@/lib/session";
+import { Role } from "@/lib/types";
 
 interface NavItem {
   href: string;

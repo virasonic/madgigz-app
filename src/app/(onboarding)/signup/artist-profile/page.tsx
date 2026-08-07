@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { setArtistProfile } from "@/lib/artist-data";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ArtistProfilePage() {
   const router = useRouter();
@@ -16,15 +16,15 @@ export default function ArtistProfilePage() {
   const [twitter, setTwitter] = useState("");
   const [spotify, setSpotify] = useState("");
   const [youtube, setYoutube] = useState("");
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    setFileName(file ? file.name : null);
+    setFile(event.target.files?.[0] ?? null);
   }
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
 
@@ -32,19 +32,48 @@ export default function ArtistProfilePage() {
     if (!instagram.trim() && !tiktok.trim() && !twitter.trim()) {
       nextErrors.social = "Add at least one social link";
     }
-    if (!fileName) nextErrors.evidence = "Upload evidence to verify your profile";
+    if (!file) nextErrors.evidence = "Upload evidence to verify your profile";
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    setArtistProfile({
-      artistName,
-      instagram: instagram.trim() || undefined,
-      tiktok: tiktok.trim() || undefined,
-      twitter: twitter.trim() || undefined,
-      spotify: spotify.trim() || undefined,
-      youtube: youtube.trim() || undefined,
-    });
+    setSubmitting(true);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setSubmitting(false);
+      router.push("/signin");
+      return;
+    }
+
+    if (file) {
+      await supabase.storage
+        .from("event-media")
+        .upload(`evidence/${user.id}-${Date.now()}-${file.name}`, file);
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        artist_name: artistName.trim(),
+        instagram: instagram.trim() || null,
+        tiktok: tiktok.trim() || null,
+        twitter: twitter.trim() || null,
+        spotify: spotify.trim() || null,
+        youtube: youtube.trim() || null,
+      })
+      .eq("id", user.id);
+
+    setSubmitting(false);
+
+    if (error) {
+      setErrors({ artistName: error.message });
+      return;
+    }
+
     router.push("/feed");
   }
 
@@ -115,8 +144,8 @@ export default function ArtistProfilePage() {
               errors.evidence ? "border-danger text-danger" : "border-muted/30 text-muted"
             }`}
           >
-            {fileName ? (
-              <span className="text-foreground">{fileName} — tap to replace</span>
+            {file ? (
+              <span className="text-foreground">{file.name} — tap to replace</span>
             ) : (
               "Tap to upload a screenshot or document"
             )}
@@ -130,8 +159,8 @@ export default function ArtistProfilePage() {
           {errors.evidence && <p className="text-sm text-danger">{errors.evidence}</p>}
         </div>
 
-        <Button type="submit" className="mt-2">
-          Submit for review
+        <Button type="submit" className="mt-2" disabled={submitting}>
+          {submitting ? "Submitting..." : "Submit for review"}
         </Button>
       </form>
     </div>

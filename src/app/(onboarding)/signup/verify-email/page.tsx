@@ -1,61 +1,38 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import { rememberAccount, setMockUser } from "@/lib/session";
+import { createClient } from "@/lib/supabase/client";
 
-function VerifyEmailForm() {
-  const router = useRouter();
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
-  const role = searchParams.get("role") === "artist" ? "artist" : "fan";
-  const username = searchParams.get("username") ?? "";
   const email = searchParams.get("email") ?? "";
-
-  const [code, setCode] = useState("");
-  const [error, setError] = useState<string | undefined>();
   const [resent, setResent] = useState(false);
 
-  function handleVerify(event: FormEvent) {
-    event.preventDefault();
-
-    if (!/^\d{6}$/.test(code)) {
-      setError("Enter the 6-digit code");
-      return;
-    }
-
-    setMockUser({ username, role });
-    rememberAccount(username, role);
-    router.push(role === "artist" ? "/signup/artist-profile" : "/feed");
+  async function handleResend() {
+    const supabase = createClient();
+    await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
+    });
+    setResent(true);
   }
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center text-center">
       <h1 className="font-display text-3xl text-foreground">Check your inbox</h1>
       <p className="mt-2 text-sm text-muted">
-        We sent a 6-digit code to <span className="text-foreground">{email}</span>
+        We sent a confirmation link to <span className="text-foreground">{email}</span>.
+        Click it to finish setting up your account.
       </p>
 
-      <form onSubmit={handleVerify} className="mt-8 w-full max-w-xs flex flex-col gap-5">
-        <Input
-          label="6-digit code"
-          inputMode="numeric"
-          maxLength={6}
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          error={error}
-        />
-        <Button type="submit">Verify</Button>
-      </form>
-
-      <button
-        type="button"
-        onClick={() => setResent(true)}
-        className="mt-4 text-sm text-accent"
-      >
-        {resent ? "Code resent" : "Resend code"}
-      </button>
+      <div className="mt-8 w-full max-w-xs">
+        <Button variant="ghost" onClick={handleResend}>
+          {resent ? "Link resent" : "Resend link"}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -63,7 +40,7 @@ function VerifyEmailForm() {
 export default function VerifyEmailPage() {
   return (
     <Suspense>
-      <VerifyEmailForm />
+      <VerifyEmailContent />
     </Suspense>
   );
 }

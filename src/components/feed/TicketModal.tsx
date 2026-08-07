@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Button from "@/components/ui/Button";
-import { EventItem } from "@/lib/mock-data";
-import { addTicket } from "@/lib/session";
+import { createClient } from "@/lib/supabase/client";
+import { applyDiscount, incrementDiscountUsage, validateDiscountCode } from "@/lib/supabase/queries";
+import { Discount, EventItem } from "@/lib/types";
 
 type Tab = "tickets" | "info";
 
@@ -11,6 +12,7 @@ interface TicketModalProps {
   event: EventItem;
   initialTab?: Tab;
   onClose: () => void;
+  onPurchased?: () => void;
 }
 
 function formatDate(iso: string) {
@@ -22,16 +24,31 @@ function formatDate(iso: string) {
   });
 }
 
-export default function TicketModal({ event, initialTab = "tickets", onClose }: TicketModalProps) {
+export default function TicketModal({
+  event,
+  initialTab = "tickets",
+  onClose,
+  onPurchased,
+}: TicketModalProps) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [quantity, setQuantity] = useState(1);
   const [purchased, setPurchased] = useState(false);
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState<string | undefined>();
+
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState<Discount | null>(null);
+  const [promoError, setPromoError] = useState<string | undefined>();
+  const [checkingPromo, setCheckingPromo] = useState(false);
 
   const soldPercent = Math.round((event.sold / event.capacity) * 100);
   const remaining = Math.max(event.capacity - event.sold, 0);
   const soldOut = remaining <= 0;
   const almostGone = !soldOut && soldPercent >= 90;
   const maxQuantity = Math.max(Math.min(remaining, 6), 1);
+
+  const subtotal = event.price * quantity;
+  const total = soldOut ? 0 : applyDiscount(subtotal, appliedDiscount);
 
   const externalUrl = event.ticketing?.mode === "external" ? event.ticketing.url : undefined;
   let externalHost = "the external site";
@@ -43,13 +60,57 @@ export default function TicketModal({ event, initialTab = "tickets", onClose }: 
     }
   }
 
-  function handleBuy() {
-    addTicket({
-      eventId: event.id,
+  async function handleApplyPromo() {
+    if (!promoCode.trim()) return;
+    setCheckingPromo(true);
+    setPromoError(undefined);
+    const supabase = createClient();
+    const discount = await validateDiscountCode(supabase, promoCode, event.id);
+    setCheckingPromo(false);
+
+    if (!discount) {
+      setPromoError("That code isn't valid for this event");
+      setAppliedDiscount(null);
+      return;
+    }
+    setAppliedDiscount(discount);
+  }
+
+  async function handleBuy() {
+    setBuying(true);
+    setBuyError(undefined);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setBuying(false);
+      setBuyError("You need to be signed in to buy tickets");
+      return;
+    }
+
+    const { error } = await supabase.from("tickets").insert({
+      user_id: user.id,
+      event_id: event.id,
       quantity,
-      purchasedAt: new Date().toISOString(),
+      price_paid: total,
+      discount_id: appliedDiscount?.id ?? null,
     });
+
+    if (error) {
+      setBuying(false);
+      setBuyError(error.message);
+      return;
+    }
+
+    if (appliedDiscount) {
+      await incrementDiscountUsage(supabase, appliedDiscount.id);
+    }
+
+    setBuying(false);
     setPurchased(true);
+    onPurchased?.();
   }
 
   function handleBuyExternal() {
@@ -160,15 +221,47 @@ export default function TicketModal({ event, initialTab = "tickets", onClose }: 
                   )}
                 </div>
 
+                {!soldOut && (
+                  <div className="flex flex-col gap-1.5">
+                    <span className="font-heading text-sm text-muted">Promo code</span>
+                    <div className="flex gap-2">
+                      <input
+                        value={promoCode}
+                        onChange={(e) => {
+                          setPromoCode(e.target.value);
+                          setAppliedDiscount(null);
+                        }}
+                        placeholder="Optional"
+                        className="min-w-0 flex-1 rounded-2xl border border-muted/20 bg-background px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyPromo}
+                        disabled={checkingPromo || !promoCode.trim()}
+                        className="shrink-0 rounded-2xl border border-muted/30 px-4 text-sm font-heading text-foreground disabled:opacity-40"
+                      >
+                        {checkingPromo ? "..." : "Apply"}
+                      </button>
+                    </div>
+                    {promoError && <p className="text-sm text-danger">{promoError}</p>}
+                    {appliedDiscount && (
+                      <p className="text-sm text-accent">
+                        {appliedDiscount.type === "percent"
+                          ? `${appliedDiscount.value}% off applied`
+                          : `€${appliedDiscount.value} off applied`}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between border-t border-muted/15 pt-4">
                   <span className="font-heading text-muted">Total</span>
-                  <span className="font-display text-xl text-foreground">
-                    €{soldOut ? 0 : event.price * quantity}
-                  </span>
+                  <span className="font-display text-xl text-foreground">€{total.toFixed(2)}</span>
                 </div>
+                {buyError && <p className="text-sm text-danger">{buyError}</p>}
 
-                <Button onClick={handleBuy} disabled={soldOut}>
-                  {soldOut ? "Sold Out" : "Buy tickets"}
+                <Button onClick={handleBuy} disabled={soldOut || buying}>
+                  {soldOut ? "Sold Out" : buying ? "Buying..." : "Buy tickets"}
                 </Button>
               </div>
             ) : (

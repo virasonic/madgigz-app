@@ -2,9 +2,11 @@
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
-import { addShowContent, getShowContent } from "@/lib/artist-data";
-import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile, readFileAsDataUrl } from "@/lib/media";
-import { ContentPost, EventItem } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/client";
+import { fetchShowContent } from "@/lib/supabase/queries";
+import { uploadEventMedia } from "@/lib/supabase/storage";
+import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
+import { ContentPost, EventItem } from "@/lib/types";
 
 type Tab = "overview" | "content";
 
@@ -26,11 +28,17 @@ function formatDate(iso: string) {
 export default function ManageShowModal({ show, artistName, onClose }: ManageShowModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("overview");
-  const [posts, setPosts] = useState<ContentPost[]>(() => getShowContent(show.id));
+  const [posts, setPosts] = useState<ContentPost[]>([]);
   const [caption, setCaption] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    fetchShowContent(supabase, show.id).then(setPosts);
+  }, [show.id]);
 
   useEffect(() => {
     return () => {
@@ -49,7 +57,7 @@ export default function ManageShowModal({ show, artistName, onClose }: ManageSho
       return;
     }
     if (selected.size > MAX_CONTENT_FILE_BYTES) {
-      setError("Choose a smaller file (under 2MB)");
+      setError("Choose a smaller file (under 8MB)");
       return;
     }
 
@@ -67,9 +75,38 @@ export default function ManageShowModal({ show, artistName, onClose }: ManageSho
     const mediaType = mediaTypeForFile(file);
     if (!mediaType) return;
 
-    const dataUrl = await readFileAsDataUrl(file);
-    addShowContent(show.id, artistName, show.title, caption.trim(), { dataUrl, mediaType });
-    setPosts(getShowContent(show.id));
+    setPosting(true);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setPosting(false);
+      setError("You need to be signed in to post");
+      return;
+    }
+
+    const mediaUrl = await uploadEventMedia(supabase, file, `content/${show.id}`);
+
+    const { error: insertError } = await supabase.from("content_posts").insert({
+      event_id: show.id,
+      artist_id: user.id,
+      artist_name: artistName,
+      show_title: show.title,
+      caption: caption.trim(),
+      media_url: mediaUrl,
+      media_type: mediaType,
+    });
+
+    setPosting(false);
+
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+
+    setPosts(await fetchShowContent(supabase, show.id));
     setCaption("");
     setFile(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -183,7 +220,9 @@ export default function ManageShowModal({ show, artistName, onClose }: ManageSho
                 className="w-full rounded-2xl border border-muted/20 bg-background px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {error && <p className="text-sm text-danger">{error}</p>}
-              <Button onClick={handlePost}>Post</Button>
+              <Button onClick={handlePost} disabled={posting}>
+                {posting ? "Posting..." : "Post"}
+              </Button>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -196,7 +235,7 @@ export default function ManageShowModal({ show, artistName, onClose }: ManageSho
                       {post.mediaType === "video" ? (
                         <video src={post.videoUrl} className="h-full w-full object-cover" muted />
                       ) : (
-                        // eslint-disable-next-line @next/next/no-img-element -- data-url content image
+                        // eslint-disable-next-line @next/next/no-img-element -- remote content image
                         <img src={post.image} alt="" className="h-full w-full object-cover" />
                       )}
                     </div>
