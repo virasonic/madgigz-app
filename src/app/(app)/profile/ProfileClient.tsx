@@ -183,6 +183,7 @@ export default function ProfileClient({
           show={activeShow}
           artistName={displayName}
           onClose={() => setActiveShow(null)}
+          onChanged={() => router.refresh()}
         />
       )}
       {settingsOpen && <SettingsSheet onClose={() => setSettingsOpen(false)} />}

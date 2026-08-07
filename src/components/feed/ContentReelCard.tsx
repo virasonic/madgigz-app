@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ContentPost, EventItem } from "@/lib/types";
 
 function HeartIcon({ filled }: { filled: boolean }) {
@@ -54,6 +54,15 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
   );
 }
 
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
 interface ContentReelCardProps {
   post: ContentPost;
   event: EventItem;
@@ -70,17 +79,39 @@ export default function ContentReelCard({
   onOpen,
 }: ContentReelCardProps) {
   const [liked, setLiked] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const showVideo = post.mediaType === "video" && post.videoUrl;
+
+  // Only the reel actually in view should play - without this, every video
+  // in the scroll-snap feed autoplays at once and their audio overlaps.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+          video.currentTime = 0;
+        }
+      },
+      { threshold: [0, 0.6, 1] }
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="relative h-full w-full overflow-hidden">
       {showVideo ? (
         <video
+          ref={videoRef}
           src={post.videoUrl}
           poster={post.image}
           className="absolute inset-0 h-full w-full object-cover"
-          autoPlay
           muted={muted}
           loop
           playsInline
@@ -106,7 +137,6 @@ export default function ContentReelCard({
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-heading text-sm text-foreground">{post.artist}</p>
-          <p className="text-xs text-muted">{post.showTitle}</p>
         </div>
         {showVideo && (
           <button
@@ -138,7 +168,16 @@ export default function ContentReelCard({
         >
           Artist Content
         </span>
-        <p className="text-sm text-foreground">{post.caption}</p>
+
+        <div>
+          <h2 className="font-display text-2xl text-foreground">{event.title}</h2>
+          <p className="mt-1 text-sm text-muted">{event.venue}</p>
+          <p className="text-sm text-muted">
+            {formatDate(event.date)} · {event.time}
+          </p>
+        </div>
+
+        {post.caption && <p className="text-sm text-foreground">{post.caption}</p>}
 
         <button
           onClick={onOpen}

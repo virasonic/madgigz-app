@@ -3,35 +3,27 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import TicketModal from "@/components/feed/TicketModal";
-import EventCard from "@/components/feed/EventCard";
 import ContentReelCard from "@/components/feed/ContentReelCard";
 import AddContentModal from "@/components/artist/AddContentModal";
 import { createClient } from "@/lib/supabase/client";
-import { fetchContentPosts, toggleSavedEvent } from "@/lib/supabase/queries";
+import { fetchContentPosts } from "@/lib/supabase/queries";
 import { AppUser, ContentPost, EventItem } from "@/lib/types";
 
 type Pane = "forYou" | "thisWeek";
 
-type FeedEntry =
-  | { kind: "event"; event: EventItem }
-  | { kind: "post"; post: ContentPost; event: EventItem };
+interface FeedEntry {
+  post: ContentPost;
+  event: EventItem;
+}
 
+// For You is content-only (no bare event posters) - each entry is a content
+// post paired with the show it's actually about. A post whose event isn't in
+// allEvents (hidden or deleted) is dropped rather than shown with no event.
 function buildForYouFeed(allEvents: EventItem[], allPosts: ContentPost[]): FeedEntry[] {
-  const entries: FeedEntry[] = [];
-  let postIndex = 0;
-
-  allEvents.forEach((event, i) => {
-    entries.push({ kind: "event", event });
-
-    if ((i + 1) % 2 === 0 && postIndex < allPosts.length) {
-      const post = allPosts[postIndex];
-      const postEvent = allEvents.find((e) => e.id === post.eventId) ?? event;
-      entries.push({ kind: "post", post, event: postEvent });
-      postIndex += 1;
-    }
+  return allPosts.flatMap((post) => {
+    const event = allEvents.find((e) => e.id === post.eventId);
+    return event ? [{ post, event }] : [];
   });
-
-  return entries;
 }
 
 function groupByDay(items: EventItem[]) {
@@ -67,7 +59,6 @@ interface FeedClientProps {
   user: AppUser;
   initialEvents: EventItem[];
   initialPosts: ContentPost[];
-  initialSavedIds: string[];
   shows: EventItem[];
 }
 
@@ -75,11 +66,9 @@ export default function FeedClient({
   user,
   initialEvents,
   initialPosts,
-  initialSavedIds,
   shows,
 }: FeedClientProps) {
   const [pane, setPane] = useState<Pane>("forYou");
-  const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [addContentOpen, setAddContentOpen] = useState(false);
@@ -95,13 +84,6 @@ export default function FeedClient({
     () => groupByDay(withinNextWeek(initialEvents)),
     [initialEvents]
   );
-
-  async function handleToggleSave(eventId: string) {
-    const wasSaved = savedIds.includes(eventId);
-    setSavedIds((ids) => (wasSaved ? ids.filter((id) => id !== eventId) : [...ids, eventId]));
-    const supabase = createClient();
-    await toggleSavedEvent(supabase, user.id, eventId, wasSaved);
-  }
 
   async function refreshContent() {
     const supabase = createClient();
@@ -143,18 +125,13 @@ export default function FeedClient({
 
       <div className="min-h-0 flex-1">
         {pane === "forYou" ? (
-          <div className="h-full snap-y snap-mandatory overflow-y-scroll">
-            {forYouFeed.map((entry) =>
-              entry.kind === "event" ? (
-                <div key={entry.event.id} className="h-full w-full snap-start">
-                  <EventCard
-                    event={entry.event}
-                    saved={savedIds.includes(entry.event.id)}
-                    onToggleSave={() => handleToggleSave(entry.event.id)}
-                    onOpen={() => setActiveEvent(entry.event)}
-                  />
-                </div>
-              ) : (
+          forYouFeed.length === 0 ? (
+            <p className="mt-6 px-4 text-center text-sm text-muted">
+              No content yet - check Explore for upcoming shows.
+            </p>
+          ) : (
+            <div className="h-full snap-y snap-mandatory overflow-y-scroll">
+              {forYouFeed.map((entry) => (
                 <div key={entry.post.id} className="h-full w-full snap-start">
                   <ContentReelCard
                     post={entry.post}
@@ -164,9 +141,9 @@ export default function FeedClient({
                     onOpen={() => setActiveEvent(entry.event)}
                   />
                 </div>
-              )
-            )}
-          </div>
+              ))}
+            </div>
+          )
         ) : (
           <div className="h-full overflow-y-auto px-4 pb-6">
             {weeklyGroups.length === 0 ? (

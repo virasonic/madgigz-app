@@ -4,7 +4,7 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { fetchShowContent } from "@/lib/supabase/queries";
-import { uploadEventMedia } from "@/lib/supabase/storage";
+import { removeEventMedia, uploadEventMedia } from "@/lib/supabase/storage";
 import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/types";
 
@@ -14,6 +14,7 @@ interface ManageShowModalProps {
   show: EventItem;
   artistName: string;
   onClose: () => void;
+  onChanged: () => void;
 }
 
 function formatDate(iso: string) {
@@ -25,7 +26,12 @@ function formatDate(iso: string) {
   });
 }
 
-export default function ManageShowModal({ show, artistName, onClose }: ManageShowModalProps) {
+export default function ManageShowModal({
+  show,
+  artistName,
+  onClose,
+  onChanged,
+}: ManageShowModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [posts, setPosts] = useState<ContentPost[]>([]);
@@ -34,6 +40,9 @@ export default function ManageShowModal({ show, artistName, onClose }: ManageSho
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
   const [posting, setPosting] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | undefined>();
 
   useEffect(() => {
     const supabase = createClient();
@@ -113,6 +122,45 @@ export default function ManageShowModal({ show, artistName, onClose }: ManageSho
     setPreviewUrl(null);
   }
 
+  async function handleHideShow() {
+    setRemoving(true);
+    setRemoveError(undefined);
+    const supabase = createClient();
+    const { error: updateError } = await supabase
+      .from("events")
+      .update({ active: false })
+      .eq("id", show.id);
+    setRemoving(false);
+
+    if (updateError) {
+      setRemoveError(updateError.message);
+      return;
+    }
+    onChanged();
+    onClose();
+  }
+
+  async function handleDeleteShow() {
+    setRemoving(true);
+    setRemoveError(undefined);
+    const supabase = createClient();
+
+    await removeEventMedia(supabase, [
+      show.image,
+      ...posts.map((p) => (p.mediaType === "video" ? p.videoUrl : p.image)),
+    ]);
+
+    const { error: deleteError } = await supabase.from("events").delete().eq("id", show.id);
+    setRemoving(false);
+
+    if (deleteError) {
+      setRemoveError(deleteError.message);
+      return;
+    }
+    onChanged();
+    onClose();
+  }
+
   return (
     <div
       className="fixed inset-0 z-30 flex items-end justify-center bg-black/60"
@@ -184,6 +232,55 @@ export default function ManageShowModal({ show, artistName, onClose }: ManageSho
             </div>
 
             <Button onClick={() => setTab("content")}>Add Content</Button>
+
+            <div className="border-t border-muted/15 pt-5">
+              {confirmingRemove ? (
+                <div className="flex flex-col gap-3">
+                  {show.sold > 0 ? (
+                    <p className="text-sm text-muted">
+                      {show.sold} {show.sold === 1 ? "ticket has" : "tickets have"} already been
+                      sold for this show, so deleting it would also delete those fans&apos;
+                      tickets. Hide it instead - it disappears from Feed/Explore, but existing
+                      ticket holders keep their tickets and you can still check them in.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-danger">
+                      This removes the show and its content permanently. This can&apos;t be
+                      undone.
+                    </p>
+                  )}
+                  {removeError && <p className="text-sm text-danger">{removeError}</p>}
+                  <div className="flex gap-3">
+                    <Button
+                      variant="ghost"
+                      className="flex-1"
+                      onClick={() => setConfirmingRemove(false)}
+                      disabled={removing}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={show.sold > 0 ? handleHideShow : handleDeleteShow}
+                      disabled={removing}
+                    >
+                      {removing
+                        ? "Working..."
+                        : show.sold > 0
+                          ? "Hide show"
+                          : "Delete show"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmingRemove(true)}
+                  className="text-sm font-heading text-danger"
+                >
+                  Remove show
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="mt-6 flex flex-col gap-5">

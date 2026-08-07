@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
@@ -146,6 +147,10 @@ export default function TicketModal({
           </div>
         ) : (
           <>
+            <div className="relative mb-4 h-44 w-full overflow-hidden rounded-2xl">
+              <Image src={event.image} alt={event.title} fill sizes="480px" className="object-cover" />
+            </div>
+
             <h2 className="font-display text-2xl text-foreground">{event.title}</h2>
             <p className="mt-1 text-sm text-muted">
               {event.venue} · {formatDate(event.date)} · {event.time}
