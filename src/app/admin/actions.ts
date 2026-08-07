@@ -2,14 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
+import { sendArtistStatusEmail } from "@/lib/email";
 import { removeEventMedia } from "@/lib/supabase/storage";
 import { ArtistStatus } from "@/lib/types";
 
-export async function setArtistStatus(profileId: string, status: ArtistStatus) {
+export async function setArtistStatus(profileId: string, email: string, status: ArtistStatus) {
   await requireAdmin();
   const admin = adminClient();
   await admin.from("profiles").update({ artist_status: status }).eq("id", profileId);
   revalidatePath("/admin/artists");
+
+  if (status === "approved" || status === "rejected") {
+    await sendArtistStatusEmail(email, status);
+  }
 }
 
 // No real payment processor exists yet, so "refund" here is a bookkeeping

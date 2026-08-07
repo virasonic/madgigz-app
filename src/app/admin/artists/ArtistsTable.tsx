@@ -34,10 +34,10 @@ export default function ArtistsTable({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleSetStatus(id: string, status: ArtistStatus) {
+  function handleSetStatus(id: string, email: string, status: ArtistStatus) {
     setPendingId(id);
     startTransition(async () => {
-      await setArtistStatus(id, status);
+      await setArtistStatus(id, email, status);
       setPendingId(null);
     });
   }
@@ -63,7 +63,7 @@ export default function ArtistsTable({
             <div className="flex shrink-0 gap-2">
               {app.artistStatus !== "approved" && (
                 <button
-                  onClick={() => handleSetStatus(app.id, "approved")}
+                  onClick={() => handleSetStatus(app.id, app.email, "approved")}
                   disabled={isPending && pendingId === app.id}
                   className="rounded-lg bg-accent/15 px-3 py-1 text-xs font-heading text-accent hover:bg-accent/25 disabled:opacity-50"
                 >
@@ -72,7 +72,7 @@ export default function ArtistsTable({
               )}
               {app.artistStatus !== "rejected" && (
                 <button
-                  onClick={() => handleSetStatus(app.id, "rejected")}
+                  onClick={() => handleSetStatus(app.id, app.email, "rejected")}
                   disabled={isPending && pendingId === app.id}
                   className="rounded-lg bg-danger/15 px-3 py-1 text-xs font-heading text-danger hover:bg-danger/25 disabled:opacity-50"
                 >
