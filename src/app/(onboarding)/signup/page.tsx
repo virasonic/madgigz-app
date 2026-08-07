@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { setMockUser } from "@/lib/session";
 
 type Role = "fan" | "artist";
 
@@ -37,7 +38,14 @@ function SignUpForm() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    router.push(role === "artist" ? "/signup/artist-profile" : "/feed");
+    if (role === "artist") {
+      // Artist session isn't created until the profile claim step is submitted.
+      router.push("/signup/artist-profile");
+      return;
+    }
+
+    setMockUser({ username, role: "fan" });
+    router.push("/feed");
   }
 
   return (

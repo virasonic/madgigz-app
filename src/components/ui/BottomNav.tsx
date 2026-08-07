@@ -1,0 +1,145 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Role } from "@/lib/session";
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: (active: boolean) => React.ReactNode;
+}
+
+function FeedIcon(active: boolean) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M4 11.5 12 4l8 7.5M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ExploreIcon(active: boolean) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect
+        x="3.5"
+        y="3.5"
+        width="7"
+        height="7"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+      />
+      <rect
+        x="13.5"
+        y="3.5"
+        width="7"
+        height="7"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+      />
+      <rect
+        x="3.5"
+        y="13.5"
+        width="7"
+        height="7"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+      />
+      <rect
+        x="13.5"
+        y="13.5"
+        width="7"
+        height="7"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+      />
+    </svg>
+  );
+}
+
+function SavedIcon(active: boolean) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1Z"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+        strokeLinejoin="round"
+        fill={active ? "currentColor" : "none"}
+      />
+    </svg>
+  );
+}
+
+function PersonIcon(active: boolean) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+      <path
+        d="M4.5 20c1.3-3.5 4.3-5.5 7.5-5.5s6.2 2 7.5 5.5"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function MicIcon(active: boolean) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="9" y="2" width="6" height="12" rx="3" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+      <path
+        d="M5 11a7 7 0 0 0 14 0M12 18v3"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export default function BottomNav({ role }: { role: Role }) {
+  const pathname = usePathname();
+
+  const items: NavItem[] = [
+    { href: "/feed", label: "Feed", icon: FeedIcon },
+    { href: "/explore", label: "Explore", icon: ExploreIcon },
+    { href: "/saved", label: "Saved", icon: SavedIcon },
+    {
+      href: "/profile",
+      label: "Profile",
+      icon: role === "artist" ? MicIcon : PersonIcon,
+    },
+  ];
+
+  return (
+    <nav className="sticky bottom-0 z-20 flex border-t border-muted/15 bg-background/95 backdrop-blur">
+      {items.map((item) => {
+        const active = pathname === item.href;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex flex-1 flex-col items-center gap-1 py-3 text-xs ${
+              active ? "text-primary" : "text-muted"
+            }`}
+          >
+            {item.icon(active)}
+            <span className="font-heading">{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
