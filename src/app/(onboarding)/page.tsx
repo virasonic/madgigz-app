@@ -13,15 +13,17 @@ function HeartIcon() {
   );
 }
 
-function MicIcon() {
+function NoteIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <rect x="9" y="2" width="6" height="12" rx="3" fill="currentColor" />
+      <circle cx="8" cy="17" r="3" fill="currentColor" />
+      <circle cx="16" cy="14" r="3" fill="currentColor" />
       <path
-        d="M5 11a7 7 0 0 0 14 0M12 18v4"
+        d="M11 17V5l8-2v10"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -55,7 +57,7 @@ export default function LandingPage() {
         <RoleCard
           role="artist"
           href="/signup?role=artist"
-          icon={<span className="text-accent"><MicIcon /></span>}
+          icon={<span className="text-accent"><NoteIcon /></span>}
           title="I'm an Artist"
           description="Claim your profile, sell your shows"
           badge="Artist"

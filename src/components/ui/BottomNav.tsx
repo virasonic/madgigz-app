@@ -95,15 +95,17 @@ function PersonIcon(active: boolean) {
   );
 }
 
-function MicIcon(active: boolean) {
+function NoteIcon(active: boolean) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <rect x="9" y="2" width="6" height="12" rx="3" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+      <circle cx="8" cy="17" r="3" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+      <circle cx="16" cy="14" r="3" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
       <path
-        d="M5 11a7 7 0 0 0 14 0M12 18v3"
+        d="M11 17V5l8-2v10"
         stroke="currentColor"
         strokeWidth={active ? 2.4 : 1.8}
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -119,7 +121,7 @@ export default function BottomNav({ role }: { role: Role }) {
     {
       href: "/profile",
       label: "Profile",
-      icon: role === "artist" ? MicIcon : PersonIcon,
+      icon: role === "artist" ? NoteIcon : PersonIcon,
     },
   ];
 
