@@ -52,11 +52,17 @@ export function getShowContent(showId: string): ContentPost[] {
   return all.filter((post) => post.eventId === showId);
 }
 
+export interface ContentMedia {
+  dataUrl: string;
+  mediaType: "image" | "video";
+}
+
 export function addShowContent(
   showId: string,
   artistName: string,
   showTitle: string,
-  caption: string
+  caption: string,
+  media: ContentMedia
 ): ContentPost {
   const all = readJSON<ContentPost[]>(CONTENT_KEY, []);
   const post: ContentPost = {
@@ -65,8 +71,9 @@ export function addShowContent(
     artist: artistName,
     showTitle,
     caption,
-    image: `https://picsum.photos/seed/${showId}-${all.length}/800/1200`,
-    mediaType: "image",
+    image: media.mediaType === "image" ? media.dataUrl : `https://picsum.photos/seed/${showId}-${all.length}/800/1200`,
+    mediaType: media.mediaType,
+    videoUrl: media.mediaType === "video" ? media.dataUrl : undefined,
   };
   writeJSON(CONTENT_KEY, [...all, post]);
   return post;

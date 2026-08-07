@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import { addShowContent, Show } from "@/lib/artist-data";
+import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile, readFileAsDataUrl } from "@/lib/media";
 
 interface AddContentModalProps {
   shows: Show[];
@@ -17,23 +18,55 @@ export default function AddContentModal({
   onClose,
   onPosted,
 }: AddContentModalProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showId, setShowId] = useState(shows[0]?.id ?? "");
   const [caption, setCaption] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
 
-  function handlePost() {
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const selected = event.target.files?.[0];
+    if (!selected) return;
+
+    if (!mediaTypeForFile(selected)) {
+      setError("Choose a photo or video");
+      return;
+    }
+    if (selected.size > MAX_CONTENT_FILE_BYTES) {
+      setError("Choose a smaller file (under 2MB)");
+      return;
+    }
+
+    setError(undefined);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(selected);
+    setPreviewUrl(URL.createObjectURL(selected));
+  }
+
+  async function handlePost() {
     if (!showId) {
       setError("Add a show first");
       return;
     }
-    if (!caption.trim()) {
-      setError("Write a caption");
+    if (!file) {
+      setError("Add a photo or video to post");
       return;
     }
     const show = shows.find((s) => s.id === showId);
     if (!show) return;
 
-    addShowContent(showId, artistName, show.title, caption.trim());
+    const mediaType = mediaTypeForFile(file);
+    if (!mediaType) return;
+
+    const dataUrl = await readFileAsDataUrl(file);
+    addShowContent(showId, artistName, show.title, caption.trim(), { dataUrl, mediaType });
     onPosted();
     onClose();
   }
@@ -44,7 +77,7 @@ export default function AddContentModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-t-3xl bg-surface p-6 pb-10"
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
@@ -74,11 +107,38 @@ export default function AddContentModal({
               </select>
             </div>
 
+            <div className="flex flex-col gap-1.5">
+              <span className="font-heading text-sm text-muted">Photo or video</span>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="overflow-hidden rounded-2xl border border-dashed border-muted/30 text-center text-sm text-muted"
+              >
+                {previewUrl ? (
+                  file?.type.startsWith("video/") ? (
+                    <video src={previewUrl} className="h-40 w-full object-cover" muted />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element -- local blob preview only
+                    <img src={previewUrl} alt="Post preview" className="h-40 w-full object-cover" />
+                  )
+                ) : (
+                  <span className="block px-4 py-6">Tap to add a photo or video</span>
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              placeholder="Share an update with your fans..."
-              rows={3}
+              placeholder="Add a caption (optional)..."
+              rows={2}
               className="w-full rounded-2xl border border-muted/20 bg-background px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {error && <p className="text-sm text-danger">{error}</p>}

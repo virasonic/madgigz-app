@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import { addShowContent, getShowContent } from "@/lib/artist-data";
+import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile, readFileAsDataUrl } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/mock-data";
 
 type Tab = "overview" | "content";
@@ -23,17 +24,56 @@ function formatDate(iso: string) {
 }
 
 export default function ManageShowModal({ show, artistName, onClose }: ManageShowModalProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [posts, setPosts] = useState<ContentPost[]>(() => getShowContent(show.id));
   const [caption, setCaption] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>();
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const soldPercent = Math.round((show.sold / show.capacity) * 100);
 
-  function handlePost() {
-    if (!caption.trim()) return;
-    addShowContent(show.id, artistName, show.title, caption.trim());
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const selected = event.target.files?.[0];
+    if (!selected) return;
+
+    if (!mediaTypeForFile(selected)) {
+      setError("Choose a photo or video");
+      return;
+    }
+    if (selected.size > MAX_CONTENT_FILE_BYTES) {
+      setError("Choose a smaller file (under 2MB)");
+      return;
+    }
+
+    setError(undefined);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(selected);
+    setPreviewUrl(URL.createObjectURL(selected));
+  }
+
+  async function handlePost() {
+    if (!file) {
+      setError("Add a photo or video to post");
+      return;
+    }
+    const mediaType = mediaTypeForFile(file);
+    if (!mediaType) return;
+
+    const dataUrl = await readFileAsDataUrl(file);
+    addShowContent(show.id, artistName, show.title, caption.trim(), { dataUrl, mediaType });
     setPosts(getShowContent(show.id));
     setCaption("");
+    setFile(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
   }
 
   return (
@@ -111,13 +151,38 @@ export default function ManageShowModal({ show, artistName, onClose }: ManageSho
         ) : (
           <div className="mt-6 flex flex-col gap-5">
             <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="overflow-hidden rounded-2xl border border-dashed border-muted/30 text-center text-sm text-muted"
+              >
+                {previewUrl ? (
+                  file?.type.startsWith("video/") ? (
+                    <video src={previewUrl} className="h-40 w-full object-cover" muted />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element -- local blob preview only
+                    <img src={previewUrl} alt="Post preview" className="h-40 w-full object-cover" />
+                  )
+                ) : (
+                  <span className="block px-4 py-6">Tap to add a photo or video</span>
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+
               <textarea
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
-                placeholder="Share an update with your fans..."
-                rows={3}
+                placeholder="Add a caption (optional)..."
+                rows={2}
                 className="w-full rounded-2xl border border-muted/20 bg-background px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
               />
+              {error && <p className="text-sm text-danger">{error}</p>}
               <Button onClick={handlePost}>Post</Button>
             </div>
 
@@ -126,8 +191,18 @@ export default function ManageShowModal({ show, artistName, onClose }: ManageSho
                 <p className="text-sm text-muted">No posts for this show yet.</p>
               ) : (
                 [...posts].reverse().map((post) => (
-                  <div key={post.id} className="rounded-2xl bg-background p-3">
-                    <p className="text-sm text-foreground">{post.caption}</p>
+                  <div key={post.id} className="flex gap-3 rounded-2xl bg-background p-3">
+                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface">
+                      {post.mediaType === "video" ? (
+                        <video src={post.videoUrl} className="h-full w-full object-cover" muted />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element -- data-url content image
+                        <img src={post.image} alt="" className="h-full w-full object-cover" />
+                      )}
+                    </div>
+                    {post.caption && (
+                      <p className="self-center text-sm text-foreground">{post.caption}</p>
+                    )}
                   </div>
                 ))
               )}

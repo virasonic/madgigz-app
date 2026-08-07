@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChangeEvent, FormEvent, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { addShow, getArtistProfile } from "@/lib/artist-data";
@@ -20,6 +20,7 @@ export default function AddShowPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [authorized, setAuthorized] = useState(false);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
@@ -33,6 +34,15 @@ export default function AddShowPage() {
   const [externalUrl, setExternalUrl] = useState("");
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (getMockUser()?.role !== "artist") {
+      router.replace("/profile");
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot read of browser-only storage on mount
+    setAuthorized(true);
+  }, [router]);
 
   function handlePosterChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -97,6 +107,8 @@ export default function AddShowPage() {
 
     router.push("/profile");
   }
+
+  if (!authorized) return null;
 
   return (
     <div className="p-4">

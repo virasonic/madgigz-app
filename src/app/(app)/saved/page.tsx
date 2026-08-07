@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import TicketModal from "@/components/feed/TicketModal";
+import TicketQRModal from "@/components/feed/TicketQRModal";
 import { getAllEvents } from "@/lib/artist-data";
 import { EventItem } from "@/lib/mock-data";
 import { getSavedEventIds, getTickets, Ticket } from "@/lib/session";
@@ -23,6 +24,9 @@ export default function SavedPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [allEvents, setAllEvents] = useState<EventItem[]>([]);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
+  const [activeTicket, setActiveTicket] = useState<{ ticket: Ticket; event: EventItem } | null>(
+    null
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot read of browser-only storage on mount
@@ -102,7 +106,7 @@ export default function SavedPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {ticketRows.map(({ ticket, event }) => (
-            <div key={`${event.id}-${ticket.purchasedAt}`} className="rounded-2xl bg-surface p-3">
+            <div key={ticket.id} className="rounded-2xl bg-surface p-3">
               <div className="flex gap-3">
                 <div className="relative h-16 w-16 overflow-hidden rounded-xl">
                   <Image src={event.image} alt={event.title} fill className="object-cover" />
@@ -126,7 +130,7 @@ export default function SavedPage() {
                 </div>
               </div>
               <button
-                onClick={() => setActiveEvent(event)}
+                onClick={() => setActiveTicket({ ticket, event })}
                 className="mt-3 w-full rounded-full border border-muted/30 py-2 text-sm font-heading text-foreground"
               >
                 View Ticket
@@ -142,6 +146,15 @@ export default function SavedPage() {
           event={activeEvent}
           initialTab="info"
           onClose={() => setActiveEvent(null)}
+        />
+      )}
+
+      {activeTicket && (
+        <TicketQRModal
+          key={activeTicket.ticket.id}
+          ticket={activeTicket.ticket}
+          event={activeTicket.event}
+          onClose={() => setActiveTicket(null)}
         />
       )}
     </div>

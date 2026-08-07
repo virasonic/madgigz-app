@@ -140,9 +140,14 @@ export default function ProfilePage() {
         </div>
       ) : (
         <>
-          <Link href="/profile/add-show">
-            <Button className="mb-6">Add Show</Button>
-          </Link>
+          <div className="mb-6 flex gap-3">
+            <Link href="/profile/add-show" className="flex-1">
+              <Button>Add Show</Button>
+            </Link>
+            <Link href="/profile/scan" className="flex-1">
+              <Button variant="secondary">Scan Tickets</Button>
+            </Link>
+          </div>
 
           <div className="mb-8 grid grid-cols-3 gap-3">
             <div className="rounded-2xl bg-surface p-4 text-center">
