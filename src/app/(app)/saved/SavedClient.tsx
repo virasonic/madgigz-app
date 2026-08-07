@@ -114,9 +114,13 @@ export default function SavedClient({
                     <p className="truncate font-heading text-sm text-foreground">{event.title}</p>
                     <span
                       className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-heading uppercase text-foreground"
-                      style={{ backgroundColor: event.accentColor }}
+                      style={{ backgroundColor: ticket.refunded ? "var(--danger)" : event.accentColor }}
                     >
-                      {ticket.checkedInAt ? "Checked in" : "Confirmed"}
+                      {ticket.refunded
+                        ? "Cancelled"
+                        : ticket.checkedInAt
+                          ? "Checked in"
+                          : "Confirmed"}
                     </span>
                   </div>
                   <p className="truncate text-xs text-muted">

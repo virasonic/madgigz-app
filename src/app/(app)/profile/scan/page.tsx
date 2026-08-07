@@ -12,6 +12,7 @@ import { EventItem, EventRow, mapEvent, mapTicket, Ticket, TicketRow } from "@/l
 type ScanResult =
   | { status: "valid"; ticket: Ticket; event: EventItem }
   | { status: "duplicate"; ticket: Ticket; event: EventItem }
+  | { status: "cancelled"; ticket: Ticket; event: EventItem }
   | { status: "invalid" };
 
 export default function ScanTicketsPage() {
@@ -30,7 +31,7 @@ export default function ScanTicketsPage() {
   useEffect(() => {
     const supabase = createClient();
     fetchCurrentUser(supabase).then((user) => {
-      if (user?.role !== "artist") {
+      if (user?.role !== "artist" || user.artistStatus !== "approved") {
         router.replace("/profile");
         return;
       }
@@ -115,9 +116,13 @@ export default function ScanTicketsPage() {
       }
       const event = mapEvent(eventRow as EventRow);
 
-      setResult(
-        ticket.checkedInAt ? { status: "duplicate", ticket, event } : { status: "valid", ticket, event }
-      );
+      if (ticket.refunded) {
+        setResult({ status: "cancelled", ticket, event });
+      } else if (ticket.checkedInAt) {
+        setResult({ status: "duplicate", ticket, event });
+      } else {
+        setResult({ status: "valid", ticket, event });
+      }
     }
 
     startCamera();
@@ -175,6 +180,14 @@ export default function ScanTicketsPage() {
                   <p className="text-sm text-muted">
                     This QR code doesn&apos;t match a MadGigz ticket.
                   </p>
+                </>
+              ) : result.status === "cancelled" ? (
+                <>
+                  <p className="font-display text-2xl text-danger">Event cancelled</p>
+                  <p className="text-sm text-muted">
+                    This event was cancelled and the ticket refunded - do not admit.
+                  </p>
+                  <p className="text-foreground">{result.event.title}</p>
                 </>
               ) : (
                 <>

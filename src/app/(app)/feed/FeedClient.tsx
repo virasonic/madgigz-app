@@ -95,7 +95,7 @@ export default function FeedClient({
   return (
     <div className="relative flex h-full flex-col">
       <div className="relative flex justify-center gap-2 p-4">
-        {user.role === "artist" && (
+        {user.role === "artist" && user.artistStatus === "approved" && (
           <button
             type="button"
             onClick={() => setAddContentOpen(true)}

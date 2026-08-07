@@ -25,7 +25,9 @@ export async function fetchCurrentUser(supabase: SupabaseClient): Promise<AppUse
 
   const { data } = await supabase
     .from("profiles")
-    .select("id, username, role, artist_name, instagram, tiktok, twitter, spotify, youtube")
+    .select(
+      "id, username, role, artist_name, instagram, tiktok, twitter, spotify, youtube, artist_status, evidence_url"
+    )
     .eq("id", user.id)
     .single();
 

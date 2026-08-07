@@ -119,6 +119,26 @@ export default function ProfileClient({
             <p className="text-sm text-muted">Saved</p>
           </div>
         </div>
+      ) : user.artistStatus !== "approved" ? (
+        <div className="mb-8 rounded-2xl bg-surface p-5 text-center">
+          {user.artistStatus === "rejected" ? (
+            <>
+              <p className="font-heading text-foreground">Application not approved</p>
+              <p className="mt-1 text-sm text-muted">
+                Your artist profile wasn&apos;t approved. Contact us if you&apos;d like to
+                submit more evidence.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-heading text-foreground">Under review</p>
+              <p className="mt-1 text-sm text-muted">
+                We&apos;re verifying your artist profile against your submitted evidence. Once
+                approved, you&apos;ll be able to add shows and post content.
+              </p>
+            </>
+          )}
+        </div>
       ) : (
         <>
           <div className="mb-6 flex gap-3">

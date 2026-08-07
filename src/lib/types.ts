@@ -1,4 +1,5 @@
 export type Role = "fan" | "artist" | "admin";
+export type ArtistStatus = "pending" | "approved" | "rejected";
 
 export interface Ticketing {
   mode: "internal" | "external";
@@ -27,6 +28,7 @@ export interface EventItem {
   ageRestriction: string;
   rating: number;
   active: boolean;
+  cancelled: boolean;
   ticketing?: Ticketing;
 }
 
@@ -50,6 +52,7 @@ export interface Ticket {
   discountId: string | null;
   purchasedAt: string;
   checkedInAt: string | null;
+  refunded: boolean;
 }
 
 export interface AppUser {
@@ -63,6 +66,8 @@ export interface AppUser {
   twitter: string | null;
   spotify: string | null;
   youtube: string | null;
+  artistStatus: ArtistStatus | null;
+  evidenceUrl: string | null;
 }
 
 export interface Discount {
@@ -103,6 +108,7 @@ export interface EventRow {
   ticketing_mode: "internal" | "external";
   ticketing_url: string | null;
   active?: boolean;
+  cancelled?: boolean;
 }
 
 export function mapEvent(row: EventRow): EventItem {
@@ -128,6 +134,7 @@ export function mapEvent(row: EventRow): EventItem {
     ageRestriction: row.age_restriction,
     rating: Number(row.rating),
     active: row.active ?? true,
+    cancelled: row.cancelled ?? false,
     ticketing:
       row.ticketing_mode === "external"
         ? { mode: "external", url: row.ticketing_url ?? undefined }
@@ -167,6 +174,7 @@ export interface TicketRow {
   discount_id: string | null;
   purchased_at: string;
   checked_in_at: string | null;
+  refunded: boolean;
 }
 
 export function mapTicket(row: TicketRow): Ticket {
@@ -179,6 +187,7 @@ export function mapTicket(row: TicketRow): Ticket {
     discountId: row.discount_id,
     purchasedAt: row.purchased_at,
     checkedInAt: row.checked_in_at,
+    refunded: row.refunded,
   };
 }
 
@@ -192,6 +201,8 @@ export interface ProfileRow {
   twitter: string | null;
   spotify: string | null;
   youtube: string | null;
+  artist_status: ArtistStatus | null;
+  evidence_url: string | null;
 }
 
 export function mapProfile(row: ProfileRow, email: string): AppUser {
@@ -205,6 +216,8 @@ export function mapProfile(row: ProfileRow, email: string): AppUser {
     tiktok: row.tiktok,
     twitter: row.twitter,
     spotify: row.spotify,
+    artistStatus: row.artist_status,
+    evidenceUrl: row.evidence_url,
     youtube: row.youtube,
   };
 }

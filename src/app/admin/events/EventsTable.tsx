@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { toggleEventActive } from "../actions";
+import { cancelEvent, toggleEventActive } from "../actions";
 import type { EventItem } from "@/lib/types";
 
 export default function EventsTable({ events }: { events: EventItem[] }) {
@@ -12,6 +12,20 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
     setPendingId(eventId);
     startTransition(async () => {
       await toggleEventActive(eventId, nextActive);
+      setPendingId(null);
+    });
+  }
+
+  function handleDelete(event: EventItem) {
+    const message =
+      event.sold > 0
+        ? `This event has ${event.sold} ${event.sold === 1 ? "ticket" : "tickets"} sold. Deleting it will mark ${event.sold === 1 ? "that ticket" : "all of them"} as refunded in our records and hide the event, but you'll still need to manually send each buyer their money back - there's no payment processor wired up yet. Continue?`
+        : "Delete this event permanently? This can't be undone.";
+    if (!window.confirm(message)) return;
+
+    setPendingId(event.id);
+    startTransition(async () => {
+      await cancelEvent(event.id);
       setPendingId(null);
     });
   }
@@ -44,26 +58,35 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
             <td className="py-2">
               <span
                 className={
-                  e.active
-                    ? "rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent"
-                    : "rounded-full bg-muted/15 px-2 py-0.5 text-xs text-muted"
+                  e.cancelled
+                    ? "rounded-full bg-danger/15 px-2 py-0.5 text-xs text-danger"
+                    : e.active
+                      ? "rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent"
+                      : "rounded-full bg-muted/15 px-2 py-0.5 text-xs text-muted"
                 }
               >
-                {e.active ? "Active" : "Hidden"}
+                {e.cancelled ? "Cancelled" : e.active ? "Active" : "Hidden"}
               </span>
             </td>
             <td className="py-2 text-right">
-              <button
-                onClick={() => handleToggle(e.id, !e.active)}
-                disabled={isPending && pendingId === e.id}
-                className="rounded-lg bg-primary/15 px-3 py-1 text-xs font-heading text-primary hover:bg-primary/25 disabled:opacity-50"
-              >
-                {isPending && pendingId === e.id
-                  ? "Saving..."
-                  : e.active
-                    ? "Hide"
-                    : "Unhide"}
-              </button>
+              {!e.cancelled && (
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => handleToggle(e.id, !e.active)}
+                    disabled={isPending && pendingId === e.id}
+                    className="rounded-lg bg-primary/15 px-3 py-1 text-xs font-heading text-primary hover:bg-primary/25 disabled:opacity-50"
+                  >
+                    {e.active ? "Hide" : "Unhide"}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(e)}
+                    disabled={isPending && pendingId === e.id}
+                    className="rounded-lg bg-danger/15 px-3 py-1 text-xs font-heading text-danger hover:bg-danger/25 disabled:opacity-50"
+                  >
+                    {isPending && pendingId === e.id ? "Working..." : "Delete"}
+                  </button>
+                </div>
+              )}
             </td>
           </tr>
         ))}

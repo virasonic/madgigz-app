@@ -5,6 +5,7 @@ import { ChangeEvent, FormEvent, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
+import { uploadEventMedia } from "@/lib/supabase/storage";
 
 export default function ArtistProfilePage() {
   const router = useRouter();
@@ -49,11 +50,7 @@ export default function ArtistProfilePage() {
       return;
     }
 
-    if (file) {
-      await supabase.storage
-        .from("event-media")
-        .upload(`evidence/${user.id}-${Date.now()}-${file.name}`, file);
-    }
+    const evidenceUrl = file ? await uploadEventMedia(supabase, file, "evidence") : null;
 
     const { error } = await supabase
       .from("profiles")
@@ -64,6 +61,7 @@ export default function ArtistProfilePage() {
         twitter: twitter.trim() || null,
         spotify: spotify.trim() || null,
         youtube: youtube.trim() || null,
+        evidence_url: evidenceUrl,
       })
       .eq("id", user.id);
 

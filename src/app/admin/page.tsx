@@ -25,11 +25,12 @@ export default async function AdminDashboardPage() {
         <p className="text-sm text-muted">Overview of MadGigz activity.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Users" value={String(stats.userCount)} />
         <StatCard label="Events" value={String(stats.eventCount)} />
         <StatCard label="Tickets sold" value={String(stats.ticketsSold)} />
         <StatCard label="Revenue" value={`€${stats.revenue.toFixed(2)}`} />
+        <StatCard label="Pending artists" value={String(stats.pendingArtistCount)} />
       </div>
 
       <div className="rounded-2xl bg-surface p-5">

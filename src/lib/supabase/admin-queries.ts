@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  ArtistStatus,
   DiscountRow,
   EventRow,
   mapDiscount,
@@ -68,11 +69,17 @@ export async function fetchAllUsers(admin: SupabaseClient): Promise<AdminUserRow
 }
 
 export async function fetchDashboardStats(admin: SupabaseClient) {
-  const [{ count: userCount }, { count: eventCount }, { data: tickets }] = await Promise.all([
-    admin.from("profiles").select("*", { count: "exact", head: true }),
-    admin.from("events").select("*", { count: "exact", head: true }),
-    admin.from("tickets").select("quantity, price_paid, purchased_at"),
-  ]);
+  const [{ count: userCount }, { count: eventCount }, { count: pendingArtistCount }, { data: tickets }] =
+    await Promise.all([
+      admin.from("profiles").select("*", { count: "exact", head: true }),
+      admin.from("events").select("*", { count: "exact", head: true }),
+      admin
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "artist")
+        .eq("artist_status", "pending"),
+      admin.from("tickets").select("quantity, price_paid, purchased_at"),
+    ]);
 
   const ticketsSold = (tickets ?? []).reduce((sum, t) => sum + t.quantity, 0);
   const revenue = (tickets ?? []).reduce((sum, t) => sum + Number(t.price_paid), 0);
@@ -87,10 +94,58 @@ export async function fetchDashboardStats(admin: SupabaseClient) {
   return {
     userCount: userCount ?? 0,
     eventCount: eventCount ?? 0,
+    pendingArtistCount: pendingArtistCount ?? 0,
     ticketsSold,
     revenue,
     signupsByDay: Array.from(signupsByDay.entries()).sort(([a], [b]) => a.localeCompare(b)),
   };
+}
+
+export interface AdminArtistApplication {
+  id: string;
+  email: string;
+  username: string;
+  artistName: string | null;
+  instagram: string | null;
+  tiktok: string | null;
+  twitter: string | null;
+  spotify: string | null;
+  youtube: string | null;
+  evidenceUrl: string | null;
+  artistStatus: ArtistStatus;
+  createdAt: string;
+}
+
+export async function fetchArtistApplications(
+  admin: SupabaseClient
+): Promise<AdminArtistApplication[]> {
+  const { data: authData } = await admin.auth.admin.listUsers();
+  const { data: profileRows } = await admin
+    .from("profiles")
+    .select(
+      "id, username, artist_name, instagram, tiktok, twitter, spotify, youtube, evidence_url, artist_status, created_at"
+    )
+    .eq("role", "artist");
+
+  const emailById = new Map((authData?.users ?? []).map((u) => [u.id, u.email ?? ""]));
+
+  const applications = (profileRows ?? []).map((p) => ({
+    id: p.id,
+    email: emailById.get(p.id) ?? "",
+    username: p.username,
+    artistName: p.artist_name,
+    instagram: p.instagram,
+    tiktok: p.tiktok,
+    twitter: p.twitter,
+    spotify: p.spotify,
+    youtube: p.youtube,
+    evidenceUrl: p.evidence_url,
+    artistStatus: (p.artist_status ?? "approved") as ArtistStatus,
+    createdAt: p.created_at,
+  }));
+
+  const statusOrder: Record<ArtistStatus, number> = { pending: 0, rejected: 1, approved: 2 };
+  return applications.sort((a, b) => statusOrder[a.artistStatus] - statusOrder[b.artistStatus]);
 }
 
 export async function fetchAllEventsAdmin(admin: SupabaseClient) {

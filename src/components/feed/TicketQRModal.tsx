@@ -23,6 +23,7 @@ export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalP
   const [qrSrc, setQrSrc] = useState<string | null>(null);
 
   useEffect(() => {
+    if (ticket.refunded) return;
     let cancelled = false;
     QRCode.toDataURL(ticket.id, { margin: 1, width: 320 }).then((url) => {
       if (!cancelled) {
@@ -32,7 +33,7 @@ export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalP
     return () => {
       cancelled = true;
     };
-  }, [ticket.id]);
+  }, [ticket.id, ticket.refunded]);
 
   return (
     <div
@@ -55,21 +56,34 @@ export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalP
           </p>
         </div>
 
-        <div className="mx-auto mt-6 flex w-fit flex-col items-center gap-3 rounded-3xl bg-white p-5">
-          {qrSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element -- generated data-url QR code
-            <img src={qrSrc} alt="Ticket QR code" className="h-56 w-56" />
-          ) : (
-            <div className="flex h-56 w-56 items-center justify-center text-sm text-black/50">
-              Generating code...
+        {ticket.refunded ? (
+          <div className="mt-6 rounded-2xl bg-danger/10 p-5 text-center">
+            <p className="font-heading text-danger">This event was cancelled</p>
+            <p className="mt-1 text-sm text-muted">
+              You&apos;re due a refund for this ticket - the organizer will be in touch to
+              process it.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="mx-auto mt-6 flex w-fit flex-col items-center gap-3 rounded-3xl bg-white p-5">
+              {qrSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element -- generated data-url QR code
+                <img src={qrSrc} alt="Ticket QR code" className="h-56 w-56" />
+              ) : (
+                <div className="flex h-56 w-56 items-center justify-center text-sm text-black/50">
+                  Generating code...
+                </div>
+              )}
+              <p className="font-mono text-xs tracking-wide text-black/60">{ticket.id}</p>
             </div>
-          )}
-          <p className="font-mono text-xs tracking-wide text-black/60">{ticket.id}</p>
-        </div>
 
-        <p className="mt-5 text-center text-xs text-muted">
-          Show this code at the door. If it can&apos;t be scanned, give the code above to staff.
-        </p>
+            <p className="mt-5 text-center text-xs text-muted">
+              Show this code at the door. If it can&apos;t be scanned, give the code above to
+              staff.
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

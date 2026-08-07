@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/artists", label: "Artists" },
   { href: "/admin/events", label: "Events" },
   { href: "/admin/billing", label: "Billing" },
   { href: "/admin/discounts", label: "Discounts" },

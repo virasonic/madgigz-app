@@ -42,7 +42,7 @@ export default function AddShowPage() {
   useEffect(() => {
     const supabase = createClient();
     fetchCurrentUser(supabase).then((current) => {
-      if (current?.role !== "artist") {
+      if (current?.role !== "artist" || current.artistStatus !== "approved") {
         router.replace("/profile");
         return;
       }
