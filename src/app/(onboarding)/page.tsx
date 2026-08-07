@@ -40,7 +40,7 @@ export default function LandingPage() {
           className="w-56"
         />
         <p className="mt-3 font-heading text-sm uppercase tracking-[0.2em] text-muted">
-          Your next obsession is one show away
+          Local Gigs &amp; Concerts
         </p>
       </div>
 

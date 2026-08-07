@@ -22,7 +22,7 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: "MadGigz",
-  description: "Your next obsession is one show away.",
+  description: "Local Gigs & Concerts",
   icons: {
     icon: "/favicon.ico",
   },
