@@ -83,6 +83,9 @@ export default function FeedClient({
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [addContentOpen, setAddContentOpen] = useState(false);
+  // Browsers block autoplay-with-sound, so reels start muted like TikTok/Reels;
+  // shared (not per-card) so unmuting once stays unmuted as you scroll.
+  const [reelsMuted, setReelsMuted] = useState(true);
 
   const forYouFeed = useMemo(
     () => buildForYouFeed(initialEvents, allPosts),
@@ -156,6 +159,8 @@ export default function FeedClient({
                   <ContentReelCard
                     post={entry.post}
                     event={entry.event}
+                    muted={reelsMuted}
+                    onToggleMute={() => setReelsMuted((v) => !v)}
                     onOpen={() => setActiveEvent(entry.event)}
                   />
                 </div>
