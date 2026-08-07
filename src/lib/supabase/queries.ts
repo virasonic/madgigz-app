@@ -49,7 +49,7 @@ export async function fetchContentPosts(supabase: SupabaseClient): Promise<Conte
   const { data } = await supabase
     .from("content_posts")
     .select("*")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false });
   return ((data as ContentPostRow[]) ?? []).map(mapContentPost);
 }
 

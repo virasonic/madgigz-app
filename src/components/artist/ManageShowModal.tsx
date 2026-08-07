@@ -43,6 +43,7 @@ export default function ManageShowModal({
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | undefined>();
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -120,6 +121,19 @@ export default function ManageShowModal({
     setFile(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
+  }
+
+  async function handleDeletePost(post: ContentPost) {
+    if (!window.confirm("Delete this post? This can't be undone.")) return;
+
+    setDeletingPostId(post.id);
+    const supabase = createClient();
+
+    await removeEventMedia(supabase, [post.mediaType === "video" ? post.videoUrl : post.image]);
+    await supabase.from("content_posts").delete().eq("id", post.id);
+
+    setPosts((current) => current.filter((p) => p.id !== post.id));
+    setDeletingPostId(null);
   }
 
   async function handleHideShow() {
@@ -327,7 +341,7 @@ export default function ManageShowModal({
                 <p className="text-sm text-muted">No posts for this show yet.</p>
               ) : (
                 [...posts].reverse().map((post) => (
-                  <div key={post.id} className="flex gap-3 rounded-2xl bg-background p-3">
+                  <div key={post.id} className="flex items-center gap-3 rounded-2xl bg-background p-3">
                     <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface">
                       {post.mediaType === "video" ? (
                         <video src={post.videoUrl} className="h-full w-full object-cover" muted />
@@ -337,8 +351,17 @@ export default function ManageShowModal({
                       )}
                     </div>
                     {post.caption && (
-                      <p className="self-center text-sm text-foreground">{post.caption}</p>
+                      <p className="min-w-0 flex-1 self-center text-sm text-foreground">
+                        {post.caption}
+                      </p>
                     )}
+                    <button
+                      onClick={() => handleDeletePost(post)}
+                      disabled={deletingPostId === post.id}
+                      className="ml-auto shrink-0 text-xs font-heading text-danger disabled:opacity-50"
+                    >
+                      {deletingPostId === post.id ? "Deleting..." : "Delete"}
+                    </button>
                   </div>
                 ))
               )}
