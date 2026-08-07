@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { setMockUser } from "@/lib/session";
+import { setArtistProfile } from "@/lib/artist-data";
 
 export default function ArtistProfilePage() {
   const router = useRouter();
@@ -37,7 +37,14 @@ export default function ArtistProfilePage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    setMockUser({ username: artistName, role: "artist" });
+    setArtistProfile({
+      artistName,
+      instagram: instagram.trim() || undefined,
+      tiktok: tiktok.trim() || undefined,
+      twitter: twitter.trim() || undefined,
+      spotify: spotify.trim() || undefined,
+      youtube: youtube.trim() || undefined,
+    });
     router.push("/feed");
   }
 

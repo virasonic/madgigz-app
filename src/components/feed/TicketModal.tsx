@@ -18,6 +18,7 @@ function formatDate(iso: string) {
     weekday: "long",
     day: "numeric",
     month: "long",
+    timeZone: "UTC",
   });
 }
 
@@ -27,9 +28,20 @@ export default function TicketModal({ event, initialTab = "tickets", onClose }: 
   const [purchased, setPurchased] = useState(false);
 
   const soldPercent = Math.round((event.sold / event.capacity) * 100);
-  const almostGone = soldPercent >= 90;
   const remaining = Math.max(event.capacity - event.sold, 0);
+  const soldOut = remaining <= 0;
+  const almostGone = !soldOut && soldPercent >= 90;
   const maxQuantity = Math.max(Math.min(remaining, 6), 1);
+
+  const externalUrl = event.ticketing?.mode === "external" ? event.ticketing.url : undefined;
+  let externalHost = "the external site";
+  if (externalUrl) {
+    try {
+      externalHost = new URL(externalUrl).hostname.replace(/^www\./, "");
+    } catch {
+      // keep the generic fallback label
+    }
+  }
 
   function handleBuy() {
     addTicket({
@@ -38,6 +50,10 @@ export default function TicketModal({ event, initialTab = "tickets", onClose }: 
       purchasedAt: new Date().toISOString(),
     });
     setPurchased(true);
+  }
+
+  function handleBuyExternal() {
+    if (externalUrl) window.open(externalUrl, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -93,23 +109,33 @@ export default function TicketModal({ event, initialTab = "tickets", onClose }: 
               </button>
             </div>
 
-            {tab === "tickets" ? (
+            {tab === "tickets" && externalUrl ? (
+              <div className="mt-6 flex flex-col gap-6">
+                <div className="rounded-2xl border border-muted/20 bg-background p-4 text-sm text-muted">
+                  Tickets for this event are sold by the artist through an external
+                  service. You&apos;ll be taken to {externalHost} to complete your purchase.
+                </div>
+                <Button onClick={handleBuyExternal}>Buy tickets on {externalHost}</Button>
+              </div>
+            ) : tab === "tickets" ? (
               <div className="mt-6 flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                   <span className="font-heading text-sm text-muted">Quantity</span>
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-muted/30 text-foreground"
+                      disabled={soldOut}
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-muted/30 text-foreground disabled:opacity-30"
                     >
                       −
                     </button>
                     <span className="w-4 text-center font-display text-lg text-foreground">
-                      {quantity}
+                      {soldOut ? 0 : quantity}
                     </span>
                     <button
                       onClick={() => setQuantity((q) => Math.min(maxQuantity, q + 1))}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-muted/30 text-foreground"
+                      disabled={soldOut}
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-muted/30 text-foreground disabled:opacity-30"
                     >
                       +
                     </button>
@@ -123,21 +149,27 @@ export default function TicketModal({ event, initialTab = "tickets", onClose }: 
                       style={{ width: `${soldPercent}%`, backgroundColor: event.accentColor }}
                     />
                   </div>
-                  {almostGone && (
-                    <p className="mt-2 text-xs text-danger">
-                      Almost gone — only {remaining} left
-                    </p>
+                  {soldOut ? (
+                    <p className="mt-2 text-xs text-danger">Sold out</p>
+                  ) : (
+                    almostGone && (
+                      <p className="mt-2 text-xs text-danger">
+                        Almost gone — only {remaining} left
+                      </p>
+                    )
                   )}
                 </div>
 
                 <div className="flex items-center justify-between border-t border-muted/15 pt-4">
                   <span className="font-heading text-muted">Total</span>
                   <span className="font-display text-xl text-foreground">
-                    €{event.price * quantity}
+                    €{soldOut ? 0 : event.price * quantity}
                   </span>
                 </div>
 
-                <Button onClick={handleBuy}>Buy tickets</Button>
+                <Button onClick={handleBuy} disabled={soldOut}>
+                  {soldOut ? "Sold Out" : "Buy tickets"}
+                </Button>
               </div>
             ) : (
               <div className="mt-6 flex flex-col gap-5">

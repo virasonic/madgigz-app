@@ -1,3 +1,5 @@
+import { readJSON, removeKey, writeJSON } from "./storage";
+
 export type Role = "fan" | "artist";
 
 export interface MockUser {
@@ -14,21 +16,7 @@ export interface Ticket {
 const USER_KEY = "madgigz_user";
 const SAVED_KEY = "madgigz_saved";
 const TICKETS_KEY = "madgigz_tickets";
-
-function readJSON<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeJSON(key: string, value: unknown) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
-}
+const ACCOUNTS_KEY = "madgigz_accounts";
 
 export function getMockUser(): MockUser | null {
   return readJSON<MockUser | null>(USER_KEY, null);
@@ -39,8 +27,19 @@ export function setMockUser(user: MockUser) {
 }
 
 export function clearMockUser() {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(USER_KEY);
+  removeKey(USER_KEY);
+}
+
+// Mock "accounts" so sign-in can restore the right role without a real backend.
+export function rememberAccount(username: string, role: Role) {
+  const accounts = readJSON<Record<string, Role>>(ACCOUNTS_KEY, {});
+  accounts[username] = role;
+  writeJSON(ACCOUNTS_KEY, accounts);
+}
+
+export function lookupRole(username: string): Role {
+  const accounts = readJSON<Record<string, Role>>(ACCOUNTS_KEY, {});
+  return accounts[username] ?? "fan";
 }
 
 export function getSavedEventIds(): string[] {

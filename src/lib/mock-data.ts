@@ -1,3 +1,8 @@
+export interface Ticketing {
+  mode: "internal" | "external";
+  url?: string;
+}
+
 export interface EventItem {
   id: string;
   title: string;
@@ -18,6 +23,9 @@ export interface EventItem {
   doors: string;
   ageRestriction: string;
   rating: number;
+  // Undefined/missing means internal (MadGigz-sold) - only artist-created
+  // shows can currently choose "external" (e.g. linking out to Entradium).
+  ticketing?: Ticketing;
 }
 
 export interface ContentPost {
@@ -27,6 +35,11 @@ export interface ContentPost {
   showTitle: string;
   caption: string;
   image: string;
+  // Scaffolding for real video reels later - no video assets exist yet, so
+  // every current mock post is "image"; ContentReelCard already knows how to
+  // render "video" once mediaType/videoUrl are populated for real.
+  mediaType: "image" | "video";
+  videoUrl?: string;
 }
 
 // Placeholder photography (Picsum, seeded for deterministic mock data) —
@@ -180,7 +193,7 @@ export const events: EventItem[] = [
     category: "Pop",
     image: photo("nazca-pop"),
     capacity: 600,
-    sold: 588,
+    sold: 600,
     description:
       "Aire Nuevo's synth-pop tour hits Nazca Club with a full light show and their biggest Madrid crowd yet.",
     lineup: ["Aire Nuevo", "Marina Cielo"],
@@ -220,6 +233,7 @@ export const contentPosts: ContentPost[] = [
     showTitle: "Noche de Fuego",
     caption: "Soundcheck done. Tonight's going to be loud. 🔥",
     image: photo("post-cardenales-1"),
+    mediaType: "image",
   },
   {
     id: "post-nuriavox-1",
@@ -228,6 +242,7 @@ export const contentPosts: ContentPost[] = [
     showTitle: "Riviera Electrónica",
     caption: "New set, new visuals. See you on the terrace this weekend.",
     image: photo("post-nuriavox-1"),
+    mediaType: "image",
   },
   {
     id: "post-hierronorte-1",
@@ -236,6 +251,7 @@ export const contentPosts: ContentPost[] = [
     showTitle: "Arena Rock Fest",
     caption: "WiZink Center, we're bringing the whole production this time.",
     image: photo("post-hierronorte-1"),
+    mediaType: "image",
   },
   {
     id: "post-airenuevo-1",
@@ -244,5 +260,6 @@ export const contentPosts: ContentPost[] = [
     showTitle: "Pop en la Nazca",
     caption: "Rehearsals for the Nazca show are giving us chills already.",
     image: photo("post-airenuevo-1"),
+    mediaType: "image",
   },
 ];

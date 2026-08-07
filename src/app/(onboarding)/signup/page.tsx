@@ -5,12 +5,27 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { setMockUser } from "@/lib/session";
 
 type Role = "fan" | "artist";
 
 function isRole(value: string | null): value is Role {
   return value === "fan" || value === "artist";
+}
+
+const MIN_AGE = 16;
+// Computed once at module load rather than during render, per React's purity rules.
+const TODAY = new Date();
+
+function calculateAge(dob: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) return null;
+  const birthDate = new Date(dob);
+  if (Number.isNaN(birthDate.getTime())) return null;
+
+  let age = TODAY.getUTCFullYear() - birthDate.getUTCFullYear();
+  const monthDiff = TODAY.getUTCMonth() - birthDate.getUTCMonth();
+  const dayDiff = TODAY.getUTCDate() - birthDate.getUTCDate();
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age -= 1;
+  return age;
 }
 
 function SignUpForm() {
@@ -24,6 +39,7 @@ function SignUpForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [dob, setDob] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function handleSubmit(event: FormEvent) {
@@ -35,17 +51,18 @@ function SignUpForm() {
     if (password.length < 8) nextErrors.password = "Use at least 8 characters";
     if (confirmPassword !== password) nextErrors.confirmPassword = "Passwords don't match";
 
+    const age = calculateAge(dob);
+    if (age === null) {
+      nextErrors.dob = "Enter your date of birth";
+    } else if (age < MIN_AGE) {
+      nextErrors.dob = `You must be at least ${MIN_AGE} to join MadGigz`;
+    }
+
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    if (role === "artist") {
-      // Artist session isn't created until the profile claim step is submitted.
-      router.push("/signup/artist-profile");
-      return;
-    }
-
-    setMockUser({ username, role: "fan" });
-    router.push("/feed");
+    const params = new URLSearchParams({ role, username, email });
+    router.push(`/signup/verify-email?${params.toString()}`);
   }
 
   return (
@@ -78,6 +95,14 @@ function SignUpForm() {
           onChange={(e) => setEmail(e.target.value)}
           error={errors.email}
           autoComplete="email"
+        />
+        <Input
+          label="Date of birth"
+          type="date"
+          value={dob}
+          onChange={(e) => setDob(e.target.value)}
+          error={errors.dob}
+          max={TODAY.toISOString().slice(0, 10)}
         />
         <Input
           label="Password"

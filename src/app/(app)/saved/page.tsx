@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import TicketModal from "@/components/feed/TicketModal";
-import { EventItem, events } from "@/lib/mock-data";
+import { getAllEvents } from "@/lib/artist-data";
+import { EventItem } from "@/lib/mock-data";
 import { getSavedEventIds, getTickets, Ticket } from "@/lib/session";
 
 type SubTab = "events" | "tickets";
@@ -12,6 +13,7 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
+    timeZone: "UTC",
   });
 }
 
@@ -19,17 +21,19 @@ export default function SavedPage() {
   const [subTab, setSubTab] = useState<SubTab>("events");
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [allEvents, setAllEvents] = useState<EventItem[]>([]);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot read of browser-only storage on mount
     setSavedIds(getSavedEventIds());
     setTickets(getTickets());
+    setAllEvents(getAllEvents());
   }, []);
 
   const savedEvents = useMemo(
-    () => events.filter((event) => savedIds.includes(event.id)),
-    [savedIds]
+    () => allEvents.filter((event) => savedIds.includes(event.id)),
+    [allEvents, savedIds]
   );
 
   const ticketRows = useMemo(
@@ -37,10 +41,10 @@ export default function SavedPage() {
       tickets
         .map((ticket) => ({
           ticket,
-          event: events.find((event) => event.id === ticket.eventId),
+          event: allEvents.find((event) => event.id === ticket.eventId),
         }))
         .filter((row): row is { ticket: Ticket; event: EventItem } => Boolean(row.event)),
-    [tickets]
+    [allEvents, tickets]
   );
 
   return (

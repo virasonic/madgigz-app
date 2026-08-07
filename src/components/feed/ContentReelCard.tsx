@@ -45,15 +45,29 @@ interface ContentReelCardProps {
 export default function ContentReelCard({ post, event, onOpen }: ContentReelCardProps) {
   const [liked, setLiked] = useState(false);
 
+  const showVideo = post.mediaType === "video" && post.videoUrl;
+
   return (
     <div className="relative h-full w-full overflow-hidden">
-      <Image
-        src={post.image}
-        alt={post.caption}
-        fill
-        sizes="480px"
-        className="object-cover"
-      />
+      {showVideo ? (
+        <video
+          src={post.videoUrl}
+          poster={post.image}
+          className="absolute inset-0 h-full w-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
+      ) : (
+        <Image
+          src={post.image}
+          alt={post.caption}
+          fill
+          sizes="480px"
+          className="object-cover"
+        />
+      )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/30" />
 
       <div className="absolute left-4 right-4 top-6 flex items-center gap-3">

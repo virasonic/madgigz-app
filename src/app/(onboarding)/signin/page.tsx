@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { setMockUser } from "@/lib/session";
+import { lookupRole, setMockUser } from "@/lib/session";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -23,8 +23,7 @@ export default function SignInPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    // No real accounts yet, so sign-in can't know the stored role - defaults to fan.
-    setMockUser({ username: identifier, role: "fan" });
+    setMockUser({ username: identifier, role: lookupRole(identifier) });
     router.push("/feed");
   }
 
