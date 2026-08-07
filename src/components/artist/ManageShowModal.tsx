@@ -57,7 +57,7 @@ export default function ManageShowModal({ show, artistName, onClose }: ManageSho
       return;
     }
     if (selected.size > MAX_CONTENT_FILE_BYTES) {
-      setError("Choose a smaller file (under 8MB)");
+      setError("Choose a smaller file (under 50MB)");
       return;
     }
 
