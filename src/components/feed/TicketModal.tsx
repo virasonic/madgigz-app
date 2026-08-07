@@ -147,8 +147,8 @@ export default function TicketModal({
           </div>
         ) : (
           <>
-            <div className="relative mb-4 h-44 w-full overflow-hidden rounded-2xl">
-              <Image src={event.image} alt={event.title} fill sizes="480px" className="object-cover" />
+            <div className="relative mb-4 aspect-[3/4] w-full overflow-hidden rounded-2xl bg-background">
+              <Image src={event.image} alt={event.title} fill sizes="480px" className="object-contain" />
             </div>
 
             <h2 className="font-display text-2xl text-foreground">{event.title}</h2>

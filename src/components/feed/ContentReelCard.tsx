@@ -181,12 +181,11 @@ export default function ContentReelCard({
 
         <button
           onClick={onOpen}
-          className="flex items-center justify-between rounded-2xl border border-white/20 bg-white/10 px-5 py-3.5 backdrop-blur-md"
+          className="flex items-center justify-between rounded-2xl px-5 py-3.5"
+          style={{ backgroundColor: event.accentColor }}
         >
-          <span className="font-heading text-sm text-foreground">Tickets available now</span>
-          <span className="font-display text-sm" style={{ color: event.accentColor }}>
-            €{event.price}
-          </span>
+          <span className="font-display text-foreground">Get Tickets</span>
+          <span className="font-heading text-foreground">€{event.price}</span>
         </button>
       </div>
     </div>
