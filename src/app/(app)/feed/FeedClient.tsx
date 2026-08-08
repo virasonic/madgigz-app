@@ -6,7 +6,7 @@ import TicketModal from "@/components/feed/TicketModal";
 import ContentReelCard from "@/components/feed/ContentReelCard";
 import AddContentModal from "@/components/artist/AddContentModal";
 import { createClient } from "@/lib/supabase/client";
-import { fetchContentPosts } from "@/lib/supabase/queries";
+import { fetchContentPosts, toggleSavedEvent } from "@/lib/supabase/queries";
 import { AppUser, ContentPost, EventItem } from "@/lib/types";
 
 type Pane = "forYou" | "thisWeek";
@@ -60,6 +60,7 @@ interface FeedClientProps {
   initialEvents: EventItem[];
   initialPosts: ContentPost[];
   shows: EventItem[];
+  initialSavedIds: string[];
 }
 
 export default function FeedClient({
@@ -67,11 +68,13 @@ export default function FeedClient({
   initialEvents,
   initialPosts,
   shows,
+  initialSavedIds,
 }: FeedClientProps) {
   const [pane, setPane] = useState<Pane>("forYou");
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [addContentOpen, setAddContentOpen] = useState(false);
+  const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   // Browsers block autoplay-with-sound, so reels start muted like TikTok/Reels;
   // shared (not per-card) so unmuting once stays unmuted as you scroll.
   const [reelsMuted, setReelsMuted] = useState(true);
@@ -88,6 +91,17 @@ export default function FeedClient({
   async function refreshContent() {
     const supabase = createClient();
     setAllPosts(await fetchContentPosts(supabase));
+  }
+
+  // Liking in the feed and saving from Explore/an artist's page are the same
+  // underlying action (saved_events) - a heart tapped here shows up as a
+  // liked event on the Tickets page, and vice versa, rather than being two
+  // disconnected concepts.
+  async function handleToggleLike(eventId: string) {
+    const wasLiked = savedIds.includes(eventId);
+    setSavedIds((ids) => (wasLiked ? ids.filter((id) => id !== eventId) : [...ids, eventId]));
+    const supabase = createClient();
+    await toggleSavedEvent(supabase, user.id, eventId, wasLiked);
   }
 
   const artistName = user.artistName ?? user.username;
@@ -139,6 +153,8 @@ export default function FeedClient({
                     muted={reelsMuted}
                     onToggleMute={() => setReelsMuted((v) => !v)}
                     onOpen={() => setActiveEvent(entry.event)}
+                    liked={savedIds.includes(entry.event.id)}
+                    onToggleLike={() => handleToggleLike(entry.event.id)}
                   />
                 </div>
               ))}

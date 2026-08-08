@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { ContentPost, EventItem } from "@/lib/types";
 
 function HeartIcon({ filled }: { filled: boolean }) {
@@ -71,6 +71,8 @@ interface ContentReelCardProps {
   muted: boolean;
   onToggleMute: () => void;
   onOpen: () => void;
+  liked: boolean;
+  onToggleLike: () => void;
 }
 
 export default function ContentReelCard({
@@ -79,8 +81,9 @@ export default function ContentReelCard({
   muted,
   onToggleMute,
   onOpen,
+  liked,
+  onToggleLike,
 }: ContentReelCardProps) {
-  const [liked, setLiked] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const showVideo = post.mediaType === "video" && post.videoUrl;
@@ -159,7 +162,7 @@ export default function ContentReelCard({
 
       <div className="absolute bottom-24 right-4 flex flex-col items-center gap-6">
         <button
-          onClick={() => setLiked((v) => !v)}
+          onClick={onToggleLike}
           style={{ color: liked ? event.accentColor : "var(--foreground)" }}
         >
           <HeartIcon filled={liked} />

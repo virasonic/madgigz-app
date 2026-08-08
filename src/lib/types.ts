@@ -55,6 +55,7 @@ export interface Ticket {
   purchasedAt: string;
   checkedInAt: string | null;
   refunded: boolean;
+  hiddenAt: string | null;
 }
 
 export interface AppUser {
@@ -201,6 +202,7 @@ export interface TicketRow {
   purchased_at: string;
   checked_in_at: string | null;
   refunded: boolean;
+  hidden_at?: string | null;
 }
 
 export function mapTicket(row: TicketRow): Ticket {
@@ -214,6 +216,7 @@ export function mapTicket(row: TicketRow): Ticket {
     purchasedAt: row.purchased_at,
     checkedInAt: row.checked_in_at,
     refunded: row.refunded,
+    hiddenAt: row.hidden_at ?? null,
   };
 }
 

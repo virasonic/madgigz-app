@@ -125,6 +125,7 @@ export async function fetchTickets(
     .from("tickets")
     .select("*")
     .eq("user_id", userId)
+    .is("hidden_at", null)
     .order("purchased_at", { ascending: false });
   return ((data as TicketRow[]) ?? []).map(mapTicket);
 }

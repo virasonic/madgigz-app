@@ -19,5 +19,12 @@ export default async function SavedPage() {
     fetchTickets(supabase, user.id),
   ]);
 
-  return <SavedClient initialEvents={events} initialSavedIds={savedIds} initialTickets={tickets} />;
+  return (
+    <SavedClient
+      userId={user.id}
+      initialEvents={events}
+      initialSavedIds={savedIds}
+      initialTickets={tickets}
+    />
+  );
 }
