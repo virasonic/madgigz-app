@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { cancelEvent, toggleEventActive } from "../actions";
 import type { EventItem } from "@/lib/types";
@@ -71,7 +72,11 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
       <tbody>
         {events.map((e) => (
           <tr key={e.id} className="border-b border-muted/10 last:border-0">
-            <td className="py-2 text-foreground">{e.title}</td>
+            <td className="py-2 text-foreground">
+              <Link href={`/admin/events/${e.id}`} className="hover:text-accent hover:underline">
+                {e.title}
+              </Link>
+            </td>
             <td className="py-2 text-muted">{e.artist}</td>
             <td className="py-2 text-muted">{e.venue}</td>
             <td className="py-2 text-muted">

@@ -1,9 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { toCents } from "@/lib/pricing";
 import {
   ArtistStatus,
   DiscountRow,
+  EventItem,
   EventRow,
   mapDiscount,
   mapEvent,
@@ -203,6 +205,170 @@ export async function fetchAllTicketsAdmin(admin: SupabaseClient): Promise<Admin
 export async function fetchAllDiscounts(admin: SupabaseClient) {
   const { data } = await admin.from("discounts").select("*").order("created_at", { ascending: false });
   return ((data as DiscountRow[]) ?? []).map(mapDiscount);
+}
+
+export interface AdminEventOrder {
+  ticketId: string;
+  username: string;
+  quantity: number;
+  pricePaidCents: number;
+  feeCents: number;
+  feeVatCents: number;
+  discountCode: string | null;
+  refunded: boolean;
+  checkedInAt: string | null;
+  purchasedAt: string;
+}
+
+export interface AdminEventDiscountUsage {
+  code: string;
+  type: "percent" | "fixed";
+  value: number;
+  timesUsed: number;
+  /** Euros given away by this code on this event, non-refunded orders only -
+   *  a refund unwinds the whole order, discount included. */
+  discountGivenCents: number;
+}
+
+export interface AdminEventDaySales {
+  day: string;
+  tickets: number;
+  revenueCents: number;
+}
+
+export interface AdminEventDetail {
+  event: EventItem;
+  stats: {
+    ordersCount: number;
+    ticketsSold: number;
+    grossCents: number;
+    feeCents: number;
+    feeVatCents: number;
+    netToArtistCents: number;
+    refundedOrders: number;
+    refundedCents: number;
+    checkedInCount: number;
+  };
+  orders: AdminEventOrder[];
+  discountUsage: AdminEventDiscountUsage[];
+  dailySales: AdminEventDaySales[];
+}
+
+// Everything one event's admin detail page needs, in one round trip per
+// related table rather than N+1 per ticket.
+export async function fetchEventDetail(
+  admin: SupabaseClient,
+  eventId: string
+): Promise<AdminEventDetail | null> {
+  const { data: eventRow } = await admin.from("events").select("*").eq("id", eventId).single();
+  if (!eventRow) return null;
+  const event = mapEvent(eventRow as EventRow);
+
+  const { data: ticketRows } = await admin
+    .from("tickets")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("purchased_at", { ascending: false });
+
+  type FeeRow = TicketRow & {
+    application_fee_cents: number | null;
+    application_fee_vat_cents: number | null;
+  };
+  const tickets = (ticketRows as FeeRow[]) ?? [];
+
+  const userIds = [...new Set(tickets.map((t) => t.user_id))];
+  const { data: profileRows } =
+    userIds.length > 0
+      ? await admin.from("profiles").select("id, username").in("id", userIds)
+      : { data: [] as { id: string; username: string }[] };
+  const usernameById = new Map((profileRows ?? []).map((p) => [p.id, p.username as string]));
+
+  const discountIds = [...new Set(tickets.map((t) => t.discount_id).filter(Boolean))] as string[];
+  const { data: discountRows } =
+    discountIds.length > 0
+      ? await admin.from("discounts").select("*").in("id", discountIds)
+      : { data: [] as DiscountRow[] };
+  const discountById = new Map(
+    ((discountRows as DiscountRow[]) ?? []).map((d) => [d.id, mapDiscount(d)])
+  );
+
+  const orders: AdminEventOrder[] = tickets.map((t) => ({
+    ticketId: t.id,
+    username: usernameById.get(t.user_id) ?? "-",
+    quantity: t.quantity,
+    pricePaidCents: toCents(Number(t.price_paid)),
+    feeCents: Number(t.application_fee_cents ?? 0),
+    feeVatCents: Number(t.application_fee_vat_cents ?? 0),
+    discountCode: t.discount_id ? (discountById.get(t.discount_id)?.code ?? null) : null,
+    refunded: t.refunded,
+    checkedInAt: t.checked_in_at,
+    purchasedAt: t.purchased_at,
+  }));
+
+  // Refunded orders gave the money back, so they're excluded from every total
+  // below - same convention as /admin/billing.
+  const live = orders.filter((o) => !o.refunded);
+  const refunded = orders.filter((o) => o.refunded);
+
+  const stats = {
+    ordersCount: orders.length,
+    ticketsSold: live.reduce((sum, o) => sum + o.quantity, 0),
+    grossCents: live.reduce((sum, o) => sum + o.pricePaidCents, 0),
+    feeCents: live.reduce((sum, o) => sum + o.feeCents, 0),
+    feeVatCents: live.reduce((sum, o) => sum + o.feeVatCents, 0),
+    netToArtistCents: live.reduce((sum, o) => sum + (o.pricePaidCents - o.feeCents), 0),
+    refundedOrders: refunded.length,
+    refundedCents: refunded.reduce((sum, o) => sum + o.pricePaidCents, 0),
+    checkedInCount: live.filter((o) => o.checkedInAt).length,
+  };
+
+  // Grouped by discount_id (not the code string) so two different codes that
+  // happen to share text can never merge into one row.
+  const discountUsageById = new Map<string, { timesUsed: number; discountGivenCents: number }>();
+  for (const t of tickets) {
+    if (t.refunded || !t.discount_id) continue;
+    const undiscountedCents = toCents(event.price) * t.quantity;
+    const paidCents = toCents(Number(t.price_paid));
+    const givenCents = Math.max(undiscountedCents - paidCents, 0);
+    const existing = discountUsageById.get(t.discount_id);
+    if (existing) {
+      existing.timesUsed += 1;
+      existing.discountGivenCents += givenCents;
+    } else {
+      discountUsageById.set(t.discount_id, { timesUsed: 1, discountGivenCents: givenCents });
+    }
+  }
+  const discountUsage: AdminEventDiscountUsage[] = [...discountUsageById.entries()]
+    .map(([discountId, agg]) => {
+      const discount = discountById.get(discountId);
+      return {
+        code: discount?.code ?? "(deleted code)",
+        type: discount?.type ?? ("fixed" as const),
+        value: discount?.value ?? 0,
+        timesUsed: agg.timesUsed,
+        discountGivenCents: agg.discountGivenCents,
+      };
+    })
+    .sort((a, b) => b.timesUsed - a.timesUsed);
+
+  // Grouped by UTC calendar day of purchase, oldest first - a simple sales
+  // timeline without pulling in a charting library.
+  const dailyMap = new Map<string, { tickets: number; revenueCents: number }>();
+  for (const o of live) {
+    const day = o.purchasedAt.slice(0, 10);
+    const existing = dailyMap.get(day);
+    if (existing) {
+      existing.tickets += o.quantity;
+      existing.revenueCents += o.pricePaidCents;
+    } else {
+      dailyMap.set(day, { tickets: o.quantity, revenueCents: o.pricePaidCents });
+    }
+  }
+  const dailySales: AdminEventDaySales[] = [...dailyMap.entries()]
+    .map(([day, v]) => ({ day, ...v }))
+    .sort((a, b) => a.day.localeCompare(b.day));
+
+  return { event, stats, orders, discountUsage, dailySales };
 }
 
 export function adminClient() {

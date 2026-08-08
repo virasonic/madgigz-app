@@ -212,14 +212,13 @@ export default function ProfileClient({
             </Link>
           </div>
 
-          <div className="mb-8 grid grid-cols-3 gap-3">
+          {/* Followers dropped until there's a real follow relationship to
+              count - see [[60]] "Build fan-following-artist infrastructure".
+              A permanent 0 reads as broken; no card at all doesn't. */}
+          <div className="mb-8 grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-surface p-4 text-center">
               <p className="font-display text-2xl text-foreground">{shows.length}</p>
               <p className="text-xs text-muted">Shows</p>
-            </div>
-            <div className="rounded-2xl bg-surface p-4 text-center">
-              <p className="font-display text-2xl text-foreground">0</p>
-              <p className="text-xs text-muted">Followers</p>
             </div>
             <div className="rounded-2xl bg-surface p-4 text-center">
               <p className="font-display text-2xl text-foreground">{ticketsSold}</p>
