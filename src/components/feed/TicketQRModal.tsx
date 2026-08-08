@@ -60,8 +60,8 @@ export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalP
           <div className="mt-6 rounded-2xl bg-danger/10 p-5 text-center">
             <p className="font-heading text-danger">This event was cancelled</p>
             <p className="mt-1 text-sm text-muted">
-              You&apos;re due a refund for this ticket - the organizer will be in touch to
-              process it.
+              This ticket has been refunded to your original payment method. It can take a few
+              days to appear on your statement.
             </p>
           </div>
         ) : (
