@@ -10,9 +10,12 @@ import {
   mapDiscount,
   mapEvent,
   mapProfile,
+  mapPublicArtistProfile,
   mapTicket,
   AppUser,
   ProfileRow,
+  PublicArtistProfile,
+  PublicArtistProfileRow,
   Ticket,
   TicketRow,
 } from "@/lib/types";
@@ -26,13 +29,34 @@ export async function fetchCurrentUser(supabase: SupabaseClient): Promise<AppUse
   const { data } = await supabase
     .from("profiles")
     .select(
-      "id, username, role, artist_name, instagram, tiktok, twitter, spotify, youtube, artist_status, evidence_url, stripe_account_id, stripe_payouts_ready"
+      "id, username, role, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, artist_status, evidence_url, stripe_account_id, stripe_payouts_ready"
     )
     .eq("id", user.id)
     .single();
 
   if (!data) return null;
   return mapProfile(data as ProfileRow, user.email ?? "");
+}
+
+// The fan-facing "who am I buying from" page. Only returns approved artists -
+// a pending/rejected application or a plain fan account isn't a public page,
+// so both come back as null rather than leaking status/role to a browsing fan.
+export async function fetchArtistProfile(
+  supabase: SupabaseClient,
+  artistId: string
+): Promise<PublicArtistProfile | null> {
+  const { data } = await supabase
+    .from("profiles")
+    .select(
+      "id, username, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, role, artist_status"
+    )
+    .eq("id", artistId)
+    .eq("role", "artist")
+    .eq("artist_status", "approved")
+    .maybeSingle();
+
+  if (!data) return null;
+  return mapPublicArtistProfile(data as PublicArtistProfileRow);
 }
 
 export async function fetchEvents(

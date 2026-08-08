@@ -36,6 +36,7 @@ export interface EventItem {
 export interface ContentPost {
   id: string;
   eventId: string;
+  artistId: string | null;
   artist: string;
   showTitle: string;
   caption: string;
@@ -62,6 +63,8 @@ export interface AppUser {
   username: string;
   role: Role;
   artistName: string | null;
+  artistBio: string | null;
+  artistPhotoUrl: string | null;
   instagram: string | null;
   tiktok: string | null;
   twitter: string | null;
@@ -71,6 +74,22 @@ export interface AppUser {
   evidenceUrl: string | null;
   stripeAccountId: string | null;
   stripePayoutsReady: boolean;
+}
+
+// The subset of a profile that's safe and meaningful to show to someone
+// browsing a different artist's public page - no email, no Stripe fields, no
+// evidence (that's private verification material, not a public credential).
+export interface PublicArtistProfile {
+  id: string;
+  username: string;
+  artistName: string;
+  artistBio: string | null;
+  artistPhotoUrl: string | null;
+  instagram: string | null;
+  tiktok: string | null;
+  twitter: string | null;
+  spotify: string | null;
+  youtube: string | null;
 }
 
 export interface Discount {
@@ -150,6 +169,7 @@ export function mapEvent(row: EventRow): EventItem {
 export interface ContentPostRow {
   id: string;
   event_id: string;
+  artist_id: string | null;
   artist_name: string;
   show_title: string;
   caption: string;
@@ -161,6 +181,7 @@ export function mapContentPost(row: ContentPostRow): ContentPost {
   return {
     id: row.id,
     eventId: row.event_id,
+    artistId: row.artist_id,
     artist: row.artist_name,
     showTitle: row.show_title,
     caption: row.caption,
@@ -201,6 +222,8 @@ export interface ProfileRow {
   username: string;
   role: Role;
   artist_name: string | null;
+  artist_bio: string | null;
+  artist_photo_url: string | null;
   instagram: string | null;
   tiktok: string | null;
   twitter: string | null;
@@ -219,6 +242,8 @@ export function mapProfile(row: ProfileRow, email: string): AppUser {
     username: row.username,
     role: row.role,
     artistName: row.artist_name,
+    artistBio: row.artist_bio,
+    artistPhotoUrl: row.artist_photo_url,
     instagram: row.instagram,
     tiktok: row.tiktok,
     twitter: row.twitter,
@@ -227,6 +252,36 @@ export function mapProfile(row: ProfileRow, email: string): AppUser {
     evidenceUrl: row.evidence_url,
     stripeAccountId: row.stripe_account_id,
     stripePayoutsReady: row.stripe_payouts_ready ?? false,
+    youtube: row.youtube,
+  };
+}
+
+// Row shape for the public-profile query - a narrower select than the full
+// ProfileRow above (no email/Stripe/evidence columns to leak).
+export interface PublicArtistProfileRow {
+  id: string;
+  username: string;
+  artist_name: string | null;
+  artist_bio: string | null;
+  artist_photo_url: string | null;
+  instagram: string | null;
+  tiktok: string | null;
+  twitter: string | null;
+  spotify: string | null;
+  youtube: string | null;
+}
+
+export function mapPublicArtistProfile(row: PublicArtistProfileRow): PublicArtistProfile {
+  return {
+    id: row.id,
+    username: row.username,
+    artistName: row.artist_name ?? row.username,
+    artistBio: row.artist_bio,
+    artistPhotoUrl: row.artist_photo_url,
+    instagram: row.instagram,
+    tiktok: row.tiktok,
+    twitter: row.twitter,
+    spotify: row.spotify,
     youtube: row.youtube,
   };
 }

@@ -12,6 +12,7 @@ export default function ArtistProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [artistName, setArtistName] = useState("");
+  const [bio, setBio] = useState("");
   const [instagram, setInstagram] = useState("");
   const [tiktok, setTiktok] = useState("");
   const [twitter, setTwitter] = useState("");
@@ -56,6 +57,7 @@ export default function ArtistProfilePage() {
       .from("profiles")
       .update({
         artist_name: artistName.trim(),
+        artist_bio: bio.trim() || null,
         instagram: instagram.trim() || null,
         tiktok: tiktok.trim() || null,
         twitter: twitter.trim() || null,
@@ -93,6 +95,20 @@ export default function ArtistProfilePage() {
           onChange={(e) => setArtistName(e.target.value)}
           error={errors.artistName}
         />
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="bio" className="font-heading text-sm text-muted">
+            Bio <span className="normal-case text-muted/70">(optional)</span>
+          </label>
+          <textarea
+            id="bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            rows={3}
+            placeholder="A line or two for fans browsing your shows"
+            className="w-full rounded-2xl border border-muted/20 bg-surface px-4 py-3.5 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
 
         <div className="flex flex-col gap-3">
           <h2 className="font-heading text-sm text-muted">Social links</h2>

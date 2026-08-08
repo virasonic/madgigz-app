@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import ManageShowModal from "@/components/artist/ManageShowModal";
 import PayoutCard from "@/components/artist/PayoutCard";
@@ -60,6 +61,13 @@ function SettingsSheet({
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
         <h2 className="font-display text-xl text-foreground">Settings</h2>
         <div className="mt-4 flex flex-col gap-2">
+          <Link
+            href="/profile/edit"
+            className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
+          >
+            <span className="text-sm text-foreground">Edit Profile</span>
+            <span className="text-xs text-muted">Bio &amp; photo</span>
+          </Link>
           <PayoutCard connected={payoutConnected} ready={payoutReady} />
           {comingSoonRows.map((row) => (
             <div
@@ -135,9 +143,7 @@ export default function ProfileClient({
     <div className="p-4">
       <div className="mb-6 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary font-display text-2xl text-foreground">
-            {displayName.slice(0, 1).toUpperCase()}
-          </div>
+          <Avatar photoUrl={user.artistPhotoUrl} name={displayName} size={64} />
           <div>
             <h1 className="font-display text-2xl text-foreground">{displayName}</h1>
             <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-heading uppercase tracking-wide text-muted">

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ContentPost, EventItem } from "@/lib/types";
 
@@ -137,7 +138,13 @@ export default function ContentReelCard({
           <NoteIcon />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-heading text-sm text-foreground">{post.artist}</p>
+          {post.artistId ? (
+            <Link href={`/profile/${post.artistId}`} className="font-heading text-sm text-foreground">
+              {post.artist}
+            </Link>
+          ) : (
+            <p className="font-heading text-sm text-foreground">{post.artist}</p>
+          )}
         </div>
         {showVideo && (
           <button

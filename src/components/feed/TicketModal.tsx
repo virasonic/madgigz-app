@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import Button from "@/components/ui/Button";
 import { createCheckout, previewPromoCode } from "@/app/(app)/checkout-actions";
@@ -143,7 +144,14 @@ export default function TicketModal({
             </div>
 
             <h2 className="font-display text-2xl text-foreground">{event.title}</h2>
-            <p className="mt-1 text-sm text-muted">
+            {event.artistId ? (
+              <Link href={`/profile/${event.artistId}`} className="mt-1 inline-block text-sm text-accent">
+                {event.artist}
+              </Link>
+            ) : (
+              <p className="mt-1 text-sm text-muted">{event.artist}</p>
+            )}
+            <p className="text-sm text-muted">
               {event.venue} · {formatDate(event.date)} · {event.time}
             </p>
 
