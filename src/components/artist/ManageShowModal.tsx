@@ -4,7 +4,13 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import FeeBreakdown from "@/components/artist/FeeBreakdown";
 import { createClient } from "@/lib/supabase/client";
-import { fetchShowBuyers, fetchShowContent, ShowBuyer } from "@/lib/supabase/queries";
+import {
+  fetchShowBuyers,
+  fetchShowContent,
+  fetchShowTicketCounts,
+  ShowBuyer,
+  ShowTicketCounts,
+} from "@/lib/supabase/queries";
 import { removeEventMedia, uploadEventMedia } from "@/lib/supabase/storage";
 import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/types";
@@ -46,10 +52,15 @@ export default function ManageShowModal({
   const [removeError, setRemoveError] = useState<string | undefined>();
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [buyers, setBuyers] = useState<ShowBuyer[] | null>(null);
+  const [ticketCounts, setTicketCounts] = useState<ShowTicketCounts | null>(null);
+  const [active, setActive] = useState(show.active);
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
+  const [visibilityError, setVisibilityError] = useState<string | undefined>();
 
   useEffect(() => {
     const supabase = createClient();
     fetchShowContent(supabase, show.id).then(setPosts);
+    fetchShowTicketCounts(supabase, show.id).then(setTicketCounts);
   }, [show.id]);
 
   useEffect(() => {
@@ -144,23 +155,64 @@ export default function ManageShowModal({
     setDeletingPostId(null);
   }
 
+  async function handleToggleVisibility() {
+    const next = !active;
+    setTogglingVisibility(true);
+    setVisibilityError(undefined);
+    const supabase = createClient();
+
+    // .select() so a row-level-security refusal reads as zero rows changed
+    // rather than a silent success - see handleDeleteShow for why that matters.
+    const { data, error } = await supabase
+      .from("events")
+      .update({ active: next })
+      .eq("id", show.id)
+      .select("id");
+
+    setTogglingVisibility(false);
+
+    if (error || !data || data.length === 0) {
+      setVisibilityError("Couldn't change visibility. Please try again.");
+      return;
+    }
+
+    setActive(next);
+    onChanged();
+  }
+
   async function handleDeleteShow() {
     setRemoving(true);
     setRemoveError(undefined);
     const supabase = createClient();
 
+    // Deleted rows are requested back, because a delete blocked by row-level
+    // security is not an error - Postgres just matches nothing. Without this
+    // the modal would report success on a show that is still there.
+    const { data, error: deleteError } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", show.id)
+      .select("id");
+
+    if (deleteError || !data || data.length === 0) {
+      setRemoving(false);
+      setRemoveError(
+        "This show couldn't be deleted - it has ticket records attached. Hide it instead, or email support@aurasonic.es."
+      );
+      // The counts are the thing that decides which options are offered, so
+      // re-read them: they are what was out of date if we got here.
+      setTicketCounts(await fetchShowTicketCounts(supabase, show.id));
+      return;
+    }
+
+    // Only once the row is genuinely gone - otherwise a failed delete would
+    // strip the poster off a show that is still live.
     await removeEventMedia(supabase, [
       show.image,
       ...posts.map((p) => (p.mediaType === "video" ? p.videoUrl : p.image)),
     ]);
 
-    const { error: deleteError } = await supabase.from("events").delete().eq("id", show.id);
     setRemoving(false);
-
-    if (deleteError) {
-      setRemoveError(deleteError.message);
-      return;
-    }
     onChanged();
     onClose();
   }
@@ -252,22 +304,58 @@ export default function ManageShowModal({
 
             <Button onClick={() => setTab("content")}>Add Content</Button>
 
-            <div className="border-t border-muted/15 pt-5">
+            <div className="flex flex-col gap-5 border-t border-muted/15 pt-5">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-heading text-sm text-foreground">
+                      {active ? "Visible to fans" : "Hidden from fans"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {active
+                        ? "Showing in the feed and Explore, and on sale."
+                        : "Off the feed and off sale. Tickets already bought still work."}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    className="w-auto shrink-0 px-5 py-2.5 text-sm"
+                    onClick={handleToggleVisibility}
+                    disabled={togglingVisibility}
+                  >
+                    {togglingVisibility ? "Saving..." : active ? "Hide" : "Unhide"}
+                  </Button>
+                </div>
+                {visibilityError && <p className="text-sm text-danger">{visibilityError}</p>}
+              </div>
+
               {confirmingRemove ? (
                 <div className="flex flex-col gap-3">
-                  {show.sold > 0 ? (
-                    // Real money has moved for these tickets, so cancelling now
-                    // means a real refund - only the admin's Stripe-connected
-                    // tools can do that safely. Self-service here would either
-                    // leave fans with a ticket to a show that isn't happening,
-                    // or need to fake a refund we can't actually issue.
+                  {ticketCounts === null ? (
+                    <p className="text-sm text-muted">Checking ticket records...</p>
+                  ) : ticketCounts.live > 0 ? (
+                    // Real money has moved for these tickets, so calling the
+                    // show off means a real refund - only the admin's
+                    // Stripe-connected tools can do that safely. Self-service
+                    // here would either strand fans holding a valid ticket, or
+                    // fake a refund we cannot actually issue.
                     <p className="text-sm text-muted">
-                      {show.sold} {show.sold === 1 ? "ticket has" : "tickets have"} already been
-                      sold for this show, so it can&apos;t be removed here. Email{" "}
+                      {ticketCounts.live} {ticketCounts.live === 1 ? "ticket has" : "tickets have"}{" "}
+                      been sold for this show, so it can&apos;t be deleted here. Email{" "}
                       <a href="mailto:support@aurasonic.es" className="text-accent underline">
                         support@aurasonic.es
                       </a>{" "}
-                      and we&apos;ll refund those fans and take the show down for you.
+                      and we&apos;ll refund those fans and take the show down for you. You can hide
+                      it in the meantime to stop further sales.
+                    </p>
+                  ) : ticketCounts.total > 0 ? (
+                    // Every ticket was refunded, so nobody is left to strand -
+                    // but the rows are the record of money that moved, and they
+                    // have to outlive the show. Hiding is the answer here.
+                    <p className="text-sm text-muted">
+                      This show has refunded ticket records attached, which we have to keep for
+                      accounting. It can&apos;t be deleted, but hiding it takes it off the app for
+                      good.
                     </p>
                   ) : (
                     <p className="text-sm text-danger">
@@ -283,9 +371,9 @@ export default function ManageShowModal({
                       onClick={() => setConfirmingRemove(false)}
                       disabled={removing}
                     >
-                      {show.sold > 0 ? "Close" : "Cancel"}
+                      {ticketCounts && ticketCounts.total === 0 ? "Cancel" : "Close"}
                     </Button>
-                    {show.sold === 0 && (
+                    {ticketCounts?.total === 0 && (
                       <Button className="flex-1" onClick={handleDeleteShow} disabled={removing}>
                         {removing ? "Working..." : "Delete show"}
                       </Button>
@@ -295,7 +383,7 @@ export default function ManageShowModal({
               ) : (
                 <button
                   onClick={() => setConfirmingRemove(true)}
-                  className="text-sm font-heading text-danger"
+                  className="self-start text-sm font-heading text-danger"
                 >
                   Remove show
                 </button>

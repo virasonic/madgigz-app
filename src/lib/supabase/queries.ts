@@ -183,6 +183,26 @@ export async function fetchShowBuyers(
   }));
 }
 
+export interface ShowTicketCounts {
+  /** Every ticket row ever written for this show, refunded ones included. */
+  total: number;
+  /** Tickets that still entitle someone to walk in - i.e. not refunded. */
+  live: number;
+}
+
+// `events.sold` is a live capacity counter: a refund decrements it, so a show
+// that sold out and was fully refunded reads `sold = 0` while its ticket rows
+// are still on file. The delete policy cares about the rows, not the counter,
+// so anything deciding whether a show can be deleted has to ask this instead.
+export async function fetchShowTicketCounts(
+  supabase: SupabaseClient,
+  eventId: string
+): Promise<ShowTicketCounts> {
+  const { data } = await supabase.from("tickets").select("refunded").eq("event_id", eventId);
+  const rows = (data ?? []) as { refunded: boolean }[];
+  return { total: rows.length, live: rows.filter((row) => !row.refunded).length };
+}
+
 export async function fetchShowsByArtist(
   supabase: SupabaseClient,
   artistId: string
