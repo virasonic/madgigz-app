@@ -46,6 +46,30 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
+function ShowRow({ show, onOpen }: { show: EventItem; onOpen: () => void }) {
+  return (
+    <button
+      onClick={onOpen}
+      className="flex items-center justify-between gap-3 rounded-2xl bg-surface p-3.5 text-left"
+    >
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="truncate font-heading text-sm text-foreground">{show.title}</p>
+          {!show.active && (
+            <span className="shrink-0 rounded-full bg-muted/15 px-2 py-0.5 text-[10px] font-heading uppercase tracking-wide text-muted">
+              Hidden
+            </span>
+          )}
+        </div>
+        <p className="truncate text-xs text-muted">
+          {formatDate(show.date)} · {show.venue}
+        </p>
+      </div>
+      <span className="shrink-0 text-xs text-muted">{show.sold} sold</span>
+    </button>
+  );
+}
+
 interface ProfileClientProps {
   user: AppUser;
   savedCount: number;
@@ -62,10 +86,13 @@ export default function ProfileClient({
   const router = useRouter();
   const [activeShow, setActiveShow] = useState<EventItem | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [hiddenOpen, setHiddenOpen] = useState(false);
 
   const roleLabel = user.role === "artist" ? "Artist" : "Fan";
   const displayName = user.artistName ?? user.username;
   const ticketsSold = useMemo(() => shows.reduce((sum, show) => sum + show.sold, 0), [shows]);
+  const visibleShows = useMemo(() => shows.filter((show) => show.active), [shows]);
+  const hiddenShows = useMemo(() => shows.filter((show) => !show.active), [shows]);
 
   async function handleLogOut() {
     const supabase = createClient();
@@ -182,28 +209,49 @@ export default function ProfileClient({
             </p>
           ) : (
             <div className="mb-8 flex flex-col gap-3">
-              {shows.map((show) => (
-                <button
-                  key={show.id}
-                  onClick={() => setActiveShow(show)}
-                  className="flex items-center justify-between rounded-2xl bg-surface p-3.5 text-left"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate font-heading text-sm text-foreground">{show.title}</p>
-                      {!show.active && (
-                        <span className="shrink-0 rounded-full bg-muted/15 px-2 py-0.5 text-[10px] font-heading uppercase tracking-wide text-muted">
-                          Hidden
-                        </span>
-                      )}
-                    </div>
-                    <p className="truncate text-xs text-muted">
-                      {formatDate(show.date)} · {show.venue}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-xs text-muted">{show.sold} sold</span>
-                </button>
+              {visibleShows.length === 0 && (
+                <p className="text-sm text-muted">
+                  All your shows are hidden right now.
+                </p>
+              )}
+              {visibleShows.map((show) => (
+                <ShowRow key={show.id} show={show} onOpen={() => setActiveShow(show)} />
               ))}
+
+              {/* Hidden shows are the ones an artist has deliberately parked -
+                  still theirs to manage, but not what they came to the page
+                  for, so they stay folded away until asked for. */}
+              {hiddenShows.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setHiddenOpen((open) => !open)}
+                    aria-expanded={hiddenOpen}
+                    className="flex items-center gap-2 self-start py-1 text-sm font-heading text-muted"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                      className={`transition-transform duration-150 ${hiddenOpen ? "rotate-90" : ""}`}
+                    >
+                      <path
+                        d="M9 6l6 6-6 6"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    Hidden shows ({hiddenShows.length})
+                  </button>
+                  {hiddenOpen &&
+                    hiddenShows.map((show) => (
+                      <ShowRow key={show.id} show={show} onOpen={() => setActiveShow(show)} />
+                    ))}
+                </>
+              )}
             </div>
           )}
         </>

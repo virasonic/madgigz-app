@@ -46,6 +46,13 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Onboarding screens already pad 2.5rem from the top, which is short of the
+   notch on recent iPhones - take whichever of the two is larger rather than
+   stacking a second padding on top of the design's own spacing. */
+@utility pt-safe-page {
+  padding-top: max(2.5rem, env(safe-area-inset-top));
+}
+
 /* Rubber-band scrolling reveals the page behind the app in standalone mode,
    which reads as a rendering glitch rather than a gesture. */
 html {

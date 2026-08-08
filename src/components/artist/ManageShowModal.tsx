@@ -307,7 +307,7 @@ export default function ManageShowModal({
             <div className="flex flex-col gap-5 border-t border-muted/15 pt-5">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-heading text-sm text-foreground">
                       {active ? "Visible to fans" : "Hidden from fans"}
                     </p>
@@ -317,14 +317,18 @@ export default function ManageShowModal({
                         : "Off the feed and off sale. Tickets already bought still work."}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    className="w-auto shrink-0 px-5 py-2.5 text-sm"
+                  {/* Deliberately not the Button component: its base class sets
+                      w-full, which no width utility passed in can reliably beat
+                      (Tailwind resolves by stylesheet order, not class order),
+                      and a full-width button crushes the label beside it. */}
+                  <button
+                    type="button"
                     onClick={handleToggleVisibility}
                     disabled={togglingVisibility}
+                    className="font-display shrink-0 rounded-full border border-muted/40 px-5 py-2.5 text-sm tracking-wide text-foreground transition-colors duration-150 hover:border-foreground disabled:border-muted/20 disabled:text-muted"
                   >
                     {togglingVisibility ? "Saving..." : active ? "Hide" : "Unhide"}
-                  </Button>
+                  </button>
                 </div>
                 {visibilityError && <p className="text-sm text-danger">{visibilityError}</p>}
               </div>
