@@ -36,6 +36,6 @@ export const config = {
   // overhead - and the cookie rewriting this middleware does has no business
   // touching a signature-verified machine-to-machine request.
   matcher: [
-    "/((?!api/stripe/webhook|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api/stripe/webhook|api/health|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
