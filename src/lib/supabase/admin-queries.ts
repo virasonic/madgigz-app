@@ -113,6 +113,8 @@ export interface AdminArtistApplication {
   youtube: string | null;
   evidenceUrl: string | null;
   artistStatus: ArtistStatus;
+  stripeAccountId: string | null;
+  stripePayoutsReady: boolean;
   createdAt: string;
 }
 
@@ -123,7 +125,7 @@ export async function fetchArtistApplications(
   const { data: profileRows } = await admin
     .from("profiles")
     .select(
-      "id, username, artist_name, instagram, tiktok, twitter, spotify, youtube, evidence_url, artist_status, created_at"
+      "id, username, artist_name, instagram, tiktok, twitter, spotify, youtube, evidence_url, artist_status, stripe_account_id, stripe_payouts_ready, created_at"
     )
     .eq("role", "artist");
 
@@ -141,6 +143,8 @@ export async function fetchArtistApplications(
     youtube: p.youtube,
     evidenceUrl: p.evidence_url,
     artistStatus: (p.artist_status ?? "approved") as ArtistStatus,
+    stripeAccountId: p.stripe_account_id,
+    stripePayoutsReady: p.stripe_payouts_ready ?? false,
     createdAt: p.created_at,
   }));
 

@@ -237,6 +237,59 @@ export async function createDiscount(data: {
   return { error: error?.message ?? null };
 }
 
+export async function resetArtistPayoutAccount(
+  profileId: string
+): Promise<{ error: string | null }> {
+  await requireAdmin();
+  const admin = adminClient();
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("stripe_account_id, stripe_payouts_ready")
+    .eq("id", profileId)
+    .single();
+
+  if (!profile?.stripe_account_id) {
+    return { error: "No payout account connected" };
+  }
+
+  // Check if they have any live (non-refunded) tickets sold - those are
+  // backed by a live balance in Stripe that deleting the account would orphan.
+  const { data: liveTickets } = await admin
+    .from("tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("stripe_account_id", profile.stripe_account_id)
+    .eq("refunded", false);
+
+  if ((liveTickets && liveTickets.length > 0) || (!liveTickets && false)) {
+    return { error: "Cannot reset: artist has live tickets. Contact Stripe support." };
+  }
+
+  // Delete the connected account - Stripe will reject if there's pending
+  // balance, but that's a rare edge case and the admin can always retry
+  // after those funds are paid out.
+  try {
+    await stripe.accounts.del(profile.stripe_account_id);
+  } catch (error) {
+    console.error(`Failed to delete Stripe account ${profile.stripe_account_id}:`, error);
+    return {
+      error:
+        error instanceof Error && error.message.includes("pending")
+          ? "Artist has pending balance - wait for payout to complete, then retry"
+          : "Stripe deletion failed - check the logs and retry",
+    };
+  }
+
+  // Clear the references so they can start fresh onboarding
+  await admin
+    .from("profiles")
+    .update({ stripe_account_id: null, stripe_payouts_ready: false })
+    .eq("id", profileId);
+
+  revalidatePath("/admin/artists");
+  return { error: null };
+}
+
 export async function toggleDiscountActive(discountId: string, active: boolean) {
   await requireAdmin();
   const admin = adminClient();

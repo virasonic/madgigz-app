@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setArtistStatus } from "../actions";
+import { setArtistStatus, resetArtistPayoutAccount } from "../actions";
 import type { AdminArtistApplication } from "@/lib/supabase/admin-queries";
 import type { ArtistStatus } from "@/lib/types";
 
@@ -33,11 +33,31 @@ export default function ArtistsTable({
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetConfirm, setResetConfirm] = useState<string | null>(null);
 
   function handleSetStatus(id: string, email: string, status: ArtistStatus) {
     setPendingId(id);
     startTransition(async () => {
       await setArtistStatus(id, email, status);
+      setPendingId(null);
+    });
+  }
+
+  function handleResetPayoutAccount(id: string) {
+    if (resetConfirm !== id) {
+      setResetConfirm(id);
+      return;
+    }
+    setPendingId(id);
+    setResetError(null);
+    startTransition(async () => {
+      const result = await resetArtistPayoutAccount(id);
+      if (result.error) {
+        setResetError(result.error);
+      } else {
+        setResetConfirm(null);
+      }
       setPendingId(null);
     });
   }
@@ -60,24 +80,47 @@ export default function ArtistsTable({
                 {app.username} · {app.email}
               </p>
             </div>
-            <div className="flex shrink-0 gap-2">
-              {app.artistStatus !== "approved" && (
-                <button
-                  onClick={() => handleSetStatus(app.id, app.email, "approved")}
-                  disabled={isPending && pendingId === app.id}
-                  className="rounded-lg bg-accent/15 px-3 py-1 text-xs font-heading text-accent hover:bg-accent/25 disabled:opacity-50"
-                >
-                  Approve
-                </button>
+            <div className="flex shrink-0 flex-col gap-2">
+              <div className="flex gap-2">
+                {app.artistStatus !== "approved" && (
+                  <button
+                    onClick={() => handleSetStatus(app.id, app.email, "approved")}
+                    disabled={isPending && pendingId === app.id}
+                    className="rounded-lg bg-accent/15 px-3 py-1 text-xs font-heading text-accent hover:bg-accent/25 disabled:opacity-50"
+                  >
+                    Approve
+                  </button>
+                )}
+                {app.artistStatus !== "rejected" && (
+                  <button
+                    onClick={() => handleSetStatus(app.id, app.email, "rejected")}
+                    disabled={isPending && pendingId === app.id}
+                    className="rounded-lg bg-danger/15 px-3 py-1 text-xs font-heading text-danger hover:bg-danger/25 disabled:opacity-50"
+                  >
+                    Reject
+                  </button>
+                )}
+                {app.stripeAccountId && !app.stripePayoutsReady && (
+                  <button
+                    onClick={() => handleResetPayoutAccount(app.id)}
+                    disabled={isPending && pendingId === app.id}
+                    className={`rounded-lg px-3 py-1 text-xs font-heading transition-colors ${
+                      resetConfirm === app.id
+                        ? "bg-danger/25 text-danger"
+                        : "bg-primary/15 text-primary hover:bg-primary/25"
+                    } disabled:opacity-50`}
+                  >
+                    {resetConfirm === app.id ? "Confirm reset" : "Reset payout"}
+                  </button>
+                )}
+              </div>
+              {resetConfirm === app.id && (
+                <p className="text-xs text-muted">
+                  Click again to delete the stuck Stripe account and clear the connection.
+                </p>
               )}
-              {app.artistStatus !== "rejected" && (
-                <button
-                  onClick={() => handleSetStatus(app.id, app.email, "rejected")}
-                  disabled={isPending && pendingId === app.id}
-                  className="rounded-lg bg-danger/15 px-3 py-1 text-xs font-heading text-danger hover:bg-danger/25 disabled:opacity-50"
-                >
-                  Reject
-                </button>
+              {resetError && resetConfirm !== app.id && (
+                <p className="text-xs text-danger">{resetError}</p>
               )}
             </div>
           </div>
