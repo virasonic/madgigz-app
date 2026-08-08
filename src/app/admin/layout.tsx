@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: "/admin/artists", label: "Artists" },
   { href: "/admin/events", label: "Events" },
   { href: "/admin/billing", label: "Billing" },
+  { href: "/admin/payouts", label: "Payouts" },
   { href: "/admin/discounts", label: "Discounts" },
 ];
 

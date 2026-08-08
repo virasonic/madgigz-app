@@ -158,6 +158,49 @@ export async function refundTicket(ticketId: string): Promise<{ error: string | 
   return { error: null };
 }
 
+// Pays out an artist's held Stripe balance to their bank. Artist accounts run
+// on a manual payout schedule, so this is the only way money leaves Stripe -
+// meant to be pressed once their event has happened.
+export async function releaseArtistPayout(
+  profileId: string
+): Promise<{ paidCents: number; error: string | null }> {
+  await requireAdmin();
+  const admin = adminClient();
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("stripe_account_id")
+    .eq("id", profileId)
+    .single();
+  if (!profile?.stripe_account_id) return { paidCents: 0, error: "No payout account connected" };
+
+  try {
+    const balance = await stripe.balance.retrieve({}, { stripeAccount: profile.stripe_account_id });
+    const available = balance.available.find((b) => b.currency === "eur")?.amount ?? 0;
+    if (available <= 0) {
+      // Card funds spend a few days as "pending" before Stripe lets them be
+      // paid out - not an error, just not releasable yet.
+      return { paidCents: 0, error: "Nothing available to pay out yet" };
+    }
+
+    await stripe.payouts.create(
+      { amount: available, currency: "eur" },
+      {
+        stripeAccount: profile.stripe_account_id,
+        // Same account + same amount + same day = one payout, so an accidental
+        // double-click can't pay twice.
+        idempotencyKey: `payout_${profile.stripe_account_id}_${available}_${new Date().toISOString().slice(0, 10)}`,
+      }
+    );
+
+    revalidatePath("/admin/payouts");
+    return { paidCents: available, error: null };
+  } catch (error) {
+    console.error(`Payout failed for profile ${profileId}:`, error);
+    return { paidCents: 0, error: "Payout failed - nothing was sent. Check the logs and retry." };
+  }
+}
+
 export async function promoteToAdmin(userId: string) {
   await requireAdmin();
   const admin = adminClient();

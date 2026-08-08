@@ -53,6 +53,13 @@ export async function startPayoutOnboarding(): Promise<{ url: string | null; err
           transfers: { requested: true },
           card_payments: { requested: true },
         },
+        // Ticket money accumulates in the artist's Stripe balance but can only
+        // reach their bank when MadGigz triggers the payout - after the event
+        // has happened. Closes the sell-tickets-withdraw-cancel fraud hole,
+        // and guarantees refunds always have a balance to reverse against.
+        settings: {
+          payouts: { schedule: { interval: "manual" } },
+        },
       });
       accountId = account.id;
       await admin.from("profiles").update({ stripe_account_id: accountId }).eq("id", user.id);
