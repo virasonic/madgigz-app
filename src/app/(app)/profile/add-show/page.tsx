@@ -32,6 +32,7 @@ export default function AddShowPage() {
   const [price, setPrice] = useState("");
   const [capacity, setCapacity] = useState("");
   const [maxPerOrder, setMaxPerOrder] = useState("6");
+  const [lineup, setLineup] = useState<string[]>([""]);
   const [description, setDescription] = useState("");
   const [accentColor, setAccentColor] = useState(ACCENT_SWATCHES[0].value);
   const [ticketingMode, setTicketingMode] = useState<TicketingMode>("internal");
@@ -49,8 +50,23 @@ export default function AddShowPage() {
         return;
       }
       setUser(current);
+      // Pre-fills the headliner slot with the artist's own name - they can
+      // still edit or replace it, this is just a sane starting point.
+      setLineup([current.artistName ?? current.username]);
     });
   }, [router]);
+
+  function updateLineupEntry(index: number, value: string) {
+    setLineup((current) => current.map((act, i) => (i === index ? value : act)));
+  }
+
+  function addLineupEntry() {
+    setLineup((current) => [...current, ""]);
+  }
+
+  function removeLineupEntry(index: number) {
+    setLineup((current) => current.filter((_, i) => i !== index));
+  }
 
   function handlePosterChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -69,6 +85,9 @@ export default function AddShowPage() {
     if (!date) nextErrors.date = "Date is required";
     if (!time) nextErrors.time = "Time is required";
     if (!description.trim()) nextErrors.description = "Description is required";
+
+    const cleanedLineup = lineup.map((act) => act.trim()).filter(Boolean);
+    if (cleanedLineup.length === 0) nextErrors.lineup = "Add at least one artist to the lineup";
 
     // price.trim() rather than !price, so "0" (a free event) is accepted.
     const priceNum = Number(price);
@@ -127,7 +146,7 @@ export default function AddShowPage() {
       capacity: capacityNum,
       max_per_order: maxPerOrderNum,
       description: description.trim(),
-      lineup: [artistName],
+      lineup: cleanedLineup,
       doors: time,
       age_restriction: "18+",
       rating: 0,
@@ -255,6 +274,38 @@ export default function AddShowPage() {
               />
             ))}
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="font-heading text-sm text-muted">Lineup</span>
+          {lineup.map((act, i) => (
+            <div key={i} className="flex gap-2">
+              <input
+                value={act}
+                onChange={(e) => updateLineupEntry(i, e.target.value)}
+                placeholder={i === 0 ? "Headliner" : "Support act"}
+                className="w-full min-w-0 flex-1 rounded-2xl border border-muted/20 bg-surface px-4 py-3.5 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {lineup.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeLineupEntry(i)}
+                  aria-label="Remove from lineup"
+                  className="shrink-0 rounded-2xl border border-muted/20 px-4 text-muted"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addLineupEntry}
+            className="self-start text-sm font-heading text-accent"
+          >
+            + Add artist
+          </button>
+          {errors.lineup && <p className="text-sm text-danger">{errors.lineup}</p>}
         </div>
 
         <div className="flex flex-col gap-1.5">

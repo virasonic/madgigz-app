@@ -144,24 +144,6 @@ export default function ManageShowModal({
     setDeletingPostId(null);
   }
 
-  async function handleHideShow() {
-    setRemoving(true);
-    setRemoveError(undefined);
-    const supabase = createClient();
-    const { error: updateError } = await supabase
-      .from("events")
-      .update({ active: false })
-      .eq("id", show.id);
-    setRemoving(false);
-
-    if (updateError) {
-      setRemoveError(updateError.message);
-      return;
-    }
-    onChanged();
-    onClose();
-  }
-
   async function handleDeleteShow() {
     setRemoving(true);
     setRemoveError(undefined);
@@ -274,11 +256,18 @@ export default function ManageShowModal({
               {confirmingRemove ? (
                 <div className="flex flex-col gap-3">
                   {show.sold > 0 ? (
+                    // Real money has moved for these tickets, so cancelling now
+                    // means a real refund - only the admin's Stripe-connected
+                    // tools can do that safely. Self-service here would either
+                    // leave fans with a ticket to a show that isn't happening,
+                    // or need to fake a refund we can't actually issue.
                     <p className="text-sm text-muted">
                       {show.sold} {show.sold === 1 ? "ticket has" : "tickets have"} already been
-                      sold for this show, so deleting it would also delete those fans&apos;
-                      tickets. Hide it instead - it disappears from Feed/Explore, but existing
-                      ticket holders keep their tickets and you can still check them in.
+                      sold for this show, so it can&apos;t be removed here. Email{" "}
+                      <a href="mailto:support@aurasonic.es" className="text-accent underline">
+                        support@aurasonic.es
+                      </a>{" "}
+                      and we&apos;ll refund those fans and take the show down for you.
                     </p>
                   ) : (
                     <p className="text-sm text-danger">
@@ -294,19 +283,13 @@ export default function ManageShowModal({
                       onClick={() => setConfirmingRemove(false)}
                       disabled={removing}
                     >
-                      Cancel
+                      {show.sold > 0 ? "Close" : "Cancel"}
                     </Button>
-                    <Button
-                      className="flex-1"
-                      onClick={show.sold > 0 ? handleHideShow : handleDeleteShow}
-                      disabled={removing}
-                    >
-                      {removing
-                        ? "Working..."
-                        : show.sold > 0
-                          ? "Hide show"
-                          : "Delete show"}
-                    </Button>
+                    {show.sold === 0 && (
+                      <Button className="flex-1" onClick={handleDeleteShow} disabled={removing}>
+                        {removing ? "Working..." : "Delete show"}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ) : (
