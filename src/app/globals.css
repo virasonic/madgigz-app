@@ -34,3 +34,21 @@ body {
   color: var(--foreground);
   font-family: var(--font-dm-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Installed to the home screen there's no browser chrome, so the layout runs
+   edge to edge under the notch and home indicator. These keep content clear of
+   both; they collapse to zero in a normal browser tab. */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Rubber-band scrolling reveals the page behind the app in standalone mode,
+   which reads as a rendering glitch rather than a gesture. */
+html {
+  overscroll-behavior-y: none;
+  background: var(--background);
+}

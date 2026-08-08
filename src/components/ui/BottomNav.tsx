@@ -126,7 +126,9 @@ export default function BottomNav({ role }: { role: Role }) {
   ];
 
   return (
-    <nav className="sticky bottom-0 z-20 flex border-t border-muted/15 bg-background/95 backdrop-blur">
+    // pb-safe keeps the tabs above the iPhone home indicator when installed to
+    // the home screen, where there's no browser chrome to sit behind.
+    <nav className="pb-safe sticky bottom-0 z-20 flex border-t border-muted/15 bg-background/95 backdrop-blur">
       {items.map((item) => {
         const active = pathname === item.href;
         return (
