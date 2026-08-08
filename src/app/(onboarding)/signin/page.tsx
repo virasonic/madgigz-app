@@ -7,13 +7,23 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 
+// The route that sends people here only ever passes a safe code, never
+// Supabase's own error text (see src/app/auth/confirm/route.ts) - this maps
+// that code to something a fan/artist can actually act on. Any code not
+// recognised here falls back to the same safe message rather than rendering
+// raw text, in case a new code is ever added upstream without updating this.
+const LINK_ERROR_MESSAGES: Record<string, string> = {
+  link_failed:
+    "That link didn't work - it may have expired or already been used. If you're already verified, sign in below. Otherwise, sign up again for a new link.",
+};
+
 function LinkError() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
   if (!error) return null;
   return (
     <p className="-mt-2 mb-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
-      That link didn&apos;t work: {error}
+      {LINK_ERROR_MESSAGES[error] ?? LINK_ERROR_MESSAGES.link_failed}
     </p>
   );
 }

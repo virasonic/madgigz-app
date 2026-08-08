@@ -26,12 +26,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}${destination}`);
     }
 
+    // Supabase's own error text ("Email link is invalid or has expired") is
+    // written for developers, not the person who just clicked a link in their
+    // inbox - log the real reason, hand the page a safe code instead of the
+    // raw message. Same pattern as the Stripe/checkout error hardening.
     console.error("auth/confirm verifyOtp failed:", error?.message);
-    return NextResponse.redirect(
-      `${origin}/signin?error=${encodeURIComponent(error?.message ?? "verify_failed")}`
-    );
+    return NextResponse.redirect(`${origin}/signin?error=link_failed`);
   }
 
   console.error("auth/confirm missing token_hash/type", { tokenHash, type });
-  return NextResponse.redirect(`${origin}/signin?error=missing_token`);
+  return NextResponse.redirect(`${origin}/signin?error=link_failed`);
 }
