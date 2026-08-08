@@ -183,9 +183,9 @@ export default function ScanTicketsPage() {
                 </>
               ) : result.status === "cancelled" ? (
                 <>
-                  <p className="font-display text-2xl text-danger">Event cancelled</p>
+                  <p className="font-display text-2xl text-danger">Ticket refunded</p>
                   <p className="text-sm text-muted">
-                    This event was cancelled and the ticket refunded - do not admit.
+                    This ticket was refunded and is no longer valid - do not admit.
                   </p>
                   <p className="text-foreground">{result.event.title}</p>
                 </>

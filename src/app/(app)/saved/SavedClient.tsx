@@ -117,7 +117,7 @@ export default function SavedClient({
                       style={{ backgroundColor: ticket.refunded ? "var(--danger)" : event.accentColor }}
                     >
                       {ticket.refunded
-                        ? "Cancelled"
+                        ? "Refunded"
                         : ticket.checkedInAt
                           ? "Checked in"
                           : "Confirmed"}

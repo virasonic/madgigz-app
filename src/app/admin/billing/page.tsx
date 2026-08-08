@@ -1,5 +1,6 @@
 import { adminClient, fetchAllTicketsAdmin, requireAdmin } from "@/lib/supabase/admin-queries";
 import { formatEuros, toCents } from "@/lib/pricing";
+import RefundButton from "./RefundButton";
 
 export default async function AdminBillingPage() {
   await requireAdmin();
@@ -99,6 +100,7 @@ export default async function AdminBillingPage() {
                 <th className="pb-2 font-heading">Fan paid</th>
                 <th className="pb-2 font-heading">Our fee</th>
                 <th className="pb-2 font-heading">Date</th>
+                <th className="pb-2 font-heading" />
               </tr>
             </thead>
             <tbody>
@@ -114,6 +116,18 @@ export default async function AdminBillingPage() {
                     {formatEuros(t.feeCents)}
                   </td>
                   <td className="py-2 text-muted">{new Date(t.purchasedAt).toLocaleString()}</td>
+                  <td className="py-2 text-right">
+                    {t.refunded ? (
+                      <span className="rounded-full bg-muted/15 px-2 py-0.5 text-xs text-muted">
+                        Refunded
+                      </span>
+                    ) : (
+                      <RefundButton
+                        ticketId={t.id}
+                        description={`${t.username}'s ${formatEuros(toCents(t.pricePaid))} order for ${t.eventTitle}`}
+                      />
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

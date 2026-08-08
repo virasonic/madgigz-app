@@ -107,6 +107,57 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
   return { deleted: false, refunded, failed, errors };
 }
 
+// Refunds one ticket without touching the rest of the event - for special
+// circumstances (a fan who can't make it, a duplicate order), not routine use.
+// Shares the cancelEvent idempotency key (refund_{ticketId}), so the two paths
+// can never double-refund the same ticket: whichever runs second gets Stripe's
+// cached response for the first.
+export async function refundTicket(ticketId: string): Promise<{ error: string | null }> {
+  await requireAdmin();
+  const admin = adminClient();
+
+  const { data: ticket } = await admin
+    .from("tickets")
+    .select("id, event_id, quantity, refunded, stripe_payment_intent_id")
+    .eq("id", ticketId)
+    .single();
+
+  if (!ticket) return { error: "Ticket not found" };
+  if (ticket.refunded) return { error: "Already refunded" };
+
+  // Free tickets took no money; there's nothing to send back, but the ticket
+  // still gets invalidated and its seats released.
+  if (ticket.stripe_payment_intent_id) {
+    try {
+      await stripe.refunds.create(
+        {
+          payment_intent: ticket.stripe_payment_intent_id,
+          // Funds sit in the artist's balance under destination charges -
+          // without reverse_transfer the fan would be repaid out of MadGigz's
+          // pocket while the artist keeps the money.
+          reverse_transfer: true,
+          refund_application_fee: true,
+        },
+        { idempotencyKey: `refund_${ticket.id}` }
+      );
+    } catch (error) {
+      // Logged in full server-side; the admin gets a plain message rather than
+      // a raw Stripe error.
+      console.error(`Refund failed for ticket ${ticket.id}:`, error);
+      return { error: "Stripe refund failed - nothing was changed. Check the logs and retry." };
+    }
+  }
+
+  await admin.from("tickets").update({ refunded: true }).eq("id", ticket.id);
+  await admin.rpc("release_event_capacity", {
+    p_event_id: ticket.event_id,
+    p_quantity: ticket.quantity,
+  });
+
+  revalidatePath("/admin/billing");
+  return { error: null };
+}
+
 export async function promoteToAdmin(userId: string) {
   await requireAdmin();
   const admin = adminClient();
