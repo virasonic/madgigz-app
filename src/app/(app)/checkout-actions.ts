@@ -73,7 +73,10 @@ export async function createCheckout(
     p_event_id: event.id,
     p_quantity: quantity,
   });
-  if (reserveError) return { error: reserveError.message };
+  if (reserveError) {
+    console.error("Capacity reservation failed:", reserveError);
+    return { error: "Couldn't hold your tickets. Please try again." };
+  }
   if (!reserved) return { error: "Not enough tickets left" };
 
   async function release() {
@@ -99,7 +102,8 @@ export async function createCheckout(
 
     if (error) {
       await release();
-      return { error: error.message };
+      console.error("Free ticket fulfilment failed:", error);
+      return { error: "Couldn't issue your ticket. Please try again." };
     }
     if (!ticketId) {
       // Already had a free ticket for this event - give the capacity back.
@@ -168,7 +172,10 @@ export async function createCheckout(
     return { url: session.url };
   } catch (error) {
     await release();
-    return { error: error instanceof Error ? error.message : "Could not start checkout" };
+    // Stripe's error text is written for developers and can echo key
+    // fragments and account ids - log it, don't show it to a buyer.
+    console.error("Checkout session creation failed:", error);
+    return { error: "Couldn't start checkout. Please try again." };
   }
 }
 

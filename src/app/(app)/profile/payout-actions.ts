@@ -30,6 +30,22 @@ function appUrl() {
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
 
+// Stripe's own error text is written for developers and can contain fragments
+// of keys and account ids - it belongs in the logs, not in an artist's face.
+// Our own thrown errors (the requireArtist guards) are safe and useful, so
+// those pass through.
+const SAFE_MESSAGES = new Set([
+  "Not signed in",
+  "Not an artist",
+  "Artist not approved yet",
+]);
+
+function userFacingError(error: unknown, context: string): string {
+  console.error(`${context} failed:`, error);
+  if (error instanceof Error && SAFE_MESSAGES.has(error.message)) return error.message;
+  return "Something went wrong connecting to Stripe. Please try again, or contact support if it keeps happening.";
+}
+
 // Returns a Stripe-hosted onboarding URL for the caller to redirect to.
 // Account Links are single-use and expire in minutes, so a fresh one is minted
 // on every click and never stored.
@@ -74,7 +90,7 @@ export async function startPayoutOnboarding(): Promise<{ url: string | null; err
 
     return { url: link.url, error: null };
   } catch (error) {
-    return { url: null, error: error instanceof Error ? error.message : "Something went wrong" };
+    return { url: null, error: userFacingError(error, "startPayoutOnboarding") };
   }
 }
 
@@ -96,7 +112,7 @@ export async function refreshPayoutStatus(): Promise<{ ready: boolean; error: st
     revalidatePath("/profile");
     return { ready, error: null };
   } catch (error) {
-    return { ready: false, error: error instanceof Error ? error.message : "Something went wrong" };
+    return { ready: false, error: userFacingError(error, "refreshPayoutStatus") };
   }
 }
 
@@ -110,6 +126,6 @@ export async function openPayoutDashboard(): Promise<{ url: string | null; error
     const link = await stripe.accounts.createLoginLink(accountId);
     return { url: link.url, error: null };
   } catch (error) {
-    return { url: null, error: error instanceof Error ? error.message : "Something went wrong" };
+    return { url: null, error: userFacingError(error, "openPayoutDashboard") };
   }
 }
