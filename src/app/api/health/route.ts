@@ -25,6 +25,12 @@ export async function GET() {
     { key: "STRIPE_WEBHOOK_SECRET_CONNECT", prefix: "whsec_", optional: true },
     { key: "RESEND_API_KEY", prefix: "re_" },
     { key: "NEXT_PUBLIC_APP_URL", prefix: "http" },
+    // Optional: signup falls back to no captcha when these are unset (see
+    // signup/page.tsx), so a missing value shouldn't fail the whole deploy -
+    // but a wrong-prefix paste (e.g. the secret key in the site-key slot)
+    // should still show up here rather than fail silently at signup time.
+    { key: "NEXT_PUBLIC_TURNSTILE_SITE_KEY", prefix: "0x", optional: true },
+    { key: "TURNSTILE_SECRET_KEY", prefix: "0x", optional: true },
   ] as const;
 
   const config = Object.fromEntries(

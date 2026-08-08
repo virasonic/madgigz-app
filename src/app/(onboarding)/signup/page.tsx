@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Turnstile, { TurnstileHandle } from "@/components/ui/Turnstile";
 import { createClient } from "@/lib/supabase/client";
+import { verifyTurnstileToken } from "./turnstile-actions";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 type Role = "fan" | "artist";
 
@@ -43,6 +47,8 @@ function SignUpForm() {
   const [dob, setDob] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -60,10 +66,28 @@ function SignUpForm() {
       nextErrors.dob = `You must be at least ${MIN_AGE} to join MadGigz`;
     }
 
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      nextErrors.captcha = "Complete the verification below";
+    }
+
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
     setSubmitting(true);
+
+    // Redeemed against Cloudflare server-side before any account is created -
+    // a token the client merely claims to have isn't proof of anything.
+    if (TURNSTILE_SITE_KEY && turnstileToken) {
+      const { success } = await verifyTurnstileToken(turnstileToken);
+      if (!success) {
+        setSubmitting(false);
+        setErrors({ captcha: "Verification failed - please try again" });
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
+        return;
+      }
+    }
+
     const supabase = createClient();
     const { error } = await supabase.auth.signUp({
       email,
@@ -77,6 +101,8 @@ function SignUpForm() {
 
     if (error) {
       setErrors({ email: error.message });
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
       return;
     }
 
@@ -139,6 +165,21 @@ function SignUpForm() {
           error={errors.confirmPassword}
           autoComplete="new-password"
         />
+
+        {TURNSTILE_SITE_KEY && (
+          <div className="flex flex-col gap-1.5">
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={TURNSTILE_SITE_KEY}
+              onVerify={(token) => {
+                setTurnstileToken(token);
+                setErrors((current) => ({ ...current, captcha: "" }));
+              }}
+              onExpire={() => setTurnstileToken(null)}
+            />
+            {errors.captcha && <p className="text-sm text-danger">{errors.captcha}</p>}
+          </div>
+        )}
 
         <Button type="submit" className="mt-2" disabled={submitting}>
           {submitting ? "Creating account..." : "Continue"}
