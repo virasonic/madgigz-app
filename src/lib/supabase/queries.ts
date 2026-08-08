@@ -140,6 +140,50 @@ export function applyDiscount(subtotal: number, discount: Discount | null): numb
   return Math.max(0, Math.round(discounted * 100) / 100);
 }
 
+export interface ShowBuyer {
+  ticketId: string;
+  username: string;
+  quantity: number;
+  pricePaid: number;
+  purchasedAt: string;
+  checkedInAt: string | null;
+  refunded: boolean;
+}
+
+// RLS ("Artists can view tickets for their own events") scopes this to the
+// caller's own shows - an artist asking for someone else's event id just
+// gets an empty list back rather than an error.
+export async function fetchShowBuyers(
+  supabase: SupabaseClient,
+  eventId: string
+): Promise<ShowBuyer[]> {
+  const { data: tickets } = await supabase
+    .from("tickets")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("purchased_at", { ascending: false });
+
+  const rows = (tickets as TicketRow[]) ?? [];
+  if (rows.length === 0) return [];
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, username")
+    .in("id", [...new Set(rows.map((t) => t.user_id))]);
+
+  const usernameById = new Map((profiles ?? []).map((p) => [p.id, p.username as string]));
+
+  return rows.map((t) => ({
+    ticketId: t.id,
+    username: usernameById.get(t.user_id) ?? "-",
+    quantity: t.quantity,
+    pricePaid: Number(t.price_paid),
+    purchasedAt: t.purchased_at,
+    checkedInAt: t.checked_in_at,
+    refunded: t.refunded,
+  }));
+}
+
 export async function fetchShowsByArtist(
   supabase: SupabaseClient,
   artistId: string

@@ -3,12 +3,12 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
-import { fetchShowContent } from "@/lib/supabase/queries";
+import { fetchShowBuyers, fetchShowContent, ShowBuyer } from "@/lib/supabase/queries";
 import { removeEventMedia, uploadEventMedia } from "@/lib/supabase/storage";
 import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/types";
 
-type Tab = "overview" | "content";
+type Tab = "overview" | "content" | "buyers";
 
 interface ManageShowModalProps {
   show: EventItem;
@@ -44,11 +44,18 @@ export default function ManageShowModal({
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | undefined>();
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [buyers, setBuyers] = useState<ShowBuyer[] | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
     fetchShowContent(supabase, show.id).then(setPosts);
   }, [show.id]);
+
+  useEffect(() => {
+    if (tab !== "buyers" || buyers !== null) return;
+    const supabase = createClient();
+    fetchShowBuyers(supabase, show.id).then(setBuyers);
+  }, [tab, buyers, show.id]);
 
   useEffect(() => {
     return () => {
@@ -208,6 +215,14 @@ export default function ManageShowModal({
           >
             Content
           </button>
+          <button
+            onClick={() => setTab("buyers")}
+            className={`flex-1 rounded-full py-2 text-sm font-heading ${
+              tab === "buyers" ? "bg-primary text-foreground" : "text-muted"
+            }`}
+          >
+            Buyers
+          </button>
         </div>
 
         {tab === "overview" ? (
@@ -295,6 +310,56 @@ export default function ManageShowModal({
                 </button>
               )}
             </div>
+          </div>
+        ) : tab === "buyers" ? (
+          <div className="mt-6 flex flex-col gap-3">
+            {buyers === null ? (
+              <p className="text-sm text-muted">Loading buyers...</p>
+            ) : buyers.length === 0 ? (
+              <p className="text-sm text-muted">No tickets sold for this show yet.</p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted">
+                    {buyers.length} {buyers.length === 1 ? "order" : "orders"}
+                  </span>
+                  <span className="text-muted">
+                    {buyers.reduce((sum, b) => sum + b.quantity, 0)} tickets
+                  </span>
+                </div>
+                {buyers.map((buyer) => (
+                  <div
+                    key={buyer.ticketId}
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-background p-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-heading text-sm text-foreground">
+                        {buyer.username}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {new Date(buyer.purchasedAt).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                        })}{" "}
+                        · {buyer.quantity} {buyer.quantity === 1 ? "ticket" : "tickets"} · €
+                        {buyer.pricePaid.toFixed(2)}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-heading uppercase ${
+                        buyer.refunded
+                          ? "bg-danger/15 text-danger"
+                          : buyer.checkedInAt
+                            ? "bg-accent/15 text-accent"
+                            : "bg-muted/15 text-muted"
+                      }`}
+                    >
+                      {buyer.refunded ? "Refunded" : buyer.checkedInAt ? "Checked in" : "Going"}
+                    </span>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         ) : (
           <div className="mt-6 flex flex-col gap-5">
