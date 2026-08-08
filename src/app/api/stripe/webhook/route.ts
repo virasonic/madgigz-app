@@ -18,20 +18,42 @@ async function releaseCapacity(session: Stripe.Checkout.Session) {
   await admin.rpc("release_event_capacity", { p_event_id: eventId, p_quantity: quantity });
 }
 
+// Stripe delivers platform events (checkout.session.*) and connected-account
+// events (account.updated on v1 accounts) to *separate* destinations, each with
+// its own signing secret. Both point at this route, so a delivery is genuine if
+// it verifies against any configured secret.
+function webhookSecrets(): string[] {
+  return [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_WEBHOOK_SECRET_CONNECT].filter(
+    (s): s is string => Boolean(s)
+  );
+}
+
 export async function POST(request: NextRequest) {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret) return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  const secrets = webhookSecrets();
+  if (secrets.length === 0) {
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
 
   const signature = request.headers.get("stripe-signature");
   if (!signature) return NextResponse.json({ error: "Missing signature" }, { status: 400 });
 
-  let event: Stripe.Event;
-  try {
-    const body = await request.text();
-    event = await stripe.webhooks.constructEventAsync(body, signature, secret);
-  } catch (error) {
-    // Bad signature - never process it, and don't ask Stripe to retry.
-    console.error("Stripe webhook signature verification failed:", error);
+  const body = await request.text();
+  let event: Stripe.Event | null = null;
+  let lastError: unknown = null;
+
+  for (const secret of secrets) {
+    try {
+      event = await stripe.webhooks.constructEventAsync(body, signature, secret);
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!event) {
+    // Verified against none of them - never process it, and don't ask Stripe to
+    // retry, since a bad signature won't fix itself.
+    console.error("Stripe webhook signature verification failed:", lastError);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
