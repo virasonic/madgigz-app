@@ -67,15 +67,21 @@ function ExploreIcon(active: boolean) {
   );
 }
 
-function SavedIcon(active: boolean) {
+function TicketIcon(active: boolean) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <path
-        d="M6 4h12a1 1 0 0 1 1 1v15l-7-4-7 4V5a1 1 0 0 1 1-1Z"
+        d="M3.375 5.25c-.62 0-1.125.504-1.125 1.125v3.026a3 3 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a3 3 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"
         stroke="currentColor"
         strokeWidth={active ? 2.4 : 1.8}
+        strokeLinecap="round"
         strokeLinejoin="round"
-        fill={active ? "currentColor" : "none"}
+      />
+      <path
+        d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+        strokeLinecap="round"
       />
     </svg>
   );
@@ -117,7 +123,7 @@ export default function BottomNav({ role }: { role: Role }) {
   const items: NavItem[] = [
     { href: "/feed", label: "Feed", icon: FeedIcon },
     { href: "/explore", label: "Explore", icon: ExploreIcon },
-    { href: "/saved", label: "Saved", icon: SavedIcon },
+    { href: "/saved", label: "Tickets", icon: TicketIcon },
     {
       href: "/profile",
       label: "Profile",

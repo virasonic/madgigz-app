@@ -27,7 +27,7 @@ export default function SavedClient({
   initialSavedIds,
   initialTickets,
 }: SavedClientProps) {
-  const [subTab, setSubTab] = useState<SubTab>("events");
+  const [subTab, setSubTab] = useState<SubTab>("tickets");
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [activeTicket, setActiveTicket] = useState<{ ticket: Ticket; event: EventItem } | null>(
     null
@@ -51,17 +51,26 @@ export default function SavedClient({
 
   return (
     <div className="p-4">
-      <h1 className="font-display mb-4 text-2xl text-foreground">Saved</h1>
+      <div className="mb-4 flex items-center gap-2">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M3.375 5.25c-.62 0-1.125.504-1.125 1.125v3.026a3 3 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a3 3 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        </svg>
+        <h1 className="font-display text-2xl text-foreground">Tickets</h1>
+      </div>
 
       <div className="mb-5 flex gap-2 rounded-full bg-surface p-1">
-        <button
-          onClick={() => setSubTab("events")}
-          className={`flex-1 rounded-full py-2 text-sm font-heading ${
-            subTab === "events" ? "bg-primary text-foreground" : "text-muted"
-          }`}
-        >
-          Saved Events
-        </button>
         <button
           onClick={() => setSubTab("tickets")}
           className={`flex-1 rounded-full py-2 text-sm font-heading ${
@@ -70,12 +79,20 @@ export default function SavedClient({
         >
           My Tickets ({ticketRows.length})
         </button>
+        <button
+          onClick={() => setSubTab("events")}
+          className={`flex-1 rounded-full py-2 text-sm font-heading ${
+            subTab === "events" ? "bg-primary text-foreground" : "text-muted"
+          }`}
+        >
+          Liked Events
+        </button>
       </div>
 
       {subTab === "events" ? (
         savedEvents.length === 0 ? (
           <p className="text-sm text-muted">
-            Tap the bookmark icon on an event to save it here.
+            Events you save will show up here.
           </p>
         ) : (
           <div className="flex flex-col gap-3">
