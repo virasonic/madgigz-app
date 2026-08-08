@@ -159,7 +159,10 @@ export interface AdminTicketRow {
   eventTitle: string;
   quantity: number;
   pricePaid: number;
+  /** Total deducted from the artist: commission + IVA. */
   feeCents: number;
+  /** The IVA portion - owed to Hacienda, not revenue. */
+  feeVatCents: number;
   refunded: boolean;
   purchasedAt: string;
 }
@@ -175,13 +178,19 @@ export async function fetchAllTicketsAdmin(admin: SupabaseClient): Promise<Admin
   const usernameById = new Map((profiles ?? []).map((p) => [p.id, p.username]));
   const titleById = new Map((events ?? []).map((e) => [e.id, e.title]));
 
-  return ((tickets as (TicketRow & { application_fee_cents: number | null })[]) ?? []).map((t) => ({
+  type FeeRow = TicketRow & {
+    application_fee_cents: number | null;
+    application_fee_vat_cents: number | null;
+  };
+
+  return ((tickets as FeeRow[]) ?? []).map((t) => ({
     id: t.id,
     username: usernameById.get(t.user_id) ?? "-",
     eventTitle: titleById.get(t.event_id) ?? "-",
     quantity: t.quantity,
     pricePaid: Number(t.price_paid),
     feeCents: Number(t.application_fee_cents ?? 0),
+    feeVatCents: Number(t.application_fee_vat_cents ?? 0),
     refunded: t.refunded,
     purchasedAt: t.purchased_at,
   }));

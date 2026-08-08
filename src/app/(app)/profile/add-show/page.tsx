@@ -31,6 +31,7 @@ export default function AddShowPage() {
   const [time, setTime] = useState("");
   const [price, setPrice] = useState("");
   const [capacity, setCapacity] = useState("");
+  const [maxPerOrder, setMaxPerOrder] = useState("6");
   const [description, setDescription] = useState("");
   const [accentColor, setAccentColor] = useState(ACCENT_SWATCHES[0].value);
   const [ticketingMode, setTicketingMode] = useState<TicketingMode>("internal");
@@ -48,9 +49,6 @@ export default function AddShowPage() {
         return;
       }
       setUser(current);
-      // An artist who can't be paid out yet shouldn't land on the internal
-      // ticketing option preselected.
-      if (!current.stripePayoutsReady) setTicketingMode("external");
     });
   }, [router]);
 
@@ -72,12 +70,26 @@ export default function AddShowPage() {
     if (!time) nextErrors.time = "Time is required";
     if (!description.trim()) nextErrors.description = "Description is required";
 
+    // price.trim() rather than !price, so "0" (a free event) is accepted.
     const priceNum = Number(price);
-    if (!price || Number.isNaN(priceNum) || priceNum < 0) nextErrors.price = "Enter a valid price";
+    if (!price.trim() || Number.isNaN(priceNum) || priceNum < 0) {
+      nextErrors.price = "Enter a valid price (0 for a free event)";
+    }
 
     const capacityNum = Number(capacity);
     if (!capacity || Number.isNaN(capacityNum) || capacityNum < 1) {
       nextErrors.capacity = "Enter a valid capacity";
+    }
+
+    const maxPerOrderNum = Number(maxPerOrder);
+    if (!maxPerOrder || Number.isNaN(maxPerOrderNum) || maxPerOrderNum < 1 || maxPerOrderNum > 50) {
+      nextErrors.maxPerOrder = "Enter a limit between 1 and 50";
+    }
+
+    // Paid internal ticketing needs somewhere to send the money; free events
+    // don't, so they're allowed through without a connected payout account.
+    if (ticketingMode === "internal" && priceNum > 0 && !user?.stripePayoutsReady) {
+      nextErrors.price = "Connect a payout account to sell paid tickets, or set the price to 0";
     }
 
     if (ticketingMode === "external") {
@@ -113,6 +125,7 @@ export default function AddShowPage() {
       category: category.trim() || "Live Music",
       image_url: imageUrl,
       capacity: capacityNum,
+      max_per_order: maxPerOrderNum,
       description: description.trim(),
       lineup: [artistName],
       doors: time,
@@ -188,6 +201,20 @@ export default function AddShowPage() {
           onChange={(e) => setCapacity(e.target.value)}
           error={errors.capacity}
         />
+        <div className="flex flex-col gap-1.5">
+          <Input
+            label="Max tickets per order"
+            type="number"
+            min={1}
+            max={50}
+            value={maxPerOrder}
+            onChange={(e) => setMaxPerOrder(e.target.value)}
+            error={errors.maxPerOrder}
+          />
+          <p className="text-xs text-muted">
+            Stops one fan buying up the room. Applies per order.
+          </p>
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <span className="font-heading text-sm text-muted">Poster</span>
@@ -252,8 +279,7 @@ export default function AddShowPage() {
             <button
               type="button"
               onClick={() => setTicketingMode("internal")}
-              disabled={!payoutsReady}
-              className={`flex-1 rounded-full py-2 text-sm font-heading disabled:opacity-40 ${
+              className={`flex-1 rounded-full py-2 text-sm font-heading ${
                 ticketingMode === "internal" ? "bg-primary text-foreground" : "text-muted"
               }`}
             >
@@ -269,10 +295,11 @@ export default function AddShowPage() {
               External link
             </button>
           </div>
-          {!payoutsReady && (
+          {!payoutsReady && ticketingMode === "internal" && (
             <p className="text-xs text-muted">
-              Connect a payout account on your profile to sell tickets through MadGigz. Until
-              then you can still link an external ticketing service.
+              You can host <strong className="text-foreground">free</strong> events through
+              MadGigz right away. To charge for tickets, connect a payout account on your
+              profile — or link an external ticketing service instead.
             </p>
           )}
           {ticketingMode === "external" && (

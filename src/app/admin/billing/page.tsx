@@ -10,9 +10,12 @@ export default async function AdminBillingPage() {
   const live = tickets.filter((t) => !t.refunded);
 
   // What fans paid is gross volume flowing to artists - it is NOT MadGigz's
-  // revenue. MadGigz earns only the application fee on top of that flow.
+  // revenue. MadGigz earns only the commission, and the IVA on top of that is
+  // collected for Hacienda, so it is neither revenue nor the artist's money.
   const grossCents = live.reduce((sum, t) => sum + toCents(t.pricePaid), 0);
   const feeCents = live.reduce((sum, t) => sum + t.feeCents, 0);
+  const vatCents = live.reduce((sum, t) => sum + t.feeVatCents, 0);
+  const revenueCents = feeCents - vatCents;
   const artistNetCents = grossCents - feeCents;
   const refundedCount = tickets.length - live.length;
 
@@ -34,16 +37,21 @@ export default async function AdminBillingPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <div className="rounded-2xl bg-surface p-5">
           <p className="text-xs uppercase tracking-wide text-muted">Gross ticket sales</p>
           <p className="mt-2 font-display text-3xl text-foreground">{formatEuros(grossCents)}</p>
           <p className="mt-1 text-xs text-muted">what fans paid</p>
         </div>
         <div className="rounded-2xl bg-surface p-5">
-          <p className="text-xs uppercase tracking-wide text-muted">MadGigz revenue</p>
-          <p className="mt-2 font-display text-3xl text-accent">{formatEuros(feeCents)}</p>
-          <p className="mt-1 text-xs text-muted">platform fee</p>
+          <p className="text-xs uppercase tracking-wide text-muted">Revenue (ex-IVA)</p>
+          <p className="mt-2 font-display text-3xl text-accent">{formatEuros(revenueCents)}</p>
+          <p className="mt-1 text-xs text-muted">commission earned</p>
+        </div>
+        <div className="rounded-2xl bg-surface p-5">
+          <p className="text-xs uppercase tracking-wide text-muted">IVA collected</p>
+          <p className="mt-2 font-display text-3xl text-foreground">{formatEuros(vatCents)}</p>
+          <p className="mt-1 text-xs text-muted">owed to Hacienda</p>
         </div>
         <div className="rounded-2xl bg-surface p-5">
           <p className="text-xs uppercase tracking-wide text-muted">Paid to artists</p>

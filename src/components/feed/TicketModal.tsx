@@ -46,7 +46,8 @@ export default function TicketModal({
   const remaining = Math.max(event.capacity - event.sold, 0);
   const soldOut = remaining <= 0;
   const almostGone = !soldOut && soldPercent >= 90;
-  const maxQuantity = Math.max(Math.min(remaining, 6), 1);
+  // Whichever runs out first: the organiser's per-order cap or the seats left.
+  const maxQuantity = Math.max(Math.min(remaining, event.maxPerOrder), 1);
 
   const subtotal = event.price * quantity;
   const total = soldOut ? 0 : (discountedTotal ?? subtotal);

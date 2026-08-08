@@ -29,6 +29,7 @@ export interface EventItem {
   rating: number;
   active: boolean;
   cancelled: boolean;
+  maxPerOrder: number;
   ticketing?: Ticketing;
 }
 
@@ -111,6 +112,7 @@ export interface EventRow {
   ticketing_url: string | null;
   active?: boolean;
   cancelled?: boolean;
+  max_per_order?: number;
 }
 
 export function mapEvent(row: EventRow): EventItem {
@@ -137,6 +139,7 @@ export function mapEvent(row: EventRow): EventItem {
     rating: Number(row.rating),
     active: row.active ?? true,
     cancelled: row.cancelled ?? false,
+    maxPerOrder: row.max_per_order ?? 6,
     ticketing:
       row.ticketing_mode === "external"
         ? { mode: "external", url: row.ticketing_url ?? undefined }

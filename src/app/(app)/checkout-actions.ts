@@ -8,8 +8,6 @@ import { applyDiscount, validateDiscountCode } from "@/lib/supabase/queries";
 import { breakdownFor, formatEuros, toCents } from "@/lib/pricing";
 import { EventRow, mapEvent } from "@/lib/types";
 
-const MAX_QUANTITY = 6;
-
 export interface CheckoutResult {
   url?: string;
   freeTicketId?: string;
@@ -31,13 +29,21 @@ export async function createCheckout(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You need to be signed in to buy tickets" };
 
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY) {
-    return { error: `Choose between 1 and ${MAX_QUANTITY} tickets` };
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return { error: "Choose at least 1 ticket" };
   }
 
   const { data: eventRow } = await supabase.from("events").select("*").eq("id", eventId).single();
   if (!eventRow) return { error: "That event no longer exists" };
   const event = mapEvent(eventRow as EventRow);
+
+  // The per-order cap is enforced against the database value, not whatever the
+  // client sent - the stepper's limit is a convenience, not a control.
+  if (quantity > event.maxPerOrder) {
+    return {
+      error: `You can buy at most ${event.maxPerOrder} ${event.maxPerOrder === 1 ? "ticket" : "tickets"} per order for this event`,
+    };
+  }
 
   if (!event.active || event.cancelled) return { error: "That event is no longer on sale" };
   if (event.ticketing?.mode === "external") {
@@ -88,6 +94,7 @@ export async function createCheckout(
       p_stripe_payment_intent_id: null,
       p_application_fee_cents: 0,
       p_stripe_account_id: null,
+      p_application_fee_vat_cents: 0,
     });
 
     if (error) {
@@ -109,7 +116,10 @@ export async function createCheckout(
     return { error: "This artist can't accept payments yet" };
   }
 
-  const { feeCents } = breakdownFor(totalCents);
+  // Stripe collects the whole fee (commission + IVA) as one application fee;
+  // the VAT portion is carried in metadata so it can be recorded separately on
+  // the ticket for tax reporting.
+  const { feeCents, feeVatCents } = breakdownFor(totalCents);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   try {
@@ -146,6 +156,7 @@ export async function createCheckout(
         quantity: String(quantity),
         discount_id: discount?.id ?? "",
         application_fee_cents: String(feeCents),
+        application_fee_vat_cents: String(feeVatCents),
         stripe_account_id: artist.stripe_account_id,
       },
     });
