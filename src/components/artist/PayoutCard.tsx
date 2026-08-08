@@ -8,6 +8,7 @@ import {
   startPayoutOnboarding,
 } from "@/app/(app)/profile/payout-actions";
 import { FEE_PERCENT } from "@/lib/pricing";
+import InfoTip from "@/components/ui/InfoTip";
 
 export default function PayoutCard({
   connected,
@@ -57,7 +58,10 @@ export default function PayoutCard({
     <div className="rounded-2xl bg-background p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-heading text-sm text-foreground">Payouts</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-heading text-sm text-foreground">Payouts</p>
+            <InfoTip text="Ticket money is held in Stripe and paid to your bank once your show has happened, not the moment a ticket sells - this protects fans if a show is ever cancelled." />
+          </div>
           <p className="text-xs text-muted">
             {liveReady
               ? `Connected — you keep ${100 - FEE_PERCENT}% of each ticket`

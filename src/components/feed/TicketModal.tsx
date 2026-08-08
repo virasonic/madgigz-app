@@ -268,6 +268,15 @@ export default function TicketModal({
                         ? "Get tickets"
                         : "Continue to payment"}
                 </Button>
+
+                {/* Visible, not tapped-for: a fan deciding whether to buy needs
+                    this before they pay, not tucked behind an icon they'd have
+                    no reason to tap. */}
+                {!soldOut && (
+                  <p className="-mt-3 text-center text-[11px] text-muted">
+                    Tickets are final sale. If something comes up, contact the organiser.
+                  </p>
+                )}
               </div>
             ) : (
               <div className="mt-6 flex flex-col gap-5">

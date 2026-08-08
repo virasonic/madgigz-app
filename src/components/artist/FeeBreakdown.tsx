@@ -8,6 +8,7 @@ import {
   toCents,
   VAT_PERCENT,
 } from "@/lib/pricing";
+import InfoTip from "@/components/ui/InfoTip";
 
 // Shown to artists wherever they set or review a ticket price, so they always
 // know what they actually net before publishing. The artist absorbs the fee:
@@ -33,9 +34,10 @@ export default function FeeBreakdown({ priceEuros }: { priceEuros: number }) {
         <span className="text-foreground">{formatEuros(fanPaysCents)}</span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-muted">
+        <span className="flex items-center gap-1.5 text-muted">
           MadGigz fee ({FEE_PERCENT}%
           {atMinimum ? `, min ${formatEuros(MIN_FEE_CENTS)}` : ""})
+          <InfoTip text="Covers card processing through Stripe, running the ticketing and payout system, and support - so MadGigz can keep operating. It's the only fee: the price you set here is exactly what fans pay, nothing added on top." />
         </span>
         <span className="text-muted">−{formatEuros(feeBaseCents)}</span>
       </div>
