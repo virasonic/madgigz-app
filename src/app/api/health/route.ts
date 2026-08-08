@@ -12,24 +12,43 @@ export const dynamic = "force-dynamic";
 // Reports only booleans and non-secret pricing config. Never echo a key value
 // here: this endpoint is public.
 export async function GET() {
+  // Presence alone isn't enough: pasting a whsec_ into STRIPE_SECRET_KEY reads
+  // as "set" but fails at the first Stripe call, which is how it was actually
+  // found - an artist hitting "Connect payouts" and getting "Invalid API Key".
+  // The expected prefix catches that class of mix-up straight away.
   const required = [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "RESEND_API_KEY",
-    "NEXT_PUBLIC_APP_URL",
+    { key: "NEXT_PUBLIC_SUPABASE_URL", prefix: "https://" },
+    { key: "NEXT_PUBLIC_SUPABASE_ANON_KEY", prefix: null },
+    { key: "SUPABASE_SERVICE_ROLE_KEY", prefix: null },
+    { key: "STRIPE_SECRET_KEY", prefix: "sk_" },
+    { key: "STRIPE_WEBHOOK_SECRET", prefix: "whsec_" },
+    { key: "STRIPE_WEBHOOK_SECRET_CONNECT", prefix: "whsec_", optional: true },
+    { key: "RESEND_API_KEY", prefix: "re_" },
+    { key: "NEXT_PUBLIC_APP_URL", prefix: "http" },
   ] as const;
 
   const config = Object.fromEntries(
-    required.map((key) => [key, Boolean(process.env[key])])
+    required.map(({ key, prefix }) => {
+      const value = process.env[key];
+      if (!value) return [key, "missing"];
+      if (prefix && !value.startsWith(prefix)) return [key, `wrong-format (expected ${prefix}…)`];
+      return [key, "ok"];
+    })
   );
 
-  const missing = required.filter((key) => !process.env[key]);
+  const missing = required
+    .filter((r) => !("optional" in r && r.optional) && !process.env[r.key])
+    .map((r) => r.key);
+
+  const malformed = required
+    .filter((r) => {
+      const value = process.env[r.key];
+      return value && r.prefix && !value.startsWith(r.prefix);
+    })
+    .map((r) => r.key);
 
   return NextResponse.json({
-    ok: missing.length === 0,
+    ok: missing.length === 0 && malformed.length === 0,
     commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "local",
     // Safe to echo: this is the public site origin, and getting it wrong sends
     // paying customers to a dead page after checkout, so it's worth surfacing.
@@ -37,5 +56,6 @@ export async function GET() {
     pricing: { feePercent: FEE_PERCENT, vatPercent: VAT_PERCENT, minFeeCents: MIN_FEE_CENTS },
     config,
     missing,
+    malformed,
   });
 }
