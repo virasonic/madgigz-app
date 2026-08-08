@@ -51,7 +51,10 @@ export default function PayoutCard({
   }
 
   return (
-    <div className="mb-6 rounded-2xl bg-surface p-4">
+    // bg-background, not bg-surface: this now lives inside the Settings sheet,
+    // whose own backdrop is bg-surface - matching the sheet's other rows
+    // instead of disappearing into their shared background.
+    <div className="rounded-2xl bg-background p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="font-heading text-sm text-foreground">Payouts</p>

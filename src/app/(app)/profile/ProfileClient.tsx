@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Button from "@/components/ui/Button";
 import ManageShowModal from "@/components/artist/ManageShowModal";
 import PayoutCard from "@/components/artist/PayoutCard";
@@ -17,8 +17,37 @@ function formatDate(iso: string) {
   });
 }
 
-function SettingsSheet({ onClose }: { onClose: () => void }) {
-  const rows = ["Payout Settings", "Promotions", "Analytics"];
+// Stripe's onboarding return_url points back at /profile?payout=return (and
+// ?payout=refresh if the artist bails partway) - now that PayoutCard lives
+// inside a sheet the artist has to open themselves, that redirect needs to
+// pop the sheet open too, or the whole round trip looks like it did nothing.
+// Isolated in its own component because useSearchParams needs a Suspense
+// boundary, and gating that boundary to just this artist-only sheet is
+// cheaper than wrapping the whole page.
+function PayoutReturnDetector({ onReturn }: { onReturn: () => void }) {
+  const searchParams = useSearchParams();
+  const payoutParam = searchParams.get("payout");
+
+  useEffect(() => {
+    if (payoutParam === "return" || payoutParam === "refresh") onReturn();
+    // onReturn is a fresh closure every render (setSettingsOpen(true)) - only
+    // payoutParam actually identifies when this should fire.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payoutParam]);
+
+  return null;
+}
+
+function SettingsSheet({
+  onClose,
+  payoutConnected,
+  payoutReady,
+}: {
+  onClose: () => void;
+  payoutConnected: boolean;
+  payoutReady: boolean;
+}) {
+  const comingSoonRows = ["Promotions", "Analytics"];
   return (
     <div
       className="fixed inset-0 z-30 flex items-end justify-center bg-black/60"
@@ -31,7 +60,8 @@ function SettingsSheet({ onClose }: { onClose: () => void }) {
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
         <h2 className="font-display text-xl text-foreground">Settings</h2>
         <div className="mt-4 flex flex-col gap-2">
-          {rows.map((row) => (
+          <PayoutCard connected={payoutConnected} ready={payoutReady} />
+          {comingSoonRows.map((row) => (
             <div
               key={row}
               className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
@@ -170,10 +200,7 @@ export default function ProfileClient({
       ) : (
         <>
           <Suspense>
-            <PayoutCard
-              connected={Boolean(user.stripeAccountId)}
-              ready={user.stripePayoutsReady}
-            />
+            <PayoutReturnDetector onReturn={() => setSettingsOpen(true)} />
           </Suspense>
 
           <div className="mb-6 flex gap-3">
@@ -269,7 +296,13 @@ export default function ProfileClient({
           onChanged={() => router.refresh()}
         />
       )}
-      {settingsOpen && <SettingsSheet onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && (
+        <SettingsSheet
+          onClose={() => setSettingsOpen(false)}
+          payoutConnected={Boolean(user.stripeAccountId)}
+          payoutReady={user.stripePayoutsReady}
+        />
+      )}
     </div>
   );
 }

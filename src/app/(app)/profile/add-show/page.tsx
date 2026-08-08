@@ -356,7 +356,7 @@ export default function AddShowPage() {
           {ticketingMode === "external" && (
             <Input
               label="Ticketing link"
-              placeholder="https://entradium.com/your-show"
+              placeholder="https://madgigz.com/your-show"
               value={externalUrl}
               onChange={(e) => setExternalUrl(e.target.value)}
               error={errors.externalUrl}
