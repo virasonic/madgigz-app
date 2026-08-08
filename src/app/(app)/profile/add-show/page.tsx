@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import FeeBreakdown from "@/components/artist/FeeBreakdown";
 import { createClient } from "@/lib/supabase/client";
 import { fetchCurrentUser } from "@/lib/supabase/queries";
 import { uploadEventMedia } from "@/lib/supabase/storage";
@@ -47,6 +48,9 @@ export default function AddShowPage() {
         return;
       }
       setUser(current);
+      // An artist who can't be paid out yet shouldn't land on the internal
+      // ticketing option preselected.
+      if (!current.stripePayoutsReady) setTicketingMode("external");
     });
   }, [router]);
 
@@ -130,6 +134,8 @@ export default function AddShowPage() {
 
   if (!user) return null;
 
+  const payoutsReady = user.stripePayoutsReady;
+
   return (
     <div className="p-4">
       <h1 className="font-display mb-6 text-2xl text-foreground">Add a show</h1>
@@ -163,14 +169,17 @@ export default function AddShowPage() {
           onChange={(e) => setTime(e.target.value)}
           error={errors.time}
         />
-        <Input
-          label="Price (EUR)"
-          type="number"
-          min={0}
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          error={errors.price}
-        />
+        <div className="flex flex-col gap-2">
+          <Input
+            label="Price (EUR)"
+            type="number"
+            min={0}
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            error={errors.price}
+          />
+          {ticketingMode === "internal" && <FeeBreakdown priceEuros={Number(price)} />}
+        </div>
         <Input
           label="Capacity"
           type="number"
@@ -243,7 +252,8 @@ export default function AddShowPage() {
             <button
               type="button"
               onClick={() => setTicketingMode("internal")}
-              className={`flex-1 rounded-full py-2 text-sm font-heading ${
+              disabled={!payoutsReady}
+              className={`flex-1 rounded-full py-2 text-sm font-heading disabled:opacity-40 ${
                 ticketingMode === "internal" ? "bg-primary text-foreground" : "text-muted"
               }`}
             >
@@ -259,6 +269,12 @@ export default function AddShowPage() {
               External link
             </button>
           </div>
+          {!payoutsReady && (
+            <p className="text-xs text-muted">
+              Connect a payout account on your profile to sell tickets through MadGigz. Until
+              then you can still link an external ticketing service.
+            </p>
+          )}
           {ticketingMode === "external" && (
             <Input
               label="Ticketing link"

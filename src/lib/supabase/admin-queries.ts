@@ -159,6 +159,8 @@ export interface AdminTicketRow {
   eventTitle: string;
   quantity: number;
   pricePaid: number;
+  feeCents: number;
+  refunded: boolean;
   purchasedAt: string;
 }
 
@@ -173,12 +175,14 @@ export async function fetchAllTicketsAdmin(admin: SupabaseClient): Promise<Admin
   const usernameById = new Map((profiles ?? []).map((p) => [p.id, p.username]));
   const titleById = new Map((events ?? []).map((e) => [e.id, e.title]));
 
-  return ((tickets as TicketRow[]) ?? []).map((t) => ({
+  return ((tickets as (TicketRow & { application_fee_cents: number | null })[]) ?? []).map((t) => ({
     id: t.id,
     username: usernameById.get(t.user_id) ?? "-",
     eventTitle: titleById.get(t.event_id) ?? "-",
     quantity: t.quantity,
     pricePaid: Number(t.price_paid),
+    feeCents: Number(t.application_fee_cents ?? 0),
+    refunded: t.refunded,
     purchasedAt: t.purchased_at,
   }));
 }

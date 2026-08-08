@@ -7,6 +7,7 @@ import type { EventItem } from "@/lib/types";
 export default function EventsTable({ events }: { events: EventItem[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [result, setResult] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   function handleToggle(eventId: string, nextActive: boolean) {
     setPendingId(eventId);
@@ -19,19 +20,43 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
   function handleDelete(event: EventItem) {
     const message =
       event.sold > 0
-        ? `This event has ${event.sold} ${event.sold === 1 ? "ticket" : "tickets"} sold. Deleting it will mark ${event.sold === 1 ? "that ticket" : "all of them"} as refunded in our records and hide the event, but you'll still need to manually send each buyer their money back - there's no payment processor wired up yet. Continue?`
+        ? `This event has ${event.sold} ${event.sold === 1 ? "ticket" : "tickets"} sold. Cancelling it will refund every buyer through Stripe and hide the event. This can't be undone. Continue?`
         : "Delete this event permanently? This can't be undone.";
     if (!window.confirm(message)) return;
 
     setPendingId(event.id);
+    setResult(null);
     startTransition(async () => {
-      await cancelEvent(event.id);
+      const outcome = await cancelEvent(event.id);
       setPendingId(null);
+      if (outcome.deleted) {
+        setResult({ kind: "ok", text: "Event deleted." });
+      } else if (outcome.failed > 0) {
+        setResult({
+          kind: "error",
+          text: `Refunded ${outcome.refunded}, but ${outcome.failed} failed: ${outcome.errors[0] ?? "unknown error"}. Re-run to retry the rest.`,
+        });
+      } else {
+        setResult({
+          kind: "ok",
+          text: `Event cancelled and ${outcome.refunded} ${outcome.refunded === 1 ? "ticket" : "tickets"} refunded.`,
+        });
+      }
     });
   }
 
   return (
-    <table className="w-full text-left text-sm">
+    <>
+      {result && (
+        <p
+          className={`mb-4 rounded-xl px-4 py-3 text-sm ${
+            result.kind === "ok" ? "bg-accent/10 text-accent" : "bg-danger/10 text-danger"
+          }`}
+        >
+          {result.text}
+        </p>
+      )}
+      <table className="w-full text-left text-sm">
       <thead>
         <tr className="border-b border-muted/15 text-muted">
           <th className="pb-2 font-heading">Title</th>
@@ -90,7 +115,8 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
             </td>
           </tr>
         ))}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </>
   );
 }

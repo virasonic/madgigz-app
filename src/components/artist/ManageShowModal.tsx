@@ -2,6 +2,7 @@
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
+import FeeBreakdown from "@/components/artist/FeeBreakdown";
 import { createClient } from "@/lib/supabase/client";
 import { fetchShowBuyers, fetchShowContent, ShowBuyer } from "@/lib/supabase/queries";
 import { removeEventMedia, uploadEventMedia } from "@/lib/supabase/storage";
@@ -254,6 +255,13 @@ export default function ManageShowModal({
                 />
               </div>
             </div>
+
+            {show.ticketing?.mode !== "external" && (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted">Ticket price</p>
+                <FeeBreakdown priceEuros={show.price} />
+              </div>
+            )}
 
             <div>
               <p className="text-sm text-muted">Description</p>

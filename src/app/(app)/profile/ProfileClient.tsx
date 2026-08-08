@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Button from "@/components/ui/Button";
 import ManageShowModal from "@/components/artist/ManageShowModal";
+import PayoutCard from "@/components/artist/PayoutCard";
 import { createClient } from "@/lib/supabase/client";
 import { AppUser, EventItem } from "@/lib/types";
 
@@ -141,6 +142,13 @@ export default function ProfileClient({
         </div>
       ) : (
         <>
+          <Suspense>
+            <PayoutCard
+              connected={Boolean(user.stripeAccountId)}
+              ready={user.stripePayoutsReady}
+            />
+          </Suspense>
+
           <div className="mb-6 flex gap-3">
             <Link href="/profile/add-show" className="flex-1">
               <Button>Add Show</Button>

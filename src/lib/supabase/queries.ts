@@ -26,7 +26,7 @@ export async function fetchCurrentUser(supabase: SupabaseClient): Promise<AppUse
   const { data } = await supabase
     .from("profiles")
     .select(
-      "id, username, role, artist_name, instagram, tiktok, twitter, spotify, youtube, artist_status, evidence_url"
+      "id, username, role, artist_name, instagram, tiktok, twitter, spotify, youtube, artist_status, evidence_url, stripe_account_id, stripe_payouts_ready"
     )
     .eq("id", user.id)
     .single();
@@ -110,10 +110,13 @@ export async function validateDiscountCode(
   code: string,
   eventId: string
 ): Promise<Discount | null> {
+  // Exact match, not ilike: `%` and `_` are LIKE wildcards, so a promo code of
+  // "%" would otherwise match every discount in the table (and then blow up in
+  // maybeSingle). Admin stores codes uppercased.
   const { data } = await supabase
     .from("discounts")
     .select("*")
-    .ilike("code", code.trim())
+    .eq("code", code.trim().toUpperCase())
     .eq("active", true)
     .maybeSingle();
 
@@ -125,10 +128,6 @@ export async function validateDiscountCode(
   if (discount.maxUses !== null && discount.usedCount >= discount.maxUses) return null;
 
   return discount;
-}
-
-export async function incrementDiscountUsage(supabase: SupabaseClient, discountId: string) {
-  await supabase.rpc("increment_discount_usage", { discount_id: discountId });
 }
 
 export function applyDiscount(subtotal: number, discount: Discount | null): number {

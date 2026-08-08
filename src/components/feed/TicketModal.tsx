@@ -3,9 +3,8 @@
 import Image from "next/image";
 import { useState } from "react";
 import Button from "@/components/ui/Button";
-import { createClient } from "@/lib/supabase/client";
-import { applyDiscount, incrementDiscountUsage, validateDiscountCode } from "@/lib/supabase/queries";
-import { Discount, EventItem } from "@/lib/types";
+import { createCheckout, previewPromoCode } from "@/app/(app)/checkout-actions";
+import { EventItem } from "@/lib/types";
 
 type Tab = "tickets" | "info";
 
@@ -38,7 +37,8 @@ export default function TicketModal({
   const [buyError, setBuyError] = useState<string | undefined>();
 
   const [promoCode, setPromoCode] = useState("");
-  const [appliedDiscount, setAppliedDiscount] = useState<Discount | null>(null);
+  const [promoLabel, setPromoLabel] = useState<string | null>(null);
+  const [discountedTotal, setDiscountedTotal] = useState<number | null>(null);
   const [promoError, setPromoError] = useState<string | undefined>();
   const [checkingPromo, setCheckingPromo] = useState(false);
 
@@ -49,7 +49,7 @@ export default function TicketModal({
   const maxQuantity = Math.max(Math.min(remaining, 6), 1);
 
   const subtotal = event.price * quantity;
-  const total = soldOut ? 0 : applyDiscount(subtotal, appliedDiscount);
+  const total = soldOut ? 0 : (discountedTotal ?? subtotal);
 
   const externalUrl = event.ticketing?.mode === "external" ? event.ticketing.url : undefined;
   let externalHost = "the external site";
@@ -65,48 +65,38 @@ export default function TicketModal({
     if (!promoCode.trim()) return;
     setCheckingPromo(true);
     setPromoError(undefined);
-    const supabase = createClient();
-    const discount = await validateDiscountCode(supabase, promoCode, event.id);
+
+    const result = await previewPromoCode(event.id, quantity, promoCode);
     setCheckingPromo(false);
 
-    if (!discount) {
-      setPromoError("That code isn't valid for this event");
-      setAppliedDiscount(null);
+    if (result.error || result.totalEuros === undefined) {
+      setPromoError(result.error ?? "That code isn't valid for this event");
+      setPromoLabel(null);
+      setDiscountedTotal(null);
       return;
     }
-    setAppliedDiscount(discount);
+    setPromoLabel(result.label ?? null);
+    setDiscountedTotal(result.totalEuros);
   }
 
+  // Pricing, discount validation and ticket creation all happen server-side -
+  // this only kicks it off and follows the redirect Stripe gives back. Free
+  // tickets come back fulfilled with no redirect.
   async function handleBuy() {
     setBuying(true);
     setBuyError(undefined);
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    if (!user) {
+    const result = await createCheckout(event.id, quantity, promoCode.trim() || null);
+
+    if (result.error) {
       setBuying(false);
-      setBuyError("You need to be signed in to buy tickets");
+      setBuyError(result.error);
       return;
     }
 
-    const { error } = await supabase.from("tickets").insert({
-      user_id: user.id,
-      event_id: event.id,
-      quantity,
-      price_paid: total,
-      discount_id: appliedDiscount?.id ?? null,
-    });
-
-    if (error) {
-      setBuying(false);
-      setBuyError(error.message);
+    if (result.url) {
+      window.location.href = result.url;
       return;
-    }
-
-    if (appliedDiscount) {
-      await incrementDiscountUsage(supabase, appliedDiscount.id);
     }
 
     setBuying(false);
@@ -189,7 +179,11 @@ export default function TicketModal({
                   <span className="font-heading text-sm text-muted">Quantity</span>
                   <div className="flex items-center gap-4">
                     <button
-                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      onClick={() => {
+                        setQuantity((q) => Math.max(1, q - 1));
+                        setPromoLabel(null);
+                        setDiscountedTotal(null);
+                      }}
                       disabled={soldOut}
                       className="flex h-9 w-9 items-center justify-center rounded-full border border-muted/30 text-foreground disabled:opacity-30"
                     >
@@ -199,7 +193,11 @@ export default function TicketModal({
                       {soldOut ? 0 : quantity}
                     </span>
                     <button
-                      onClick={() => setQuantity((q) => Math.min(maxQuantity, q + 1))}
+                      onClick={() => {
+                        setQuantity((q) => Math.min(maxQuantity, q + 1));
+                        setPromoLabel(null);
+                        setDiscountedTotal(null);
+                      }}
                       disabled={soldOut}
                       className="flex h-9 w-9 items-center justify-center rounded-full border border-muted/30 text-foreground disabled:opacity-30"
                     >
@@ -234,7 +232,8 @@ export default function TicketModal({
                         value={promoCode}
                         onChange={(e) => {
                           setPromoCode(e.target.value);
-                          setAppliedDiscount(null);
+                          setPromoLabel(null);
+                          setDiscountedTotal(null);
                         }}
                         placeholder="Optional"
                         className="min-w-0 flex-1 rounded-2xl border border-muted/20 bg-background px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
@@ -249,13 +248,7 @@ export default function TicketModal({
                       </button>
                     </div>
                     {promoError && <p className="text-sm text-danger">{promoError}</p>}
-                    {appliedDiscount && (
-                      <p className="text-sm text-accent">
-                        {appliedDiscount.type === "percent"
-                          ? `${appliedDiscount.value}% off applied`
-                          : `€${appliedDiscount.value} off applied`}
-                      </p>
-                    )}
+                    {promoLabel && <p className="text-sm text-accent">{promoLabel}</p>}
                   </div>
                 )}
 
@@ -266,7 +259,13 @@ export default function TicketModal({
                 {buyError && <p className="text-sm text-danger">{buyError}</p>}
 
                 <Button onClick={handleBuy} disabled={soldOut || buying}>
-                  {soldOut ? "Sold Out" : buying ? "Buying..." : "Buy tickets"}
+                  {soldOut
+                    ? "Sold Out"
+                    : buying
+                      ? "Starting checkout..."
+                      : total === 0
+                        ? "Get tickets"
+                        : "Continue to payment"}
                 </Button>
               </div>
             ) : (

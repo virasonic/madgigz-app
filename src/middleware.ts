@@ -31,5 +31,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  // api/stripe/webhook is excluded deliberately: it's called by Stripe, not a
+  // signed-in browser, so a Supabase auth round-trip per delivery is pure
+  // overhead - and the cookie rewriting this middleware does has no business
+  // touching a signature-verified machine-to-machine request.
+  matcher: [
+    "/((?!api/stripe/webhook|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
