@@ -47,7 +47,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/signin?notice=${code}`);
   }
 
-  // No token at all - a truncated or mangled URL rather than a spent one.
+  // No token at all. The email templates used to link to {{ .ConfirmationURL }},
+  // which is Supabase's own verify endpoint - it consumes the token itself and
+  // then redirects here with nothing in the query string. Anyone arriving that
+  // way has already been verified by that endpoint, so "sign in below" is the
+  // correct advice, not "your link looks broken". Emails sent before the
+  // templates were fixed still land here, so this has to stay friendly.
   console.error("auth/confirm missing token_hash/type", { tokenHash, type });
-  return NextResponse.redirect(`${origin}/signin?notice=link_invalid`);
+  return NextResponse.redirect(`${origin}/signin?notice=verify_link_spent`);
 }

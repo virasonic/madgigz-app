@@ -3,7 +3,7 @@
   Paste into: Supabase Dashboard -> Authentication -> Email Templates -> Confirm signup
   (replace the whole template body with this).
 
-  {{ .ConfirmationURL }} is Supabase's own variable - it's substituted automatically,
+  {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup is Supabase's own variable - it's substituted automatically,
   don't edit it. The app's verify-email screen is click-only (no code entry anywhere
   in the app - confirmed by reading the actual page source, not assumed), so the
   button is the only thing that matters here.
@@ -36,7 +36,7 @@
           <tr>
             <td style="border-radius:999px;background-color:#d76616;">
               <a
-                href="{{ .ConfirmationURL }}"
+                href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup"
                 target="_blank"
                 style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#f3f1d1;text-decoration:none;"
               >
