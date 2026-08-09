@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ARTIST_CAPABLE_ROLES } from "@/lib/roles";
 
 // Single-city for now; venues carry a city column so a second one is a filter
 // change rather than a migration.
@@ -119,7 +120,7 @@ async function syncEventArtists(
       .from("profiles")
       .select("id")
       .in("id", wanted)
-      .eq("role", "artist")
+      .in("role", ARTIST_CAPABLE_ROLES)
       .eq("artist_status", "approved");
 
     const validIds = new Set((valid ?? []).map((p) => p.id as string));

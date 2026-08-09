@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Role } from "@/lib/types";
+import { isArtistRole } from "@/lib/roles";
 
 interface NavItem {
   href: string;
@@ -127,7 +128,7 @@ export default function BottomNav({ role }: { role: Role }) {
     {
       href: "/profile",
       label: "Profile",
-      icon: role === "artist" ? NoteIcon : PersonIcon,
+      icon: isArtistRole(role) ? NoteIcon : PersonIcon,
     },
   ];
 

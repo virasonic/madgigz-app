@@ -8,6 +8,7 @@ import {
   fetchShowsByArtist,
 } from "@/lib/supabase/queries";
 import FeedClient from "./FeedClient";
+import { isArtistRole } from "@/lib/roles";
 
 export default async function FeedPage() {
   const supabase = await createClient();
@@ -17,7 +18,7 @@ export default async function FeedPage() {
   const [events, posts, shows, savedIds] = await Promise.all([
     fetchEvents(supabase, { activeOnly: true }),
     fetchContentPosts(supabase),
-    user.role === "artist" ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
+    isArtistRole(user.role) ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
     fetchSavedEventIds(supabase, user.id),
   ]);
 

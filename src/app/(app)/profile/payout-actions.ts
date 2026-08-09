@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { payoutsReady, stripe } from "@/lib/stripe";
+import { isArtistRole } from "@/lib/roles";
 
 // Server Actions are public POST endpoints, so the caller is re-derived from
 // the session here rather than trusted from an argument.
@@ -24,7 +25,7 @@ async function requireArtist() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "artist") throw new Error("Not an artist");
+  if (!profile || !isArtistRole(profile.role)) throw new Error("Not an artist");
   if (profile.artist_status !== "approved") throw new Error("Artist not approved yet");
 
   return { user, profile };

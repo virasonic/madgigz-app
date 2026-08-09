@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { fetchCurrentUser } from "@/lib/supabase/queries";
 import { EventItem, EventRow, mapEvent, mapTicket, Ticket, TicketRow } from "@/lib/types";
+import { canActAsArtist } from "@/lib/roles";
 
 type ScanResult =
   | { status: "valid"; ticket: Ticket; event: EventItem }
@@ -31,7 +32,7 @@ export default function ScanTicketsPage() {
   useEffect(() => {
     const supabase = createClient();
     fetchCurrentUser(supabase).then((user) => {
-      if (user?.role !== "artist" || user.artistStatus !== "approved") {
+      if (!user || !canActAsArtist(user)) {
         router.replace("/profile");
         return;
       }

@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchCurrentUser } from "@/lib/supabase/queries";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { AppUser } from "@/lib/types";
+import { canActAsArtist } from "@/lib/roles";
 
 // Same set the signup claim collects, so an artist can correct a typo or add
 // a link they skipped without going through support.
@@ -48,7 +49,7 @@ export default function EditProfilePage() {
   useEffect(() => {
     const supabase = createClient();
     fetchCurrentUser(supabase).then((current) => {
-      if (current?.role !== "artist" || current.artistStatus !== "approved") {
+      if (!current || !canActAsArtist(current)) {
         router.replace("/profile");
         return;
       }

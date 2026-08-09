@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ARTIST_CAPABLE_ROLES } from "@/lib/roles";
 import {
   ContentPost,
   ContentPostRow,
@@ -55,7 +56,7 @@ export async function fetchArtistProfile(
       "id, username, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, role, artist_status"
     )
     .eq("id", artistId)
-    .eq("role", "artist")
+    .in("role", ARTIST_CAPABLE_ROLES)
     .eq("artist_status", "approved")
     .maybeSingle();
 
@@ -137,7 +138,7 @@ export async function fetchApprovedArtists(
     .select(
       "id, username, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, role, artist_status"
     )
-    .eq("role", "artist")
+    .in("role", ARTIST_CAPABLE_ROLES)
     .eq("artist_status", "approved")
     .order("artist_name");
 

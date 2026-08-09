@@ -9,6 +9,7 @@ import {
   fetchTickets,
 } from "@/lib/supabase/queries";
 import ProfileClient from "./ProfileClient";
+import { isArtistRole } from "@/lib/roles";
 
 // Computed once at module load rather than during render, per React's purity rules.
 const NOW = Date.now();
@@ -22,8 +23,8 @@ export default async function ProfilePage() {
     fetchSavedEventIds(supabase, user.id),
     fetchTickets(supabase, user.id),
     fetchEvents(supabase),
-    user.role === "artist" ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
-    user.role === "artist" ? fetchTaggedShows(supabase, user.id) : Promise.resolve([]),
+    isArtistRole(user.role) ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
+    isArtistRole(user.role) ? fetchTaggedShows(supabase, user.id) : Promise.resolve([]),
   ]);
 
   const attendedCount = tickets.filter((ticket) => {

@@ -8,6 +8,7 @@ import AddContentModal from "@/components/artist/AddContentModal";
 import { createClient } from "@/lib/supabase/client";
 import { fetchContentPosts, toggleSavedEvent } from "@/lib/supabase/queries";
 import { AppUser, ContentPost, EventItem } from "@/lib/types";
+import { canActAsArtist } from "@/lib/roles";
 
 type Pane = "forYou" | "thisWeek";
 
@@ -114,7 +115,7 @@ export default function FeedClient({
   return (
     <div className="relative flex h-full flex-col">
       <div className="relative flex justify-center gap-2 p-4">
-        {user.role === "artist" && user.artistStatus === "approved" && (
+        {canActAsArtist(user) && (
           <button
             type="button"
             onClick={() => setAddContentOpen(true)}

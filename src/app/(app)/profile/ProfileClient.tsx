@@ -11,6 +11,7 @@ import ManageShowModal from "@/components/artist/ManageShowModal";
 import PayoutCard from "@/components/artist/PayoutCard";
 import { createClient } from "@/lib/supabase/client";
 import { AppUser, EventItem } from "@/lib/types";
+import { isArtistRole } from "@/lib/roles";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -130,7 +131,10 @@ export default function ProfileClient({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hiddenOpen, setHiddenOpen] = useState(false);
 
-  const roleLabel = user.role === "artist" ? "Artist" : "Fan";
+  // Admins keep their own badge - they get the artist tools below, but
+  // labelling the account "Artist" would misreport what it actually is.
+  const roleLabel = user.role === "admin" ? "Admin" : user.role === "artist" ? "Artist" : "Fan";
+  const artistTools = isArtistRole(user.role);
   const displayName = user.artistName ?? user.username;
   const hasSocials = buildSocialLinks(user).length > 0;
   // Evidence is the one thing only the claim form can set, so it's the reliable
@@ -160,7 +164,7 @@ export default function ProfileClient({
           </div>
         </div>
 
-        {user.role === "artist" && (
+        {artistTools && (
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
@@ -185,7 +189,7 @@ export default function ProfileClient({
           away from. */}
       {/* One wrapper so bio-only, links-only, and both all get the same spacing
           against the header above and whatever follows. */}
-      {user.role === "artist" && (user.artistBio || hasSocials) && (
+      {artistTools && (user.artistBio || hasSocials) && (
         <div className="-mt-2 mb-6 flex flex-col gap-3">
           {user.artistBio && (
             <p className="text-sm leading-relaxed text-foreground/90">{user.artistBio}</p>

@@ -18,6 +18,7 @@ import {
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { AppUser, Genre, PublicArtistProfile, Venue } from "@/lib/types";
 import { finaliseNewShow } from "../show-actions";
+import { canActAsArtist } from "@/lib/roles";
 
 const ACCENT_SWATCHES = [
   { name: "Orange", value: "#d76616" },
@@ -57,7 +58,7 @@ export default function AddShowPage() {
   useEffect(() => {
     const supabase = createClient();
     fetchCurrentUser(supabase).then((current) => {
-      if (current?.role !== "artist" || current.artistStatus !== "approved") {
+      if (!current || !canActAsArtist(current)) {
         router.replace("/profile");
         return;
       }
