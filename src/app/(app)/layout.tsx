@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import BottomNav from "@/components/ui/BottomNav";
 import { createClient } from "@/lib/supabase/server";
+import { fetchUnreadCount } from "@/lib/notifications";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -12,11 +13,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile }, unreadCount] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    fetchUnreadCount(supabase, user.id),
+  ]);
 
   return (
     // pt-safe sits on the shell rather than inside the scroll area, so content
@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // Paired with pb-safe on BottomNav; both collapse to zero in a browser tab.
     <div className="pt-safe mx-auto flex h-screen w-full max-w-md flex-col bg-background">
       <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-      <BottomNav role={profile?.role ?? "fan"} />
+      <BottomNav role={profile?.role ?? "fan"} unreadCount={unreadCount} />
     </div>
   );
 }

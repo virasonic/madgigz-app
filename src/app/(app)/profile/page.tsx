@@ -9,17 +9,19 @@ import {
 } from "@/lib/supabase/queries";
 import ProfileClient from "./ProfileClient";
 import { isArtistRole } from "@/lib/roles";
+import { fetchUnreadCount } from "@/lib/notifications";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
   const user = await fetchCurrentUser(supabase);
   if (!user) redirect("/");
 
-  const [savedIds, tickets, shows, taggedShows] = await Promise.all([
+  const [savedIds, tickets, shows, taggedShows, unreadCount] = await Promise.all([
     fetchSavedEventIds(supabase, user.id),
     fetchTickets(supabase, user.id),
     isArtistRole(user.role) ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
     isArtistRole(user.role) ? fetchTaggedShows(supabase, user.id) : Promise.resolve([]),
+    fetchUnreadCount(supabase, user.id),
   ]);
 
   // Scanned at the door, not "the date has passed". A ticket bought and never
@@ -37,6 +39,7 @@ export default async function ProfilePage() {
       attendedCount={attendedCount}
       shows={shows}
       taggedShows={taggedShows}
+      unreadCount={unreadCount}
     />
   );
 }

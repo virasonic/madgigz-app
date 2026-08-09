@@ -118,7 +118,13 @@ function NoteIcon(active: boolean) {
   );
 }
 
-export default function BottomNav({ role }: { role: Role }) {
+export default function BottomNav({
+  role,
+  unreadCount = 0,
+}: {
+  role: Role;
+  unreadCount?: number;
+}) {
   const pathname = usePathname();
 
   const items: NavItem[] = [
@@ -142,11 +148,22 @@ export default function BottomNav({ role }: { role: Role }) {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-1 flex-col items-center gap-1 py-3 text-xs ${
+            className={`relative flex flex-1 flex-col items-center gap-1 py-3 text-xs ${
               active ? "text-primary" : "text-muted"
             }`}
           >
-            {item.icon(active)}
+            <span className="relative">
+              {item.icon(active)}
+              {/* On the Profile tab because that's where the bell lives. Without
+                  it, notifications only exist for someone who happens to open
+                  their profile. */}
+              {item.href === "/profile" && unreadCount > 0 && (
+                <span
+                  aria-label={`${unreadCount} unread notifications`}
+                  className="absolute -right-1.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background"
+                />
+              )}
+            </span>
             <span className="font-heading">{item.label}</span>
           </Link>
         );

@@ -134,6 +134,7 @@ interface ProfileClientProps {
   attendedCount: number;
   shows: EventItem[];
   taggedShows: EventItem[];
+  unreadCount: number;
 }
 
 export default function ProfileClient({
@@ -142,6 +143,7 @@ export default function ProfileClient({
   attendedCount,
   shows,
   taggedShows,
+  unreadCount,
 }: ProfileClientProps) {
   const router = useRouter();
   const [activeShow, setActiveShow] = useState<EventItem | null>(null);
@@ -189,6 +191,26 @@ export default function ProfileClient({
           </div>
         </div>
 
+        <div className="flex items-center gap-2">
+        <Link
+          href="/notifications"
+          aria-label="Notifications"
+          className="relative flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M18 8a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6Z"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+            />
+            <path d="M13.7 20a2 2 0 0 1-3.4 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+          {unreadCount > 0 && (
+            <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-surface" />
+          )}
+        </Link>
+
         {/* Everyone gets Settings now - it holds Edit Profile, and a fan can
             change their picture. Payouts stay artist-only inside the sheet. */}
         <button
@@ -207,6 +229,7 @@ export default function ProfileClient({
             />
           </svg>
         </button>
+        </div>
       </div>
 
       {/* Without this an artist writes a bio in Edit Profile and never sees it
