@@ -42,17 +42,19 @@ export default function ShareEventButton({
   showLabel?: boolean;
   className?: string;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
 
   async function handleShare() {
     const outcome = await shareEvent(event);
     // On a phone the OS share sheet is its own confirmation. The tick is for
-    // desktop, where the fallback is a silent clipboard write that would
-    // otherwise look like the button did nothing.
-    if (outcome !== "copied") return;
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // desktop, where the clipboard write is otherwise silent and the button
+    // looks like it did nothing.
+    if (outcome === "shared" || outcome === "cancelled") return;
+    setStatus(outcome === "copied" ? "copied" : "failed");
+    setTimeout(() => setStatus("idle"), 2500);
   }
+
+  const copied = status === "copied";
 
   return (
     <button
@@ -61,8 +63,12 @@ export default function ShareEventButton({
       className={`flex flex-col items-center gap-1 text-foreground ${className}`}
     >
       {copied ? <CheckIcon /> : <ShareIcon />}
-      {showLabel && (
-        <span className="text-xs text-muted">{copied ? "Link copied" : "Share"}</span>
+      {/* The failure label shows even on the icon-only rails: a share that
+          silently does nothing is worse than one that admits it couldn't. */}
+      {(showLabel || status === "failed") && (
+        <span className="whitespace-nowrap text-xs text-muted">
+          {status === "copied" ? "Link copied" : status === "failed" ? "Couldn't copy" : "Share"}
+        </span>
       )}
     </button>
   );

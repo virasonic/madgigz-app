@@ -3,29 +3,36 @@ import { absoluteUrl, eventPath } from "@/lib/site";
 
 export type ShareOutcome = "shared" | "copied" | "cancelled" | "failed";
 
-function shareText(event: EventItem) {
-  const date = new Date(event.date).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
-  return `${event.artist} at ${event.venue}, ${date}`;
+// Phones and tablets get the native sheet; everything else gets the clipboard.
+//
+// Not a stylistic choice - it's a correctness one. Desktop share targets treat
+// the payload as loose text and staple the fields together, so "Copy" from the
+// macOS sheet produced "<url> <artist> at <venue>, <date>" as a single string.
+// Pasted into an address bar that is one URL with a broken path, and it 404s.
+// The clipboard path writes exactly the URL and nothing else, which is what
+// someone on a laptop wanted anyway.
+function prefersNativeSheet() {
+  if (typeof navigator === "undefined" || !navigator.share) return false;
+  return navigator.maxTouchPoints > 0;
 }
 
 // One share path for every surface - the feed card, the reel, the ticket sheet
 // and the public page all call this, so a link shared from one place is the
 // same link shared from another.
 //
-// Deliberately no per-channel buttons (WhatsApp, email, SMS). navigator.share
-// hands the OS sheet every app the person actually has installed, which is
-// both more choice and less code than anything we could build. Desktop
-// browsers mostly lack it, hence the clipboard fallback.
+// Deliberately no per-channel buttons (WhatsApp, email, SMS). On a phone
+// navigator.share hands over the OS sheet with every app the person actually
+// has installed, which is both more choice and less code than anything we
+// could build.
 export async function shareEvent(event: EventItem): Promise<ShareOutcome> {
   const url = absoluteUrl(eventPath(event.id));
 
-  if (typeof navigator !== "undefined" && navigator.share) {
+  if (prefersNativeSheet()) {
     try {
-      await navigator.share({ title: event.title, text: shareText(event), url });
+      // title and url only. Passing `text` as well is what let targets
+      // concatenate a description onto the link - and a title is displayed as
+      // a label by targets that use it, rather than appended to the URL.
+      await navigator.share({ title: `${event.title} - ${event.artist}`, url });
       return "shared";
     } catch (error) {
       // Dismissing the share sheet rejects with AbortError. That's a decision,
@@ -39,7 +46,8 @@ export async function shareEvent(event: EventItem): Promise<ShareOutcome> {
     await navigator.clipboard.writeText(url);
     return "copied";
   } catch {
-    // Clipboard access needs a secure context and can be refused outright.
+    // Clipboard access needs a secure context, a visible document, and can be
+    // refused outright. Callers surface the URL for manual copying instead.
     return "failed";
   }
 }
