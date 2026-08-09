@@ -12,9 +12,20 @@ the same thing across old conversations. Gaps are shipped items.
 | 82 | Google & Apple sign-in | Enable both providers in Supabase; add a post-callback screen to collect username, role and date of birth (an OAuth callback carries none of them, and the profile trigger and 16+ gate need all three); decide what happens when an OAuth email matches an existing password account. | **You.** A Google Cloud OAuth client (free) and an Apple Developer account (~€99/yr) for the Services ID and signing key. | M–L |
 | 79 | Email verification link is decorative | Decide: say so in the email, drop the button, or leave it. Scanners open the link within ~15s of sending, so nobody completes verification by tapping it — the sign-in notice *is* the verification step. | Your decision. Deprioritised. | S |
 | 59 | Spanish/English localization | Pull every UI string into translation files, add a language switch, write the Spanish. Dates and currency are already `en-GB`/EUR, so those are fine. | Sequencing, plus a fluent Spanish pass on the copy. Best done **after** #82, or its new auth screens get translated twice. | L |
+| 88 | Promoter & venue user flows | Account types alongside fan/artist, probably web rather than the mobile app. Groundwork exists: admin-created shows already model a show with no `artist_id` whose creator manages it, `venues` rows have a `verified` flag a venue account could claim, and the artist claim-and-evidence flow is the precedent for verifying someone represents a venue. | Later, by your call. Decide ownership first — see below. | L |
 | 58 | Admin user activity tracking | Login frequency, geolocation, attendance history. Needs a new events table and a write path, not just a query. | Nothing technical. Least urgent. | L |
 
-### Two worth reading before starting
+### Three worth reading before starting
+
+**#88 turns on one decision: ownership.** `events.artist_id` assumes an artist
+owns a show, and every RLS policy keyed on `events.artist_id = auth.uid()`
+widens with it — events, event_artists, content_posts, and the whole checkout
+path. Generalising it (an `owner_id` + `owner_type`, or a separate table) is the
+call that shapes everything else. The other two questions are commercial rather
+than technical: who gets paid when a promoter books an artist and whether the 5%
+splits three ways, and whether a venue sees sales for shows at their venue that
+they didn't book.
+
 
 **#58 collects personal data.** Geolocation and login history are personal data
 under GDPR, so they fall under the same retention and erasure rules the account
