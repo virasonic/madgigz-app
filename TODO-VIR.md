@@ -58,7 +58,8 @@ one is on Calle de los Jardines.
 Built and shipped, but never exercised through the UI:
 
 - **The new admin show form** (`/admin/events` → *New show*), after step 2.
-  Try one external-link show and one house show.
+  Two options only: *Sold elsewhere* (link out) or *MadGigz house show* (we sell,
+  we keep it, no commission). Try one of each.
 - **Account deletion dialog**, sign-in cancellation, and the "your account is
   safe" notice. *(You've now done this — it works.)*
 
