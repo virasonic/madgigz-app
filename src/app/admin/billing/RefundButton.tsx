@@ -12,6 +12,25 @@ export default function RefundButton({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Set when the first attempt was refused because the ticket was scanned in.
+  // The override lives behind this rather than in the first confirm: refunding
+  // someone who walked through the door is a decision, and it should take a
+  // second, separate action to make it.
+  const [checkedIn, setCheckedIn] = useState(false);
+
+  function run(force: boolean) {
+    setError(null);
+    startTransition(async () => {
+      const result = await refundTicket(ticketId, force);
+      if (result.blockedByCheckIn) {
+        setCheckedIn(true);
+        setError(null);
+        return;
+      }
+      if (result.error) setError(result.error);
+      else setCheckedIn(false);
+    });
+  }
 
   function handleRefund() {
     if (
@@ -20,12 +39,17 @@ export default function RefundButton({
       )
     )
       return;
+    run(false);
+  }
 
-    setError(null);
-    startTransition(async () => {
-      const result = await refundTicket(ticketId);
-      if (result.error) setError(result.error);
-    });
+  function handleForce() {
+    if (
+      !window.confirm(
+        `This ticket was scanned in — the holder attended. Refund anyway? Their seat stays counted as used, so it won't go back on sale.`
+      )
+    )
+      return;
+    run(true);
   }
 
   return (
@@ -37,7 +61,23 @@ export default function RefundButton({
       >
         {isPending ? "Refunding..." : "Refund"}
       </button>
-      {error && <span className="text-[10px] text-danger">{error}</span>}
+
+      {checkedIn && (
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-right text-[10px] text-muted">
+            Scanned in at the door — they attended.
+          </span>
+          <button
+            onClick={handleForce}
+            disabled={isPending}
+            className="rounded-lg border border-danger/40 px-3 py-1 text-[10px] font-heading text-danger disabled:opacity-50"
+          >
+            Refund anyway
+          </button>
+        </div>
+      )}
+
+      {error && <span className="text-right text-[10px] text-danger">{error}</span>}
     </div>
   );
 }

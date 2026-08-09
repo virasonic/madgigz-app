@@ -136,7 +136,14 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
 // Shares the cancelEvent idempotency key (refund_{ticketId}), so the two paths
 // can never double-refund the same ticket: whichever runs second gets Stripe's
 // cached response for the first.
-export async function refundTicket(ticketId: string): Promise<{ error: string | null }> {
+export async function refundTicket(
+  ticketId: string,
+  // Refunds a ticket that was scanned in at the door. Off by default and
+  // never set by the first click: the UI blocks, explains, and only then
+  // offers this. Goodwill, a door dispute or a mis-scan are all real, but
+  // none of them should be one accidental tap away.
+  force = false
+): Promise<{ error: string | null; blockedByCheckIn?: boolean }> {
   await requireAdmin();
   const admin = adminClient();
 
@@ -151,9 +158,17 @@ export async function refundTicket(ticketId: string): Promise<{ error: string | 
   if (!ticket) return { error: "Ticket not found" };
   if (ticket.refunded) return { error: "Already refunded" };
   // They were scanned through the door: the gig happened for them. Refunding a
-  // used ticket is giving the money back for something delivered.
+  // used ticket is giving the money back for something delivered - possible,
+  // but it should be a decision rather than a slip.
+  if (ticket.checked_in_at && !force) {
+    return {
+      error: "That ticket was scanned in at the door.",
+      blockedByCheckIn: true,
+    };
+  }
+
   if (ticket.checked_in_at) {
-    return { error: "That ticket was scanned in at the door - it can't be refunded" };
+    console.warn(`Refunding ticket ${ticket.id}, which was checked in at ${ticket.checked_in_at}`);
   }
 
   // Free tickets took no money; there's nothing to send back, but the ticket
@@ -182,10 +197,16 @@ export async function refundTicket(ticketId: string): Promise<{ error: string | 
   }
 
   await admin.from("tickets").update({ refunded: true }).eq("id", ticket.id);
-  await admin.rpc("release_event_capacity", {
-    p_event_id: ticket.event_id,
-    p_quantity: ticket.quantity,
-  });
+
+  // Capacity only goes back if the seat was never used. Releasing it for
+  // someone who walked in would put a seat that was physically occupied back
+  // on sale.
+  if (!ticket.checked_in_at) {
+    await admin.rpc("release_event_capacity", {
+      p_event_id: ticket.event_id,
+      p_quantity: ticket.quantity,
+    });
+  }
 
   revalidatePath("/admin/billing");
   return { error: null };
