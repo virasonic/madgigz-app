@@ -27,39 +27,44 @@ export interface AdminEventInput {
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
+// Shared by create and update so the two can't drift on what a valid show is.
+function validate(input: AdminEventInput): string | null {
+  if (!input.title.trim()) return "Title is required";
+  if (!input.artistName.trim()) return "Artist name is required";
+  if (!input.date) return "Date is required";
+  if (!input.time) return "Time is required";
+  if (!Number.isFinite(input.price) || input.price < 0) return "Price can't be negative";
+  if (!Number.isInteger(input.capacity) || input.capacity < 1) return "Capacity must be at least 1";
+  if (!Number.isInteger(input.maxPerOrder) || input.maxPerOrder < 1) {
+    return "Max per order must be at least 1";
+  }
+  if (!HEX.test(input.accentColor)) return "Pick an accent colour";
+
+  if (input.ticketingMode === "external") {
+    // Validated rather than trusted: this URL is opened in the fan's browser.
+    try {
+      const parsed = new URL(input.ticketingUrl.trim());
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error();
+    } catch {
+      return "Enter a valid ticket link, starting with https://";
+    }
+  }
+  return null;
+}
+
 export async function createAdminEvent(
   input: AdminEventInput
 ): Promise<{ id?: string; error?: string }> {
   await requireAdmin();
   const admin = adminClient();
 
+  const invalid = validate(input);
+  if (invalid) return { error: invalid };
+
   const title = input.title.trim();
   const artistName = input.artistName.trim();
-  if (!title) return { error: "Title is required" };
-  if (!artistName) return { error: "Artist name is required" };
-  if (!input.date) return { error: "Date is required" };
-  if (!input.time) return { error: "Time is required" };
-
-  if (!Number.isFinite(input.price) || input.price < 0) return { error: "Price can't be negative" };
-  if (!Number.isInteger(input.capacity) || input.capacity < 1) {
-    return { error: "Capacity must be at least 1" };
-  }
-  if (!Number.isInteger(input.maxPerOrder) || input.maxPerOrder < 1) {
-    return { error: "Max per order must be at least 1" };
-  }
-  if (!HEX.test(input.accentColor)) return { error: "Pick an accent colour" };
-
   const external = input.ticketingMode === "external";
   const ticketingUrl = input.ticketingUrl.trim();
-  if (external) {
-    // Validated rather than trusted: this URL is opened in the fan's browser.
-    try {
-      const parsed = new URL(ticketingUrl);
-      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error();
-    } catch {
-      return { error: "Enter a valid ticket link, starting with https://" };
-    }
-  }
 
   const venue = await resolveVenue(admin, input.venueName, input.venueId);
   if (venue.error) return { error: venue.error };
@@ -129,4 +134,97 @@ export async function createAdminEvent(
 
   const warning = genreError ?? tagError;
   return warning ? { id: created.id, error: `Show created, but: ${warning}` } : { id: created.id };
+}
+
+
+// Editing a MadGigz-created show. Price is editable here, unlike the artist's
+// own edit form - there the fee split is a promise already made to whoever is
+// being paid, whereas a house show is MadGigz changing its own price. It is
+// still refused once tickets exist: someone has paid the old one.
+export async function updateAdminEvent(
+  eventId: string,
+  input: AdminEventInput
+): Promise<{ error?: string }> {
+  await requireAdmin();
+  const admin = adminClient();
+
+  const invalid = validate(input);
+  if (invalid) return { error: invalid };
+
+  const { data: existing } = await admin
+    .from("events")
+    .select("id, artist_id, cancelled")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  if (!existing) return { error: "That show no longer exists" };
+  if (existing.cancelled) return { error: "That show is cancelled and can't be edited" };
+  // Artist-owned shows belong to the artist's own Manage Show sheet. An admin
+  // rewriting someone else's date or price behind their back is a different
+  // feature with different rules, and not this one.
+  if (existing.artist_id) {
+    return { error: "This show belongs to an artist - they edit it from their own profile" };
+  }
+
+  const { count: ticketCount } = await admin
+    .from("tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .eq("refunded", false);
+
+  const external = input.ticketingMode === "external";
+
+  if ((ticketCount ?? 0) > 0 && input.price !== undefined) {
+    const { data: current } = await admin
+      .from("events")
+      .select("price")
+      .eq("id", eventId)
+      .single();
+    if (current && Number(current.price) !== input.price) {
+      return { error: "Tickets have been sold at the current price - it can't be changed now" };
+    }
+  }
+
+  const venue = await resolveVenue(admin, input.venueName, input.venueId);
+  if (venue.error) return { error: venue.error };
+
+  const { error } = await admin
+    .from("events")
+    .update({
+      venue_id: venue.id,
+      title: input.title.trim(),
+      artist_name: input.artistName.trim(),
+      venue: venue.name,
+      event_date: input.date,
+      event_time: input.time,
+      price: input.price,
+      accent_color: input.accentColor,
+      ...(input.imageUrl ? { image_url: input.imageUrl } : {}),
+      capacity: input.capacity,
+      max_per_order: input.maxPerOrder,
+      description: input.description.trim(),
+      lineup: input.lineup.map((l) => l.trim()).filter(Boolean),
+      doors: input.time,
+      age_restriction: input.ageRestriction,
+      ticketing_mode: input.ticketingMode,
+      ticketing_url: external ? input.ticketingUrl.trim() : null,
+      house_run: !external,
+    })
+    .eq("id", eventId);
+
+  if (error) {
+    console.error("updateAdminEvent failed:", error);
+    return { error: "Couldn't save the changes" };
+  }
+
+  const genreError = await syncEventGenres(admin, eventId, input.genreIds);
+  const tagError = await syncEventArtists(admin, eventId, null, input.taggedArtistIds);
+
+  revalidatePath("/admin/events");
+  revalidatePath("/explore");
+  revalidatePath("/feed");
+  revalidatePath(`/e/${eventId}`);
+
+  const warning = genreError ?? tagError;
+  return warning ? { error: `Saved, but: ${warning}` } : {};
 }

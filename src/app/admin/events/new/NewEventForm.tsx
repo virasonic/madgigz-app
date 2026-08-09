@@ -5,10 +5,10 @@ import { useState, useTransition } from "react";
 import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
 import GenrePicker from "@/components/artist/GenrePicker";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
-import { createAdminEvent } from "../event-actions";
+import { createAdminEvent, updateAdminEvent } from "../event-actions";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
-import type { Genre, PublicArtistProfile, Venue } from "@/lib/types";
+import type { EventItem, Genre, PublicArtistProfile, Venue } from "@/lib/types";
 
 const ACCENT_SWATCHES = [
   { name: "Orange", value: "#d76616" },
@@ -39,6 +39,12 @@ function Field({
   );
 }
 
+// Same trap as the shared Input component: a focused number field steps on
+// wheel, so scrolling the page past it edits the value. Give the scroll back.
+function blurOnWheel(e: React.WheelEvent<HTMLInputElement>) {
+  e.currentTarget.blur();
+}
+
 const inputClass =
   "w-full rounded-xl bg-background px-4 py-2.5 text-sm text-foreground outline-none ring-1 ring-muted/20 focus:ring-primary";
 
@@ -46,30 +52,51 @@ export default function NewEventForm({
   venues,
   genres,
   artists,
+  existing,
+  taggedArtistIds: initialTaggedIds = [],
+  genreIds: initialGenreIds = [],
 }: {
   venues: Venue[];
   genres: Genre[];
   artists: PublicArtistProfile[];
+  // Present when editing. The same form either way - a create screen and an
+  // edit screen that drift apart is how a field ends up settable but not
+  // changeable.
+  existing?: EventItem;
+  taggedArtistIds?: string[];
+  genreIds?: string[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const [title, setTitle] = useState("");
-  const [artistName, setArtistName] = useState("");
-  const [venue, setVenue] = useState<VenueSelection>({ name: "", venueId: null });
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("21:00");
-  const [price, setPrice] = useState("0");
-  const [capacity, setCapacity] = useState("100");
-  const [maxPerOrder, setMaxPerOrder] = useState("6");
-  const [description, setDescription] = useState("");
-  const [entries, setEntries] = useState<LineupEntry[]>([{ name: "", profileId: null }]);
-  const [genreIds, setGenreIds] = useState<string[]>([]);
-  const [accentColor, setAccentColor] = useState(ACCENT_SWATCHES[0].value);
-  const [ageRestriction, setAgeRestriction] = useState("18+");
-  const [ticketing, setTicketing] = useState<Ticketing>("external");
-  const [ticketingUrl, setTicketingUrl] = useState("");
+  const [title, setTitle] = useState(existing?.title ?? "");
+  const [artistName, setArtistName] = useState(existing?.artist ?? "");
+  const [venue, setVenue] = useState<VenueSelection>({
+    name: existing?.venue ?? "",
+    venueId: existing?.venueId ?? null,
+  });
+  const [date, setDate] = useState(existing?.date ?? "");
+  const [time, setTime] = useState(existing?.time?.slice(0, 5) ?? "21:00");
+  const [price, setPrice] = useState(existing ? String(existing.price) : "0");
+  const [capacity, setCapacity] = useState(existing ? String(existing.capacity) : "100");
+  const [maxPerOrder, setMaxPerOrder] = useState(existing ? String(existing.maxPerOrder) : "6");
+  const [description, setDescription] = useState(existing?.description ?? "");
+  const [entries, setEntries] = useState<LineupEntry[]>(
+    existing && existing.lineup.length > 0
+      ? existing.lineup.map((name) => ({
+          name,
+          profileId: artists.find((a) => a.artistName === name && initialTaggedIds.includes(a.id))?.id ?? null,
+        }))
+      : [{ name: "", profileId: null }]
+  );
+  const [genreIds, setGenreIds] = useState<string[]>(initialGenreIds);
+  const [accentColor, setAccentColor] = useState(existing?.accentColor ?? ACCENT_SWATCHES[0].value);
+  const [ageRestriction, setAgeRestriction] = useState(existing?.ageRestriction ?? "18+");
+  const [ticketing, setTicketing] = useState<Ticketing>(
+    existing?.ticketing?.mode === "external" ? "external" : existing ? "internal" : "external"
+  );
+  const [ticketingUrl, setTicketingUrl] = useState(existing?.ticketing?.url ?? "");
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
 
@@ -99,7 +126,7 @@ export default function NewEventForm({
         .map((en) => en.profileId)
         .filter((id): id is string => Boolean(id));
 
-      const result = await createAdminEvent({
+      const payload = {
         title,
         artistName,
         venueName: venue.name,
@@ -118,7 +145,11 @@ export default function NewEventForm({
         ageRestriction,
         ticketingMode: ticketing,
         ticketingUrl,
-      });
+      };
+
+      const result = existing
+        ? { ...(await updateAdminEvent(existing.id, payload)), id: existing.id }
+        : await createAdminEvent(payload);
 
       if (result.error && !result.id) {
         setError(result.error);
@@ -163,7 +194,7 @@ export default function NewEventForm({
           <input type="time" className={inputClass} value={time} onChange={(e) => setTime(e.target.value)} />
         </Field>
         <Field label="Capacity">
-          <input type="number" min={1} className={inputClass} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+          <input type="number" onWheel={blurOnWheel} min={1} className={inputClass} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
         </Field>
         <Field label="Age">
           <select className={inputClass} value={ageRestriction} onChange={(e) => setAgeRestriction(e.target.value)}>
@@ -229,10 +260,10 @@ export default function NewEventForm({
           label="Price (EUR)"
           hint={ticketing === "external" ? "Shown to fans before they're sent to the other site." : undefined}
         >
-          <input type="number" min={0} step="0.01" className={inputClass} value={price} onChange={(e) => setPrice(e.target.value)} />
+          <input type="number" onWheel={blurOnWheel} min={0} step="0.01" className={inputClass} value={price} onChange={(e) => setPrice(e.target.value)} />
         </Field>
         <Field label="Max tickets per order">
-          <input type="number" min={1} className={inputClass} value={maxPerOrder} onChange={(e) => setMaxPerOrder(e.target.value)} />
+          <input type="number" onWheel={blurOnWheel} min={1} className={inputClass} value={maxPerOrder} onChange={(e) => setMaxPerOrder(e.target.value)} />
         </Field>
       </div>
 
@@ -257,7 +288,7 @@ export default function NewEventForm({
       </Field>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Poster">
+        <Field label={existing ? "Replace poster (optional)" : "Poster"}>
           <input
             type="file"
             accept="image/*"
@@ -298,7 +329,7 @@ export default function NewEventForm({
           disabled={isPending}
           className="rounded-full bg-primary px-6 py-3 font-heading text-sm text-foreground disabled:opacity-50"
         >
-          {isPending ? "Creating..." : "Create show"}
+          {isPending ? "Saving..." : existing ? "Save changes" : "Create show"}
         </button>
         <button
           type="button"

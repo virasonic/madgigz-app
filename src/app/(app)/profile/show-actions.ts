@@ -140,3 +140,40 @@ export async function finaliseNewShow(
   revalidatePath("/explore");
   return { error: null };
 }
+
+
+// Lets an artist take themselves off a bill they were added to. Deletes only
+// their own event_artists row, so the show itself is untouched - it just stops
+// appearing on their profile, public and private, and they lose the right to
+// post about it.
+//
+// Needed because tagging is done by someone else: a cancelled show, or one they
+// were never really on, would otherwise sit on their profile forever with no
+// way to shift it. The event_artists policies are written around the show's
+// owner, so this runs through the admin client with the caller re-derived from
+// the session rather than trusted from the argument.
+export async function removeSelfFromShow(eventId: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("event_artists")
+    .delete()
+    .eq("event_id", eventId)
+    .eq("profile_id", user.id)
+    .select("event_id");
+
+  if (error) {
+    console.error("removeSelfFromShow failed:", error);
+    return { error: "Couldn't remove the show" };
+  }
+  if ((data?.length ?? 0) === 0) return { error: "You're not tagged on that show" };
+
+  revalidatePath("/profile");
+  revalidatePath(`/profile/${user.id}`);
+  return { error: null };
+}

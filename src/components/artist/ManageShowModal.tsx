@@ -3,6 +3,7 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import FeeBreakdown from "@/components/artist/FeeBreakdown";
+import { removeSelfFromShow } from "@/app/(app)/profile/show-actions";
 import { createClient } from "@/lib/supabase/client";
 import {
   fetchShowBuyers,
@@ -90,6 +91,7 @@ export default function ManageShowModal({
     venue: show.venue,
   });
   const [editing, setEditing] = useState(false);
+  const [removingTag, setRemovingTag] = useState(false);
   const [draft, setDraft] = useState(details);
   const [savingEdits, setSavingEdits] = useState(false);
   const [editError, setEditError] = useState<string | undefined>();
@@ -543,6 +545,33 @@ export default function ManageShowModal({
                 <Button className="flex-1" onClick={() => setTab("content")}>
                   Add Content
                 </Button>
+              </div>
+            )}
+
+            {!canManage && (
+              <div className="border-t border-muted/15 pt-5">
+                <button
+                  onClick={async () => {
+                    setRemovingTag(true);
+                    const result = await removeSelfFromShow(show.id);
+                    setRemovingTag(false);
+                    if (result.error) {
+                      setError(result.error);
+                      return;
+                    }
+                    onChanged();
+                    onClose();
+                  }}
+                  disabled={removingTag}
+                  className="text-sm font-heading text-danger disabled:opacity-50"
+                >
+                  {removingTag ? "Removing..." : "Remove from my profile"}
+                </button>
+                <p className="mt-1 text-xs text-muted">
+                  Takes you off this bill. The show itself is unaffected — it just
+                  stops showing on your profile, and you won&apos;t be able to post
+                  about it.
+                </p>
               </div>
             )}
 

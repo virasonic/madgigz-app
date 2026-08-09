@@ -15,6 +15,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const [revealed, setRevealed] = useState(false);
     const resolvedType = isPassword ? (revealed ? "text" : "password") : type;
 
+    // A focused type="number" input treats the wheel as a stepper, so scrolling
+    // the page with the cursor over it silently edits the value - by `step` a
+    // notch, which on a price field is one cent at a time. Someone types 2.00,
+    // scrolls down to the submit button, and publishes a show at 1.85 without
+    // touching the field again. Blurring on wheel gives the scroll back to the
+    // page.
+    function handleWheel(e: React.WheelEvent<HTMLInputElement>) {
+      props.onWheel?.(e);
+      if (resolvedType === "number") e.currentTarget.blur();
+    }
+
     return (
       <div className="flex flex-col gap-1.5">
         <label
@@ -34,6 +45,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             aria-invalid={Boolean(error)}
             aria-describedby={error ? `${inputId}-error` : undefined}
             {...props}
+            onWheel={handleWheel}
           />
           {isPassword && (
             <button

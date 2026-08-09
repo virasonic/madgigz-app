@@ -149,6 +149,17 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
             <td className="py-2 text-right">
               {!e.cancelled && (
                 <div className="flex justify-end gap-2">
+                  {/* Only MadGigz-created shows. An artist's own show is edited
+                      from their profile, where the fee split they published
+                      under still applies. */}
+                  {!e.artistId && (
+                    <Link
+                      href={`/admin/events/${e.id}/edit`}
+                      className="rounded-lg bg-surface-raised px-3 py-1 text-xs font-heading text-foreground hover:bg-muted/20"
+                    >
+                      Edit
+                    </Link>
+                  )}
                   <button
                     onClick={() => handleToggle(e.id, !e.active)}
                     disabled={isPending && pendingId === e.id}
