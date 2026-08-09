@@ -101,7 +101,12 @@ export default function FeedClient({
     const wasLiked = savedIds.includes(eventId);
     setSavedIds((ids) => (wasLiked ? ids.filter((id) => id !== eventId) : [...ids, eventId]));
     const supabase = createClient();
-    await toggleSavedEvent(supabase, user.id, eventId, wasLiked);
+    const ok = await toggleSavedEvent(supabase, user.id, eventId, wasLiked);
+    // Put the heart back if the write was refused, rather than leaving it
+    // showing a like that doesn't exist.
+    if (!ok) {
+      setSavedIds((ids) => (wasLiked ? [...ids, eventId] : ids.filter((id) => id !== eventId)));
+    }
   }
 
   const artistName = user.artistName ?? user.username;

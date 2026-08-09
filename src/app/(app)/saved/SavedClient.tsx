@@ -72,12 +72,12 @@ export default function SavedClient({
   );
 
   async function handleUnsave(eventId: string) {
-    // Optimistic: this list is the only place a fan un-saves from, so a
-    // failed request just means it reappears on next load rather than
-    // needing a rollback dance here.
     setSavedIds((ids) => ids.filter((id) => id !== eventId));
     const supabase = createClient();
-    await toggleSavedEvent(supabase, userId, eventId, true);
+    const ok = await toggleSavedEvent(supabase, userId, eventId, true);
+    // Put the row back if the delete was refused, so the list matches what's
+    // actually stored rather than only correcting itself on the next load.
+    if (!ok) setSavedIds((ids) => [...ids, eventId]);
   }
 
   async function handleRemoveRefunded(ticketId: string) {

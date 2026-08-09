@@ -100,21 +100,32 @@ export async function fetchSavedEventIds(
   return (data ?? []).map((row) => row.event_id as string);
 }
 
+// Returns whether the write actually landed, so callers can roll back their
+// optimistic UI instead of showing a heart that isn't saved. A delete blocked
+// by RLS matches zero rows and returns no error, so the .select() is what
+// makes a silent refusal detectable - same pattern as show/ticket hiding.
 export async function toggleSavedEvent(
   supabase: SupabaseClient,
   userId: string,
   eventId: string,
   currentlySaved: boolean
-) {
+): Promise<boolean> {
   if (currentlySaved) {
-    await supabase
+    const { data, error } = await supabase
       .from("saved_events")
       .delete()
       .eq("user_id", userId)
-      .eq("event_id", eventId);
-  } else {
-    await supabase.from("saved_events").insert({ user_id: userId, event_id: eventId });
+      .eq("event_id", eventId)
+      .select("event_id");
+    return !error && (data?.length ?? 0) > 0;
   }
+
+  const { error } = await supabase
+    .from("saved_events")
+    .insert({ user_id: userId, event_id: eventId });
+  // A duplicate key means it was already saved - the desired end state either
+  // way, so don't treat it as a failure and bounce the heart back.
+  return !error || error.code === "23505";
 }
 
 export async function fetchTickets(

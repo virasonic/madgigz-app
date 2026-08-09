@@ -160,7 +160,10 @@ export default function ContentReelCard({
         )}
       </div>
 
-      <div className="absolute bottom-24 right-4 flex flex-col items-center gap-6">
+      {/* z-10 keeps this rail above the caption block below - that block is
+          full-width and comes later in the DOM, so without this it paints on
+          top and swallows every tap on Like/Share. */}
+      <div className="absolute bottom-24 right-4 z-10 flex flex-col items-center gap-6">
         <button
           onClick={onToggleLike}
           style={{ color: liked ? event.accentColor : "var(--foreground)" }}

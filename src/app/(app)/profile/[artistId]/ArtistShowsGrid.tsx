@@ -23,7 +23,10 @@ export default function ArtistShowsGrid({
     const wasSaved = savedIds.includes(eventId);
     setSavedIds((ids) => (wasSaved ? ids.filter((id) => id !== eventId) : [...ids, eventId]));
     const supabase = createClient();
-    await toggleSavedEvent(supabase, userId, eventId, wasSaved);
+    const ok = await toggleSavedEvent(supabase, userId, eventId, wasSaved);
+    if (!ok) {
+      setSavedIds((ids) => (wasSaved ? [...ids, eventId] : ids.filter((id) => id !== eventId)));
+    }
   }
 
   if (shows.length === 0) {
