@@ -114,6 +114,7 @@ export interface AppUser {
   youtube: string | null;
   artistStatus: ArtistStatus | null;
   evidenceSubmitted: boolean;
+  followerCount: number;
   // Whether a Stripe account exists, not which one. The id itself is
   // service-role-only (addendum_018) and the UI only ever needed the boolean.
   stripeAccountConnected: boolean;
@@ -126,6 +127,7 @@ export interface AppUser {
 export interface PublicArtistProfile {
   id: string;
   username: string;
+  followerCount: number;
   artistName: string;
   artistBio: string | null;
   artistPhotoUrl: string | null;
@@ -279,6 +281,7 @@ export interface ProfileRow {
   youtube: string | null;
   artist_status: ArtistStatus | null;
   evidence_submitted: boolean | null;
+  follower_count: number | null;
   stripe_account_connected: boolean | null;
   stripe_payouts_ready: boolean | null;
 }
@@ -298,6 +301,7 @@ export function mapProfile(row: ProfileRow, email: string): AppUser {
     spotify: row.spotify,
     artistStatus: row.artist_status,
     evidenceSubmitted: Boolean(row.evidence_submitted),
+    followerCount: row.follower_count ?? 0,
     stripeAccountConnected: Boolean(row.stripe_account_connected),
     stripePayoutsReady: row.stripe_payouts_ready ?? false,
     youtube: row.youtube,
@@ -309,6 +313,7 @@ export function mapProfile(row: ProfileRow, email: string): AppUser {
 export interface PublicArtistProfileRow {
   id: string;
   username: string;
+  follower_count: number | null;
   artist_name: string | null;
   artist_bio: string | null;
   artist_photo_url: string | null;
@@ -323,6 +328,9 @@ export function mapPublicArtistProfile(row: PublicArtistProfileRow): PublicArtis
   return {
     id: row.id,
     username: row.username,
+    // Null while addendum_021 hasn't run - treat as zero rather than rendering
+    // "null followers".
+    followerCount: row.follower_count ?? 0,
     artistName: row.artist_name ?? row.username,
     artistBio: row.artist_bio,
     artistPhotoUrl: row.artist_photo_url,

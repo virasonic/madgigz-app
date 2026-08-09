@@ -34,7 +34,7 @@ export async function fetchCurrentUser(supabase: SupabaseClient): Promise<AppUse
   const { data } = await supabase
     .from("profiles")
     .select(
-      "id, username, role, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, artist_status, evidence_submitted, stripe_account_connected, stripe_payouts_ready"
+      "id, username, role, follower_count, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, artist_status, evidence_submitted, stripe_account_connected, stripe_payouts_ready"
     )
     .eq("id", user.id)
     .single();
@@ -53,7 +53,7 @@ export async function fetchArtistProfile(
   const { data } = await supabase
     .from("profiles")
     .select(
-      "id, username, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, role, artist_status"
+      "id, username, follower_count, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, role, artist_status"
     )
     .eq("id", artistId)
     .in("role", ARTIST_CAPABLE_ROLES)
@@ -136,13 +136,30 @@ export async function fetchApprovedArtists(
   const { data } = await supabase
     .from("profiles")
     .select(
-      "id, username, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, role, artist_status"
+      "id, username, follower_count, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, role, artist_status"
     )
     .in("role", ARTIST_CAPABLE_ROLES)
     .eq("artist_status", "approved")
     .order("artist_name");
 
   return ((data as PublicArtistProfileRow[]) ?? []).map(mapPublicArtistProfile);
+}
+
+// Which of these artists the current user follows. One query for the whole
+// list rather than one per card - Explore renders every approved artist.
+export async function fetchFollowedArtistIds(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("follows")
+    .select("artist_id")
+    .eq("follower_id", userId);
+
+  // 42P01 = table missing, i.e. addendum_021 hasn't been run yet. Following
+  // simply does nothing until it lands, rather than breaking the page.
+  if (error?.code === "42P01") return [];
+  return (data ?? []).map((row) => row.artist_id as string);
 }
 
 export async function fetchEvents(

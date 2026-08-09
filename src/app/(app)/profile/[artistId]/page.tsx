@@ -3,10 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import {
   fetchArtistProfile,
   fetchCurrentUser,
+  fetchFollowedArtistIds,
   fetchSavedEventIds,
   fetchShowsByArtist,
   fetchTaggedShows,
 } from "@/lib/supabase/queries";
+import FollowButton from "@/components/artist/FollowButton";
 import Avatar from "@/components/ui/Avatar";
 import SocialLinks from "@/components/ui/SocialLinks";
 import ArtistShowsGrid from "./ArtistShowsGrid";
@@ -26,11 +28,12 @@ export default async function PublicArtistProfilePage({
   // (Add Show, Settings, hidden shows) instead of the stripped-down public one.
   if (artistId === currentUser.id) redirect("/profile");
 
-  const [artist, shows, taggedShows, savedIds] = await Promise.all([
+  const [artist, shows, taggedShows, savedIds, followedIds] = await Promise.all([
     fetchArtistProfile(supabase, artistId),
     fetchShowsByArtist(supabase, artistId),
     fetchTaggedShows(supabase, artistId),
     fetchSavedEventIds(supabase, currentUser.id),
+    fetchFollowedArtistIds(supabase, currentUser.id),
   ]);
 
   if (!artist) notFound();
@@ -60,6 +63,14 @@ export default async function PublicArtistProfilePage({
       {artist.artistBio && (
         <p className="mt-4 text-sm leading-relaxed text-foreground/90">{artist.artistBio}</p>
       )}
+
+      <div className="mt-4">
+        <FollowButton
+          artistId={artist.id}
+          initialFollowing={followedIds.includes(artist.id)}
+          initialCount={artist.followerCount}
+        />
+      </div>
 
       <SocialLinks source={artist} className="mt-4" />
 

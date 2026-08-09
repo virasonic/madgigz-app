@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchCurrentUser } from "@/lib/supabase/queries";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { AppUser } from "@/lib/types";
-import { canActAsArtist } from "@/lib/roles";
+import { canActAsArtist, isArtistRole } from "@/lib/roles";
 
 // Same set the signup claim collects, so an artist can correct a typo or add
 // a link they skipped without going through support.
@@ -49,7 +49,15 @@ export default function EditProfilePage() {
   useEffect(() => {
     const supabase = createClient();
     fetchCurrentUser(supabase).then((current) => {
-      if (!current || !canActAsArtist(current)) {
+      // Fans get in too, for the photo. Bio and social links are artist
+      // furniture - they only appear on an artist page - so the form shows
+      // just the picture for everyone else rather than asking a fan to fill
+      // in a Spotify link that nothing will ever render.
+      if (!current) {
+        router.replace("/");
+        return;
+      }
+      if (isArtistRole(current.role) && !canActAsArtist(current)) {
         router.replace("/profile");
         return;
       }
@@ -78,7 +86,12 @@ export default function EditProfilePage() {
     event.preventDefault();
     if (!user) return;
 
-    if (!REQUIRED_SOCIALS.some((key) => socials[key].trim())) {
+    // Artists only. A fan has no social fields on this form, so requiring one
+    // would make saving a profile picture impossible.
+    if (
+      isArtistRole(user.role) &&
+      !REQUIRED_SOCIALS.some((key) => socials[key].trim())
+    ) {
       setSocialError("Keep at least one of Instagram, TikTok or Twitter / X");
       return;
     }
@@ -119,6 +132,8 @@ export default function EditProfilePage() {
 
   if (!user) return null;
 
+  const isArtist = isArtistRole(user.role);
+
   return (
     <div className="p-4">
       <h1 className="font-display mb-6 text-2xl text-foreground">Edit profile</h1>
@@ -158,6 +173,8 @@ export default function EditProfilePage() {
           />
         </div>
 
+{isArtist && (
+          <>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="bio" className="font-heading text-sm text-muted">
             Bio
@@ -192,6 +209,8 @@ export default function EditProfilePage() {
             TikTok or Twitter / X.
           </p>
         </div>
+          </>
+        )}
 
         {error && <p className="text-sm text-danger">{error}</p>}
 

@@ -60,10 +60,12 @@ function SettingsSheet({
   onClose,
   payoutConnected,
   payoutReady,
+  isArtist,
 }: {
   onClose: () => void;
   payoutConnected: boolean;
   payoutReady: boolean;
+  isArtist: boolean;
 }) {
   const comingSoonRows = ["Promotions", "Analytics"];
   return (
@@ -83,18 +85,19 @@ function SettingsSheet({
             className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
           >
             <span className="text-sm text-foreground">Edit Profile</span>
-            <span className="text-xs text-muted">Bio &amp; photo</span>
+            <span className="text-xs text-muted">{isArtist ? "Bio & photo" : "Photo"}</span>
           </Link>
-          <PayoutCard connected={payoutConnected} ready={payoutReady} />
-          {comingSoonRows.map((row) => (
-            <div
-              key={row}
-              className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
-            >
-              <span className="text-sm text-foreground">{row}</span>
-              <span className="text-xs uppercase text-muted">Soon</span>
-            </div>
-          ))}
+          {isArtist && <PayoutCard connected={payoutConnected} ready={payoutReady} />}
+          {isArtist &&
+            comingSoonRows.map((row) => (
+              <div
+                key={row}
+                className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
+              >
+                <span className="text-sm text-foreground">{row}</span>
+                <span className="text-xs uppercase text-muted">Soon</span>
+              </div>
+            ))}
         </div>
       </div>
     </div>
@@ -186,24 +189,24 @@ export default function ProfileClient({
           </div>
         </div>
 
-        {artistTools && (
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Settings"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-              <path
-                d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.7 7.7 0 0 0-1.7-1L15 3h-4l-.3 2.5a7.7 7.7 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.7 7.7 0 0 0 1.7 1L11 21h4l.3-2.5a7.7 7.7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6Z"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        )}
+        {/* Everyone gets Settings now - it holds Edit Profile, and a fan can
+            change their picture. Payouts stay artist-only inside the sheet. */}
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Settings"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+            <path
+              d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.7 7.7 0 0 0-1.7-1L15 3h-4l-.3 2.5a7.7 7.7 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.7 7.7 0 0 0 1.7 1L11 21h4l.3-2.5a7.7 7.7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6Z"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Without this an artist writes a bio in Edit Profile and never sees it
@@ -281,10 +284,14 @@ export default function ProfileClient({
             </Link>
           </div>
 
-          {/* Followers dropped until there's a real follow relationship to
-              count - see [[60]] "Build fan-following-artist infrastructure".
-              A permanent 0 reads as broken; no card at all doesn't. */}
-          <div className="mb-8 grid grid-cols-2 gap-3">
+          {/* Followers is back: #60 gave it something real to count. A zero
+              here now means nobody has followed yet, which is true, rather
+              than meaning the feature doesn't exist. */}
+          <div className="mb-8 grid grid-cols-3 gap-3">
+            <div className="rounded-2xl bg-surface p-4 text-center">
+              <p className="font-display text-2xl text-foreground">{user.followerCount}</p>
+              <p className="text-xs text-muted">Followers</p>
+            </div>
             <div className="rounded-2xl bg-surface p-4 text-center">
               <p className="font-display text-2xl text-foreground">{shows.length}</p>
               <p className="text-xs text-muted">Shows</p>
@@ -426,6 +433,7 @@ export default function ProfileClient({
           onClose={() => setSettingsOpen(false)}
           payoutConnected={user.stripeAccountConnected}
           payoutReady={user.stripePayoutsReady}
+          isArtist={artistTools}
         />
       )}
     </div>
