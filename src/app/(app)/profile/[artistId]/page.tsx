@@ -68,7 +68,6 @@ export default async function PublicArtistProfilePage({
         <FollowButton
           artistId={artist.id}
           initialFollowing={followedIds.includes(artist.id)}
-          initialCount={artist.followerCount}
         />
       </div>
 

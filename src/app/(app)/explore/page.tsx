@@ -4,6 +4,7 @@ import {
   fetchApprovedArtists,
   fetchCurrentUser,
   fetchEvents,
+  fetchFollowedEventIds,
   fetchGenresByEvent,
   fetchSavedEventIds,
 } from "@/lib/supabase/queries";
@@ -14,11 +15,12 @@ export default async function ExplorePage() {
   const user = await fetchCurrentUser(supabase);
   if (!user) redirect("/");
 
-  const [events, savedIds, artists, genresByEvent] = await Promise.all([
+  const [events, savedIds, artists, genresByEvent, followedEventIds] = await Promise.all([
     fetchEvents(supabase, { activeOnly: true }),
     fetchSavedEventIds(supabase, user.id),
     fetchApprovedArtists(supabase),
     fetchGenresByEvent(supabase),
+    fetchFollowedEventIds(supabase, user.id),
   ]);
 
   return (
@@ -28,6 +30,7 @@ export default async function ExplorePage() {
       initialSavedIds={savedIds}
       artists={artists}
       genresByEvent={genresByEvent}
+      followedEventIds={[...followedEventIds]}
     />
   );
 }

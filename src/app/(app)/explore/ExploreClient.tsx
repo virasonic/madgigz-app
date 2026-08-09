@@ -15,6 +15,7 @@ interface ExploreClientProps {
   initialSavedIds: string[];
   artists: PublicArtistProfile[];
   genresByEvent: Record<string, string[]>;
+  followedEventIds: string[];
 }
 
 export default function ExploreClient({
@@ -23,6 +24,7 @@ export default function ExploreClient({
   initialSavedIds,
   artists,
   genresByEvent,
+  followedEventIds,
 }: ExploreClientProps) {
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
@@ -39,19 +41,28 @@ export default function ExploreClient({
 
   const trimmedQuery = query.trim().toLowerCase();
 
+  const followed = useMemo(() => new Set(followedEventIds), [followedEventIds]);
+
   const filteredEvents = useMemo(() => {
     let list = initialEvents;
     if (activeGenre) {
       list = list.filter((event) => (genresByEvent[event.id] ?? []).includes(activeGenre));
     }
-    if (!trimmedQuery) return list;
-    return list.filter((event) =>
-      [event.title, event.artist, event.venue, ...(genresByEvent[event.id] ?? [])]
-        .join(" ")
-        .toLowerCase()
-        .includes(trimmedQuery)
+    if (trimmedQuery) {
+      list = list.filter((event) =>
+        [event.title, event.artist, event.venue, ...(genresByEvent[event.id] ?? [])]
+          .join(" ")
+          .toLowerCase()
+          .includes(trimmedQuery)
+      );
+    }
+    // Artists you follow float to the top. Explore is discovery rather than a
+    // schedule, so unlike This Week it can afford to break date order - and a
+    // stable sort keeps everything else in the date order it arrived in.
+    return [...list].sort(
+      (a, b) => Number(followed.has(b.id)) - Number(followed.has(a.id))
     );
-  }, [initialEvents, trimmedQuery, activeGenre, genresByEvent]);
+  }, [initialEvents, trimmedQuery, activeGenre, genresByEvent, followed]);
 
   // Artists only appear once someone searches - listing every artist above the
   // grid by default would bury the shows Explore exists to surface.

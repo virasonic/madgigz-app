@@ -162,6 +162,28 @@ export async function fetchFollowedArtistIds(
   return (data ?? []).map((row) => row.artist_id as string);
 }
 
+// Every event connected to an artist the user follows - shows they own, and
+// shows they're only tagged on. The tag half matters: a MadGigz house show has
+// no artist_id at all, so ranking on ownership alone would ignore exactly the
+// shows the admin panel creates.
+export async function fetchFollowedEventIds(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<Set<string>> {
+  const followed = await fetchFollowedArtistIds(supabase, userId);
+  if (followed.length === 0) return new Set();
+
+  const [{ data: owned }, { data: tagged }] = await Promise.all([
+    supabase.from("events").select("id").in("artist_id", followed),
+    supabase.from("event_artists").select("event_id").in("profile_id", followed),
+  ]);
+
+  return new Set([
+    ...(owned ?? []).map((row) => row.id as string),
+    ...(tagged ?? []).map((row) => row.event_id as string),
+  ]);
+}
+
 export async function fetchEvents(
   supabase: SupabaseClient,
   options: { activeOnly?: boolean } = {}

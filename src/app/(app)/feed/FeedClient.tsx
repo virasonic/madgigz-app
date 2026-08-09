@@ -20,11 +20,22 @@ interface FeedEntry {
 // For You is content-only (no bare event posters) - each entry is a content
 // post paired with the show it's actually about. A post whose event isn't in
 // allEvents (hidden or deleted) is dropped rather than shown with no event.
-function buildForYouFeed(allEvents: EventItem[], allPosts: ContentPost[]): FeedEntry[] {
-  return allPosts.flatMap((post) => {
+function buildForYouFeed(
+  allEvents: EventItem[],
+  allPosts: ContentPost[],
+  followed: Set<string>
+): FeedEntry[] {
+  const entries = allPosts.flatMap((post) => {
     const event = allEvents.find((e) => e.id === post.eventId);
     return event ? [{ post, event }] : [];
   });
+
+  // Followed artists first, newest-first within each half. A stable sort keeps
+  // the created_at order the query already applied, so this only lifts the
+  // followed ones rather than reshuffling everything.
+  return entries.sort(
+    (a, b) => Number(followed.has(b.event.id)) - Number(followed.has(a.event.id))
+  );
 }
 
 function groupByDay(items: EventItem[]) {
@@ -62,6 +73,7 @@ interface FeedClientProps {
   initialPosts: ContentPost[];
   shows: EventItem[];
   initialSavedIds: string[];
+  followedEventIds: string[];
 }
 
 export default function FeedClient({
@@ -70,6 +82,7 @@ export default function FeedClient({
   initialPosts,
   shows,
   initialSavedIds,
+  followedEventIds,
 }: FeedClientProps) {
   const [pane, setPane] = useState<Pane>("forYou");
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
@@ -80,13 +93,23 @@ export default function FeedClient({
   // shared (not per-card) so unmuting once stays unmuted as you scroll.
   const [reelsMuted, setReelsMuted] = useState(true);
 
+  const followed = useMemo(() => new Set(followedEventIds), [followedEventIds]);
+
   const forYouFeed = useMemo(
-    () => buildForYouFeed(initialEvents, allPosts),
-    [initialEvents, allPosts]
+    () => buildForYouFeed(initialEvents, allPosts, followed),
+    [initialEvents, allPosts, followed]
   );
+  // groupByDay re-sorts by date, and Array.sort is stable, so pre-sorting
+  // followed-first keeps the days in order while lifting followed artists
+  // within each one. This Week is a schedule; it can't stop being chronological.
   const weeklyGroups = useMemo(
-    () => groupByDay(withinNextWeek(initialEvents)),
-    [initialEvents]
+    () =>
+      groupByDay(
+        [...withinNextWeek(initialEvents)].sort(
+          (a, b) => Number(followed.has(b.id)) - Number(followed.has(a.id))
+        )
+      ),
+    [initialEvents, followed]
   );
 
   async function refreshContent() {
