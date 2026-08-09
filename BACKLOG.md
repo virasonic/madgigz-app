@@ -7,32 +7,42 @@ the same thing across old conversations. Gaps are shipped items.
 
 ## Open
 
-| # | Item | Why it's waiting |
-|---|---|---|
-| 82 | Sign up / sign in with Google and Apple | Supabase supports both providers, but an OAuth callback carries no username, role or date of birth — and the profile trigger and the 16+ age gate both need all three — so it needs a post-callback step to collect them. Also needs a decision on what happens when an OAuth email matches an existing password account. Apple requires a paid Apple Developer account; Google is free. |
-| 79 | Make clear that the email verification link is decorative | Deprioritised by Vir. Mail scanners open the link within ~15s of sending, so nobody completes verification by tapping it — the sign-in notice *is* the verification experience. |
-| 59 | Spanish/English localization | Sequenced late on purpose — i18n means pulling every UI string into translation files, so it wants the fan-facing UI settled first, or new strings need a second pass. |
-| 58 | Admin: user activity tracking | Login frequency, geolocation, attendance history. Needs new tracking infrastructure, not just a query. Heaviest lift here, least urgent. |
-| 63 | Past-events storage/function | Vir is scoping it; not a priority. What should happen to a show once its date passes? |
-| 60 | Fan-follows-artist infrastructure | Post-MVP call. Follower counts are hidden on artist profiles today rather than faked as a permanent 0. |
+| # | Item | What the work actually is | Blocked on | Size |
+|---|---|---|---|---|
+| 82 | Google & Apple sign-in | Enable both providers in Supabase; add a post-callback screen to collect username, role and date of birth (an OAuth callback carries none of them, and the profile trigger and 16+ gate need all three); decide what happens when an OAuth email matches an existing password account. | **You.** A Google Cloud OAuth client (free) and an Apple Developer account (~€99/yr) for the Services ID and signing key. | M–L |
+| 60 | Fan follows artist | New `follows` table + RLS, follow/unfollow on artist profiles, real counts (hidden today rather than faked as a permanent 0), and deciding whether the feed weights followed artists. | Your post-MVP call. | M |
+| 63 | Past events | What happens to a show once its date passes — drop out of Explore, move to an archive, stay on the artist's profile as history? Tickets must keep working for check-in either way. | **You**, to scope. | S–M once scoped |
+| 79 | Email verification link is decorative | Decide: say so in the email, drop the button, or leave it. Scanners open the link within ~15s of sending, so nobody completes verification by tapping it — the sign-in notice *is* the verification step. | Your decision. Deprioritised. | S |
+| 59 | Spanish/English localization | Pull every UI string into translation files, add a language switch, write the Spanish. Dates and currency are already `en-GB`/EUR, so those are fine. | Sequencing, plus a fluent Spanish pass on the copy. Best done **after** #82, or its new auth screens get translated twice. | L |
+| 58 | Admin user activity tracking | Login frequency, geolocation, attendance history. Needs a new events table and a write path, not just a query. | Nothing technical. Least urgent. | L |
 
-## Waiting on Vir
+### Two worth reading before starting
 
-See [TODO-VIR.md](TODO-VIR.md) for the full list with instructions.
+**#58 collects personal data.** Geolocation and login history are personal data
+under GDPR, so they fall under the same retention and erasure rules the account
+deletion work set up in `addendum_019` — the purge in
+`src/lib/account-deletion.ts` would have to scrub or anonymise whatever this
+adds. Decide what it is *for* before building it: "useful someday" is a poor
+reason to start retaining people's locations.
 
-- **`CRON_SECRET` is not set in Vercel.** The nightly account purge returns 503
-  and refuses to run, so deletion requests are accepted but never complete.
-  This is the one genuinely blocking item.
-- **`El Sol` has no address** in `/admin/venues` — the last one. Its old value
-  was wrong (it carried Café Berlín's address), so it was nulled rather than
-  left to sit there looking correct.
-- **Stripe test keys** were printed in a chat transcript — worth rolling.
+**#59 wants to go last.** i18n means touching every string in the app. Anything
+built afterwards needs its own translation pass, so each feature shipped before
+it is one that gets translated once instead of twice.
 
-## Verified-by-hand gaps
+## Suggested order
 
-Things built and shipped but never exercised through the UI, so worth a click
-before trusting them:
+1. **#63** — cheapest, and the one where shows quietly pile up as the calendar
+   moves. Needs ten minutes of your thinking more than mine.
+2. **#82** — the biggest fan-facing win; sign-up friction is what costs users.
+3. **#60** — makes artist profiles worth following, and gives the feed something
+   to personalise on.
+4. **#59** — after the above, so the strings are translated once.
+5. **#58** — whenever, and only once it has a purpose.
 
-- The account-deletion dialog, the sign-in cancellation, and the "your account
-  is safe" notice. The purge itself *has* been run end to end and verified
-  (personal fields scrubbed, sign-in blocked, ticket rows survived).
+**#79** is a five-minute change whenever you decide the answer.
+
+## Nothing is currently waiting on you
+
+`CRON_SECRET` set, `addendum_020` run, Stripe keys rotated, every active venue
+has an address, tombstone removed. The house-show path — list, buy, refund, tag,
+post content, edit — has been exercised end to end.
