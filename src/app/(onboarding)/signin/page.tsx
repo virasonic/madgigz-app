@@ -17,17 +17,29 @@ import { createClient } from "@/lib/supabase/client";
 // the mail provider's link scanner already completed the verification, so the
 // account is fine - shouting in red at someone whose signup actually worked is
 // the bug this replaced.
-const LINK_NOTICES: Record<string, { text: string; tone: "info" | "warn" }> = {
+// Headline first, caveat in small print. Mail scanners open these within
+// seconds of sending, so in practice nearly everyone who lands here is already
+// verified and just needs to sign in - that should be the sentence they read.
+// The fallback still has to be there though: the same notice fires when a link
+// genuinely expired unopened, and a flat "verified" would be a lie to someone
+// who then can't get in.
+const LINK_NOTICES: Record<
+  string,
+  { title: string; detail?: string; tone: "info" | "warn" }
+> = {
   verify_link_spent: {
-    text: "That link has already been opened, which usually means your email is verified. Sign in below - if it doesn't work, sign up again for a fresh link.",
+    title: "Email verified - sign in below",
+    detail: "If that doesn't work, sign up again for a fresh link.",
     tone: "info",
   },
   reset_link_spent: {
-    text: "That password reset link has already been opened or has expired. Request a new one with 'Forgot password?' below.",
+    title: "That reset link has already been used",
+    detail: "Tap 'Forgot password?' below for a new one.",
     tone: "warn",
   },
   link_invalid: {
-    text: "That link looks incomplete - it may have been cut short by your email app. Try opening it again, or request a new one.",
+    title: "That link didn't come through properly",
+    detail: "Try opening it again, or request a new one.",
     tone: "warn",
   },
 };
@@ -38,14 +50,16 @@ function LinkNotice() {
   if (!code) return null;
 
   const notice = LINK_NOTICES[code] ?? LINK_NOTICES.link_invalid;
-  const tone =
-    notice.tone === "warn"
-      ? "bg-primary/10 text-primary"
-      : "bg-surface text-muted";
+  const tone = notice.tone === "warn" ? "bg-primary/10 text-primary" : "bg-surface text-foreground";
 
   // Positive top margin: the old -mt-2 pulled this up over the "Sign in to keep
   // the vibe going" line beneath the heading.
-  return <p className={`mt-5 rounded-xl px-4 py-3 text-sm leading-relaxed ${tone}`}>{notice.text}</p>;
+  return (
+    <div className={`mt-5 rounded-xl px-4 py-3 ${tone}`}>
+      <p className="font-heading text-sm">{notice.title}</p>
+      {notice.detail && <p className="mt-1 text-xs text-muted">{notice.detail}</p>}
+    </div>
+  );
 }
 
 export default function SignInPage() {

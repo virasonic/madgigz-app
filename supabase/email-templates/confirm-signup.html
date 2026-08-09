@@ -3,10 +3,15 @@
   Paste into: Supabase Dashboard -> Authentication -> Email Templates -> Confirm signup
   (replace the whole template body with this).
 
-  {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup is Supabase's own variable - it's substituted automatically,
-  don't edit it. The app's verify-email screen is click-only (no code entry anywhere
-  in the app - confirmed by reading the actual page source, not assumed), so the
-  button is the only thing that matters here.
+  The button must link to OUR route carrying the token, not to
+  {{ .ConfirmationURL }}. That variable points at Supabase's own
+  /auth/v1/verify, which consumes the token itself and then redirects to
+  /auth/confirm with an empty query string - so the app never learned the
+  verification happened and told people their link looked incomplete.
+
+  {{ .SiteURL }} and {{ .TokenHash }} are substituted by Supabase; don't edit
+  them. .TokenHash is a hash embedded in the URL, not the 6-digit .Token - this
+  stays a one-tap link and needs no code-entry screen.
 -->
 <div style="background-color:#0a0807;padding:40px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:420px;margin:0 auto;">
