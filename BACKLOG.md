@@ -5,50 +5,49 @@ Open items only. Anything not listed here has shipped — see `git log`.
 Numbering is historical and deliberately not re-packed, so a number always means
 the same thing across old conversations. Gaps are shipped items.
 
-## Open
+## In suggested order
 
-| # | Item | What the work actually is | Blocked on | Size |
-|---|---|---|---|---|
-| 82 | Google & Apple sign-in | Enable both providers in Supabase; add a post-callback screen to collect username, role and date of birth (an OAuth callback carries none of them, and the profile trigger and 16+ gate need all three); decide what happens when an OAuth email matches an existing password account. | **You.** A Google Cloud OAuth client (free) and an Apple Developer account (~€99/yr) for the Services ID and signing key. | M–L |
-| 79 | Email verification link is decorative | Decide: say so in the email, drop the button, or leave it. Scanners open the link within ~15s of sending, so nobody completes verification by tapping it — the sign-in notice *is* the verification step. | Your decision. Deprioritised. | S |
-| 59 | Spanish/English localization | Pull every UI string into translation files, add a language switch, write the Spanish. Dates and currency are already `en-GB`/EUR, so those are fine. | Sequencing, plus a fluent Spanish pass on the copy. Best done **after** #82, or its new auth screens get translated twice. | L |
-| 88 | Promoter & venue user flows | Account types alongside fan/artist, probably web rather than the mobile app. Groundwork exists: admin-created shows already model a show with no `artist_id` whose creator manages it, `venues` rows have a `verified` flag a venue account could claim, and the artist claim-and-evidence flow is the precedent for verifying someone represents a venue. | Later, by your call. Decide ownership first — see below. | L |
-| 58 | Admin user activity tracking | Login frequency, geolocation, attendance history. Needs a new events table and a write path, not just a query. | Nothing technical. Least urgent. | L |
+| Order | # | Item | What the work actually is | Blocked on | Size |
+|---|---|---|---|---|---|
+| 1 | 82a | **Google sign-in** | The hard part of #82, and it isn't the provider: an OAuth callback carries no username, role or date of birth, and the profile trigger and 16+ age gate need all three — so it needs a post-callback screen to collect them. Also a decision on what happens when a Google email matches an existing password account. | **You** — a Google Cloud OAuth client. Free, about ten minutes. | M |
+| 2 | 82b | **Apple sign-in** | Enable the provider, add the button. Small, because 82a already built the callback screen — it's provider-agnostic. | **Apple**, approving your developer verification. | S |
+| 3 | 59 | **Spanish/English localization** | Every UI string into translation files, a language switch, and the Spanish itself. Dates and currency are already `en-GB`/EUR. | Sequencing (see below), plus a fluent Spanish pass on the copy. | L |
+| 4 | 79 | **Verification link is decorative** | Say so in the email, drop the button, or leave it. Scanners open the link within ~15s of sending, so nobody completes verification by tapping it — the sign-in notice *is* the verification step. | Your decision. Can jump the queue any time — it's five minutes. | S |
+| 5 | 88 | **Promoter & venue flows** | Account types alongside fan/artist, probably web rather than the app. Groundwork exists: admin-created shows already model a show with no `artist_id` managed by its creator, `venues` rows carry a `verified` flag an account could claim, and the artist claim-and-evidence flow is the precedent for verifying someone represents a venue. | Later, your call. Decide ownership first. | L |
+| 6 | 58 | **Admin activity tracking** | Login frequency, geolocation, attendance history. A new events table and a write path, not just a query. | Nothing technical. Needs a purpose first. | L |
 
-### Three worth reading before starting
+## Why this order
+
+**Google before Apple, not both together.** Apple needs verification you're
+waiting on; Google needs a free OAuth client you can create today. The
+post-callback screen — the actual work — is shared, so building it against
+Google means Apple later is a provider toggle and a button rather than a
+rebuild. Waiting for Apple would block the whole of #82 on something outside
+your control.
+
+**Localization after the auth screens exist.** i18n means touching every string
+in the app, so anything built afterwards needs its own translation pass. Doing
+#82 first means those screens get translated once instead of twice. This is the
+only ordering constraint that actually costs money to get wrong.
 
 **#88 turns on one decision: ownership.** `events.artist_id` assumes an artist
 owns a show, and every RLS policy keyed on `events.artist_id = auth.uid()`
 widens with it — events, event_artists, content_posts, and the whole checkout
-path. Generalising it (an `owner_id` + `owner_type`, or a separate table) is the
-call that shapes everything else. The other two questions are commercial rather
-than technical: who gets paid when a promoter books an artist and whether the 5%
-splits three ways, and whether a venue sees sales for shows at their venue that
-they didn't book.
-
+path. Generalising it (an `owner_id` + `owner_type`, or a separate table) shapes
+everything else, so settle it before any UI gets designed. The other two
+questions are commercial rather than technical, and yours: who gets paid when a
+promoter books an artist and whether the 5% splits three ways, and whether a
+venue sees sales for shows at their venue they didn't book.
 
 **#58 collects personal data.** Geolocation and login history are personal data
-under GDPR, so they fall under the same retention and erasure rules the account
-deletion work set up in `addendum_019` — the purge in
-`src/lib/account-deletion.ts` would have to scrub or anonymise whatever this
-adds. Decide what it is *for* before building it: "useful someday" is a poor
+under GDPR, so they fall under the retention and erasure rules `addendum_019`
+set up — the purge in `src/lib/account-deletion.ts` would have to scrub whatever
+this adds. Decide what it's *for* before building it: "useful someday" is a poor
 reason to start retaining people's locations.
-
-**#59 wants to go last.** i18n means touching every string in the app. Anything
-built afterwards needs its own translation pass, so each feature shipped before
-it is one that gets translated once instead of twice.
-
-## Suggested order
-
-1. **#82** — the biggest fan-facing win; sign-up friction is what costs users.
-   Blocked until Apple approves your verification.
-3. **#59** — after the above, so the strings are translated once.
-4. **#58** — whenever, and only once it has a purpose.
-
-**#79** is a five-minute change whenever you decide the answer.
 
 ## Nothing is currently waiting on you
 
-`CRON_SECRET` set, `addendum_020` run, Stripe keys rotated, every active venue
-has an address, tombstone removed. The house-show path — list, buy, refund, tag,
-post content, edit — has been exercised end to end.
+`CRON_SECRET` set, every migration through `addendum_023` run, Stripe keys
+rotated, every active venue has an address. The house-show path — list, buy,
+refund, tag, post content, edit — has been exercised end to end, and
+notifications are confirmed firing on ticket purchases and follows.
