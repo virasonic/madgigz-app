@@ -13,13 +13,14 @@ the same thing across old conversations. Gaps are shipped items.
 | 85 | Say the payout account is needed *before* the Add Show form | Tester feedback, 9 Aug: *"Frustrating from the UX standpoint."* The form only blocks "Sell through MadGigz" once you reach the ticketing section, so an artist fills in name, venue, date, poster and description before finding out they can't sell. Surface it up front with a link to onboarding. |
 | 82 | Sign up / sign in with Google and Apple | Supabase supports both providers, but an OAuth callback carries no username, role or date of birth — and the profile trigger and the 16+ age gate both need all three — so it needs a post-callback step to collect them. Also needs a decision on what happens when an OAuth email matches an existing password account. Apple requires a paid Apple Developer account; Google is free. |
 | 79 | Make clear that the email verification link is decorative | Mail scanners open the link within ~15s of sending, so effectively nobody completes verification by tapping it — the sign-in notice *is* the verification experience. Parked pending tester feedback: say so in the email, drop the button, or leave it. |
-| 62 | Admin/house-created shows | Part 1: shows with an external ticket link (no Stripe, no fee). Part 2: MadGigz-hosted shows. Blocker: `event_artists` policies check `events.artist_id = auth.uid()`, so admin tagging needs its own server action. |
 | 59 | Spanish/English localization | Sequenced late on purpose — i18n means pulling every UI string into translation files, so it wants the fan-facing UI settled first, or new strings need a second pass. |
 | 58 | Admin: user activity tracking | Login frequency, geolocation, attendance history. Needs new tracking infrastructure, not just a query. Heaviest lift here, least urgent. |
 | 63 | Past-events storage/function | Unscoped — what should happen to a show once its date passes? Needs deciding before it can be planned. |
 | 60 | Fan-follows-artist infrastructure | Post-MVP call. Follower counts are hidden on artist profiles today rather than faked as a permanent 0. |
 
 ## Waiting on Vir
+
+See [TODO-VIR.md](TODO-VIR.md) for the full list with instructions.
 
 - **`CRON_SECRET` is not set in Vercel.** The nightly account purge returns 503
   and refuses to run, so deletion requests are accepted but never complete.
