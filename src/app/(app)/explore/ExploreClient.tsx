@@ -138,8 +138,6 @@ export default function ExploreClient({
               <EventCard
                 key={event.id}
                 event={event}
-                liked={savedIds.includes(event.id)}
-                onToggleLike={() => handleToggleSave(event.id)}
                 onOpen={() => setActiveEvent(event)}
               />
             ))}
@@ -157,6 +155,8 @@ export default function ExploreClient({
         <TicketModal
           key={activeEvent.id}
           event={activeEvent}
+          liked={savedIds.includes(activeEvent.id)}
+          onToggleLike={() => handleToggleSave(activeEvent.id)}
           onClose={() => setActiveEvent(null)}
         />
       )}

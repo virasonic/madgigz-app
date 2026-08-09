@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import { createCheckout, previewPromoCode } from "@/app/(app)/checkout-actions";
 import { EventItem } from "@/lib/types";
 import ShareEventButton from "./ShareEventButton";
+import LikeButton from "./LikeButton";
 
 type Tab = "tickets" | "info";
 
@@ -15,6 +16,10 @@ interface TicketModalProps {
   initialTab?: Tab;
   onClose: () => void;
   onPurchased?: () => void;
+  // Optional because the public /e/[id] page opens this sheet for people who
+  // aren't signed in, and there's nowhere to record a like for them.
+  liked?: boolean;
+  onToggleLike?: () => void;
 }
 
 function formatDate(iso: string) {
@@ -31,6 +36,8 @@ export default function TicketModal({
   initialTab = "tickets",
   onClose,
   onPurchased,
+  liked = false,
+  onToggleLike,
 }: TicketModalProps) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [quantity, setQuantity] = useState(1);
@@ -144,12 +151,19 @@ export default function TicketModal({
               <Image src={event.image} alt={event.title} fill sizes="480px" className="object-contain" />
             </div>
 
-            {/* This sheet is the only way into an event from Explore and This
-                Week, so without a share button here those two tabs had no way
-                to share a gig at all - only the For You rail did. */}
+            {/* Like and share both live here rather than on the cards behind
+                it. This sheet is the one place every route into an event
+                converges - Explore, This Week, For You - so one pair of controls
+                covers all three, and they sit next to the show they act on
+                rather than on a thumbnail of it. */}
             <div className="flex items-start justify-between gap-3">
               <h2 className="font-display text-2xl text-foreground">{event.title}</h2>
-              <ShareEventButton event={event} showLabel className="shrink-0 pt-1" />
+              <div className="flex shrink-0 items-start gap-4 pt-1">
+                {onToggleLike && (
+                  <LikeButton event={event} liked={liked} onToggle={onToggleLike} showLabel />
+                )}
+                <ShareEventButton event={event} showLabel />
+              </div>
             </div>
             {event.artistId ? (
               <Link href={`/profile/${event.artistId}`} className="mt-1 inline-block text-sm text-accent">

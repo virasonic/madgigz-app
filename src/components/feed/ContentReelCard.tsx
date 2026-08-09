@@ -5,18 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { ContentPost, EventItem } from "@/lib/types";
 import ShareEventButton from "./ShareEventButton";
-
-function HeartIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"}>
-      <path
-        d="M12 20.5s-7.5-4.6-10-9.3C.5 8 2 4.5 5.5 4c2-.3 3.7.6 5 2.3C11.8 4.6 13.5 3.7 15.5 4c3.5.5 5 4 3.5 7.2-2.5 4.7-10 9.3-10 9.3Z"
-        stroke="currentColor"
-        strokeWidth={filled ? 0 : 1.8}
-      />
-    </svg>
-  );
-}
+import LikeButton from "./LikeButton";
 
 function NoteIcon() {
   return (
@@ -154,12 +143,9 @@ export default function ContentReelCard({
           full-width and comes later in the DOM, so without this it paints on
           top and swallows every tap on Like/Share. */}
       <div className="absolute bottom-24 right-4 z-10 flex flex-col items-center gap-6">
-        <button
-          onClick={onToggleLike}
-          style={{ color: liked ? event.accentColor : "var(--foreground)" }}
-        >
-          <HeartIcon filled={liked} />
-        </button>
+        {/* Stays in the rail, unchanged - a reel is scrolled full-screen, so
+            its controls belong on the edge rather than in a sheet. */}
+        <LikeButton event={event} liked={liked} onToggle={onToggleLike} />
         {/* Shares the gig, not the reel. A reel is an artist's post *about* a
             show; the recipient wants the show. */}
         <ShareEventButton event={event} />

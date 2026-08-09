@@ -224,6 +224,8 @@ export default function FeedClient({
         <TicketModal
           key={activeEvent.id}
           event={activeEvent}
+          liked={savedIds.includes(activeEvent.id)}
+          onToggleLike={() => handleToggleLike(activeEvent.id)}
           onClose={() => setActiveEvent(null)}
         />
       )}

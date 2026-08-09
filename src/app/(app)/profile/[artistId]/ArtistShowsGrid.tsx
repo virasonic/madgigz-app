@@ -40,8 +40,6 @@ export default function ArtistShowsGrid({
           <EventCard
             key={show.id}
             event={show}
-            liked={savedIds.includes(show.id)}
-            onToggleLike={() => handleToggleSave(show.id)}
             onOpen={() => setActiveEvent(show)}
           />
         ))}
@@ -51,6 +49,8 @@ export default function ArtistShowsGrid({
         <TicketModal
           key={activeEvent.id}
           event={activeEvent}
+          liked={savedIds.includes(activeEvent.id)}
+          onToggleLike={() => handleToggleSave(activeEvent.id)}
           onClose={() => setActiveEvent(null)}
         />
       )}

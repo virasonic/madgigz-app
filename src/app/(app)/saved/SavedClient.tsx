@@ -71,13 +71,19 @@ export default function SavedClient({
     [initialEvents, tickets]
   );
 
-  async function handleUnsave(eventId: string) {
-    setSavedIds((ids) => ids.filter((id) => id !== eventId));
+  // A real toggle rather than unsave-only. From this list it always unsaves -
+  // everything here is saved by definition - but the ticket sheet opened from
+  // it has a like button too, and that has to be able to put one back.
+  async function handleToggleSaved(eventId: string) {
+    const wasSaved = savedIds.includes(eventId);
+    setSavedIds((ids) => (wasSaved ? ids.filter((id) => id !== eventId) : [...ids, eventId]));
     const supabase = createClient();
-    const ok = await toggleSavedEvent(supabase, userId, eventId, true);
-    // Put the row back if the delete was refused, so the list matches what's
-    // actually stored rather than only correcting itself on the next load.
-    if (!ok) setSavedIds((ids) => [...ids, eventId]);
+    const ok = await toggleSavedEvent(supabase, userId, eventId, wasSaved);
+    // Put it back if the write was refused, so the list matches what's actually
+    // stored rather than only correcting itself on the next load.
+    if (!ok) {
+      setSavedIds((ids) => (wasSaved ? [...ids, eventId] : ids.filter((id) => id !== eventId)));
+    }
   }
 
   async function handleRemoveRefunded(ticketId: string) {
@@ -161,7 +167,7 @@ export default function SavedClient({
                 </button>
                 <span className="shrink-0 text-xs text-muted">€{event.price}</span>
                 <button
-                  onClick={() => handleUnsave(event.id)}
+                  onClick={() => handleToggleSaved(event.id)}
                   aria-label="Remove from liked events"
                   className="shrink-0 rounded-full p-1.5 text-muted hover:text-foreground"
                 >
@@ -238,6 +244,8 @@ export default function SavedClient({
           key={activeEvent.id}
           event={activeEvent}
           initialTab="info"
+          liked={savedIds.includes(activeEvent.id)}
+          onToggleLike={() => handleToggleSaved(activeEvent.id)}
           onClose={() => setActiveEvent(null)}
         />
       )}
