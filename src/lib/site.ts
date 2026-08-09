@@ -40,3 +40,17 @@ export function safeNext(value: string | null | undefined): string | null {
   if (value.startsWith("//") || value.startsWith("/\\")) return null;
   return value;
 }
+
+// A maps link that works wherever it's tapped. Deliberately the plain Google
+// Maps query URL rather than a geo:, maps:// or Apple-specific scheme: iOS
+// offers to open this in Apple Maps anyway, Android goes straight to Google
+// Maps, and a desktop browser shows a normal web page - whereas a geo: URI
+// does nothing at all on a laptop.
+//
+// The venue name goes in alongside the address because addresses in Madrid are
+// often ambiguous without it, and the name is what fixes the pin on the right
+// door rather than the middle of the street.
+export function mapsUrl(venueName: string, address: string | null): string {
+  const query = address ? `${venueName}, ${address}` : `${venueName}, Madrid`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}

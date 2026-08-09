@@ -3,6 +3,7 @@
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { EventItem, Ticket } from "@/lib/types";
+import { mapsUrl } from "@/lib/site";
 
 interface TicketQRModalProps {
   ticket: Ticket;
@@ -51,6 +52,17 @@ export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalP
           <p className="mt-1 text-sm text-muted">
             {event.venue} · {formatDate(event.date)} · {event.time}
           </p>
+
+          {/* The one screen someone has open while standing outside trying to
+              find the door. */}
+          <a
+            href={mapsUrl(event.venue, event.venueAddress)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-block text-sm text-accent underline underline-offset-4"
+          >
+            {event.venueAddress ?? "Find the venue"} &rarr;
+          </a>
           <p className="mt-1 text-sm text-muted">
             {ticket.quantity} {ticket.quantity === 1 ? "ticket" : "tickets"}
           </p>

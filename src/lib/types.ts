@@ -53,6 +53,9 @@ export interface EventItem {
   title: string;
   artist: string;
   venue: string;
+  // Joined from the venue row. Null for a show whose venue was typed in before
+  // the venues table existed, or one an admin hasn't given an address yet.
+  venueAddress: string | null;
   city: string;
   date: string;
   time: string;
@@ -176,6 +179,9 @@ export interface EventRow {
   rating: number;
   ticketing_mode: "internal" | "external";
   ticketing_url: string | null;
+  // PostgREST embed of the joined venue row. Absent on queries that don't ask
+  // for it, so treated as optional rather than assumed.
+  venues?: { address: string | null } | null;
   active?: boolean;
   cancelled?: boolean;
   max_per_order?: number;
@@ -189,6 +195,7 @@ export function mapEvent(row: EventRow): EventItem {
     title: row.title,
     artist: row.artist_name,
     venue: row.venue,
+    venueAddress: row.venues?.address ?? null,
     city: row.city,
     date: row.event_date,
     time: row.event_time,

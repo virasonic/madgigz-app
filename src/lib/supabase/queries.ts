@@ -188,7 +188,9 @@ export async function fetchEvents(
   supabase: SupabaseClient,
   options: { activeOnly?: boolean } = {}
 ): Promise<EventItem[]> {
-  let query = supabase.from("events").select("*").order("event_date");
+  // The venue embed carries the address through to the ticket and the public
+  // page, where it becomes a maps link. One join beats a lookup per event.
+  let query = supabase.from("events").select("*, venues(address)").order("event_date");
   if (options.activeOnly) query = query.eq("active", true);
   const { data } = await query;
   return ((data as EventRow[]) ?? []).map(mapEvent);
@@ -201,7 +203,11 @@ export async function fetchEventById(
   supabase: SupabaseClient,
   eventId: string
 ): Promise<EventItem | null> {
-  const { data } = await supabase.from("events").select("*").eq("id", eventId).maybeSingle();
+  const { data } = await supabase
+    .from("events")
+    .select("*, venues(address)")
+    .eq("id", eventId)
+    .maybeSingle();
   return data ? mapEvent(data as EventRow) : null;
 }
 
@@ -397,7 +403,7 @@ export async function fetchTaggedShows(
 ): Promise<EventItem[]> {
   const { data } = await supabase
     .from("event_artists")
-    .select("events(*)")
+    .select("events(*, venues(address))")
     .eq("profile_id", artistId);
 
   return ((data ?? []) as unknown as { events: EventRow | null }[])
@@ -413,7 +419,7 @@ export async function fetchShowsByArtist(
 ): Promise<EventItem[]> {
   const { data } = await supabase
     .from("events")
-    .select("*")
+    .select("*, venues(address)")
     .eq("artist_id", artistId)
     .order("event_date");
   return ((data as EventRow[]) ?? []).map(mapEvent);

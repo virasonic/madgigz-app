@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchEventById, fetchEventGenreNames } from "@/lib/supabase/queries";
-import { absoluteUrl, eventPath } from "@/lib/site";
+import { absoluteUrl, eventPath, mapsUrl } from "@/lib/site";
 import PublicEventActions from "./PublicEventActions";
 
 // The one page in the app that a logged-out stranger is meant to see. Everything
@@ -121,9 +121,15 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
 
         <h1 className="font-display mt-5 text-3xl text-foreground">{event.title}</h1>
         <p className="mt-1 text-base text-foreground/90">{event.artist}</p>
-        <p className="mt-2 text-sm text-muted">
-          {event.venue} · {event.city}
-        </p>
+        <a
+          href={mapsUrl(event.venue, event.venueAddress)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 block text-sm text-accent"
+        >
+          {event.venue}
+          {event.venueAddress ? ` · ${event.venueAddress}` : ` · ${event.city}`} &rarr;
+        </a>
         <p className="text-sm text-muted">
           {formatDate(event.date)} · Doors {event.doors}
         </p>
