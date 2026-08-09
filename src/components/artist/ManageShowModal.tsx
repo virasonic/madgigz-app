@@ -14,6 +14,12 @@ import {
 import { removeEventMedia, uploadEventMedia } from "@/lib/supabase/storage";
 import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/types";
+import { updateShow } from "@/app/(app)/profile/show-actions";
+
+// <input type="time"> wants HH:MM; Postgres hands back HH:MM:SS.
+function toTimeInput(value: string) {
+  return value.slice(0, 5);
+}
 
 type Tab = "overview" | "content" | "buyers";
 
@@ -56,6 +62,19 @@ export default function ManageShowModal({
   const [active, setActive] = useState(show.active);
   const [togglingVisibility, setTogglingVisibility] = useState(false);
   const [visibilityError, setVisibilityError] = useState<string | undefined>();
+
+  // Held locally so a save shows immediately - the `show` prop only refreshes
+  // once the parent refetches.
+  const [details, setDetails] = useState({
+    description: show.description,
+    lineup: show.lineup,
+    date: show.date,
+    time: show.time,
+  });
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(details);
+  const [savingEdits, setSavingEdits] = useState(false);
+  const [editError, setEditError] = useState<string | undefined>();
 
   useEffect(() => {
     const supabase = createClient();
@@ -180,6 +199,39 @@ export default function ManageShowModal({
     onChanged();
   }
 
+  function startEditing() {
+    setDraft(details);
+    setEditError(undefined);
+    setEditing(true);
+  }
+
+  async function handleSaveEdits() {
+    setSavingEdits(true);
+    setEditError(undefined);
+
+    const result = await updateShow(show.id, {
+      description: draft.description,
+      lineup: draft.lineup,
+      date: draft.date,
+      time: draft.time,
+    });
+
+    setSavingEdits(false);
+
+    if (result.error) {
+      setEditError(result.error);
+      return;
+    }
+
+    setDetails({
+      ...draft,
+      description: draft.description.trim(),
+      lineup: draft.lineup.map((a) => a.trim()).filter(Boolean),
+    });
+    setEditing(false);
+    onChanged();
+  }
+
   async function handleDeleteShow() {
     setRemoving(true);
     setRemoveError(undefined);
@@ -230,7 +282,7 @@ export default function ManageShowModal({
 
         <h2 className="font-display text-2xl text-foreground">{show.title}</h2>
         <p className="mt-1 text-sm text-muted">
-          {show.venue} · {formatDate(show.date)} · {show.time}
+          {show.venue} · {formatDate(details.date)} · {toTimeInput(details.time)}
         </p>
 
         <div className="mt-5 flex gap-2 rounded-full bg-background p-1">
@@ -270,7 +322,7 @@ export default function ManageShowModal({
               <div>
                 <p className="text-muted">Date &amp; time</p>
                 <p className="text-foreground">
-                  {formatDate(show.date)}, {show.time}
+                  {formatDate(details.date)}, {toTimeInput(details.time)}
                 </p>
               </div>
             </div>
@@ -298,11 +350,135 @@ export default function ManageShowModal({
             )}
 
             <div>
-              <p className="text-sm text-muted">Description</p>
-              <p className="mt-1 text-sm text-foreground/90">{show.description}</p>
+              <p className="text-sm text-muted">Lineup</p>
+              <p className="mt-1 text-sm text-foreground/90">{details.lineup.join(" · ")}</p>
             </div>
 
-            <Button onClick={() => setTab("content")}>Add Content</Button>
+            <div>
+              <p className="text-sm text-muted">Description</p>
+              <p className="mt-1 text-sm text-foreground/90">{details.description}</p>
+            </div>
+
+            {editing ? (
+              <div className="flex flex-col gap-4 rounded-2xl bg-background p-4">
+                <p className="font-heading text-sm text-foreground">Edit details</p>
+
+                <div className="flex gap-2">
+                  <label className="flex flex-1 flex-col gap-1.5">
+                    <span className="text-xs text-muted">Date</span>
+                    <input
+                      type="date"
+                      value={draft.date}
+                      onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))}
+                      className="w-full rounded-xl border border-muted/20 bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </label>
+                  <label className="flex flex-1 flex-col gap-1.5">
+                    <span className="text-xs text-muted">Time</span>
+                    <input
+                      type="time"
+                      value={toTimeInput(draft.time)}
+                      onChange={(e) => setDraft((d) => ({ ...d, time: e.target.value }))}
+                      className="w-full rounded-xl border border-muted/20 bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </label>
+                </div>
+
+                {show.sold > 0 && (
+                  <p className="text-xs text-muted">
+                    {show.sold} {show.sold === 1 ? "person has" : "people have"} already bought
+                    tickets - let them know yourself if you move the date or time.
+                  </p>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs text-muted">Lineup</span>
+                  {draft.lineup.map((act, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input
+                        value={act}
+                        onChange={(e) =>
+                          setDraft((d) => ({
+                            ...d,
+                            lineup: d.lineup.map((a, j) => (j === i ? e.target.value : a)),
+                          }))
+                        }
+                        placeholder={i === 0 ? "Headliner" : "Support act"}
+                        className="w-full min-w-0 flex-1 rounded-xl border border-muted/20 bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      {draft.lineup.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setDraft((d) => ({
+                              ...d,
+                              lineup: d.lineup.filter((_, j) => j !== i),
+                            }))
+                          }
+                          aria-label="Remove from lineup"
+                          className="shrink-0 rounded-xl border border-muted/20 px-3 text-muted"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setDraft((d) => ({ ...d, lineup: [...d.lineup, ""] }))}
+                    className="self-start text-sm font-heading text-accent"
+                  >
+                    + Add artist
+                  </button>
+                </div>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs text-muted">Description</span>
+                  <textarea
+                    value={draft.description}
+                    onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+                    rows={4}
+                    className="w-full rounded-xl border border-muted/20 bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </label>
+
+                {/* Said out loud rather than just leaving the field out, so it
+                    doesn't read as something we forgot to build. */}
+                <p className="text-xs text-muted">
+                  Ticket price can&apos;t be changed after publishing - fans who already bought
+                  paid the listed price, and their receipts and refunds are tied to it. Email{" "}
+                  <a href="mailto:support@aurasonic.es" className="text-accent underline">
+                    support@aurasonic.es
+                  </a>{" "}
+                  if the price is wrong.
+                </p>
+
+                {editError && <p className="text-sm text-danger">{editError}</p>}
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={() => setEditing(false)}
+                    disabled={savingEdits}
+                  >
+                    Cancel
+                  </Button>
+                  <Button className="flex-1" onClick={handleSaveEdits} disabled={savingEdits}>
+                    {savingEdits ? "Saving..." : "Save changes"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <Button variant="ghost" className="flex-1" onClick={startEditing}>
+                  Edit details
+                </Button>
+                <Button className="flex-1" onClick={() => setTab("content")}>
+                  Add Content
+                </Button>
+              </div>
+            )}
 
             <div className="flex flex-col gap-5 border-t border-muted/15 pt-5">
               <div className="flex flex-col gap-2">
