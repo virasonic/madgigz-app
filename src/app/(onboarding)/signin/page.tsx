@@ -165,20 +165,10 @@ function SignInContent() {
         </Button>
       </form>
 
-      <div className="mt-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-muted/20" />
-        <span className="text-xs text-muted">or</span>
-        <div className="h-px flex-1 bg-muted/20" />
-      </div>
-
-      <div className="mt-6 flex flex-col gap-3">
-        <Button variant="ghost" type="button" disabled>
-          Continue with Apple
-        </Button>
-        <Button variant="ghost" type="button" disabled>
-          Continue with Google
-        </Button>
-      </div>
+      {/* Apple and Google buttons lived here, rendered disabled. A greyed-out
+          button reads as "this is broken" rather than "this isn't built yet",
+          and it was the first thing on the page for anyone who signs in with
+          Google everywhere else. They come back with [[82]], wired up. */}
 
       <p className="mt-8 text-center text-sm text-muted">
         Don&apos;t have an account?{" "}
