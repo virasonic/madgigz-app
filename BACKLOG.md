@@ -9,6 +9,7 @@ the same thing across old conversations. Gaps are shipped items.
 
 | # | Item | Why it's waiting |
 |---|---|---|
+| 83 | Hide the Google and Apple buttons until they work | They render disabled on sign-in and sign-up, which reads as broken rather than unbuilt. Remove them and the "or" divider; bring them back with #82. Small — a few lines. |
 | 82 | Sign up / sign in with Google and Apple | The buttons already exist on both screens, rendered disabled. Supabase supports both providers, but OAuth callbacks carry no username, role or date of birth — and the profile trigger and the 16+ age gate both need those — so it needs a post-callback step to collect them. Apple also needs a paid Apple Developer account. |
 | 79 | Make clear that the email verification link is decorative | Mail scanners open the link within ~15s of sending, so effectively nobody completes verification by tapping it — the sign-in notice *is* the verification experience. Needs deciding whether to say so in the email, drop the button entirely, or leave it. |
 | 70 | Account deletion (fan + artist self-serve, plus admin delete user) | Needs a retention decision first — tickets and payment records can't simply vanish, so "delete" has to mean anonymise-and-keep for some tables. GDPR-shaped, worth getting right once. |
