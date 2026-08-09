@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
@@ -201,6 +202,31 @@ export default function AddShowPage() {
   return (
     <div className="p-4">
       <h1 className="font-display mb-6 text-2xl text-foreground">Add a show</h1>
+
+      {/* Up here rather than beside the ticketing toggle, which is most of the
+          way down. A tester filled in the name, venue, date, poster and
+          description before finding out they couldn't charge for it - the
+          constraint was accurate, it just arrived after the work. */}
+      {!payoutsReady && (
+        <div className="mb-6 rounded-2xl bg-surface p-4">
+          <p className="font-heading text-sm text-foreground">
+            Before you start: you can&apos;t sell paid tickets yet
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Free shows and external ticket links work right away. To charge through
+            MadGigz you need a payout account — it takes a few minutes.
+          </p>
+          <Link
+            href="/profile?payout=refresh"
+            className="mt-3 inline-block font-heading text-xs text-accent"
+          >
+            {/* payout=refresh, not payout=return: "return" also fires a live
+                Stripe capability lookup, which is for coming back from
+                onboarding. Both open the Settings sheet. */}
+            Set up payouts
+          </Link>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <Input label="Show name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />

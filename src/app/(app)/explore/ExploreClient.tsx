@@ -138,9 +138,8 @@ export default function ExploreClient({
               <EventCard
                 key={event.id}
                 event={event}
-                variant="grid"
-                saved={savedIds.includes(event.id)}
-                onToggleSave={() => handleToggleSave(event.id)}
+                liked={savedIds.includes(event.id)}
+                onToggleLike={() => handleToggleSave(event.id)}
                 onOpen={() => setActiveEvent(event)}
               />
             ))}

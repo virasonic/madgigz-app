@@ -40,9 +40,8 @@ export default function ArtistShowsGrid({
           <EventCard
             key={show.id}
             event={show}
-            variant="grid"
-            saved={savedIds.includes(show.id)}
-            onToggleSave={() => handleToggleSave(show.id)}
+            liked={savedIds.includes(show.id)}
+            onToggleLike={() => handleToggleSave(show.id)}
             onOpen={() => setActiveEvent(show)}
           />
         ))}
