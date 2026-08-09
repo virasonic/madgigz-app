@@ -19,8 +19,12 @@ function timeAgo(iso: string, now: number) {
 export default function NotificationsClient({
   initialNotifications,
   now,
+  isArtist,
 }: {
   initialNotifications: AppNotification[];
+  // Only artists get followers or get put on a bill, so promising a fan those
+  // things describes an app they aren't using.
+  isArtist: boolean;
   // Passed in from the server rather than read during render. Calling
   // Date.now() here would be an impure render, and setting it in an effect
   // trips react-hooks/set-state-in-effect; a serialised prop hydrates to the
@@ -45,8 +49,9 @@ export default function NotificationsClient({
       <div className="p-4">
         <h1 className="font-display mb-6 text-2xl text-foreground">Notifications</h1>
         <p className="text-sm text-muted">
-          Nothing yet. You&apos;ll hear when an artist you follow announces a show, when
-          someone follows you, or when one of your gigs is coming up.
+          {isArtist
+            ? "Nothing yet. You'll hear when someone follows you, when you're added to a bill, and when a show you've got tickets for is coming up."
+            : "Nothing yet. You'll hear when an artist you follow announces a show, and when a show you've got tickets for is coming up."}
         </p>
       </div>
     );

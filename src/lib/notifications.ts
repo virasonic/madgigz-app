@@ -95,6 +95,8 @@ export function describeNotification(n: AppNotification): { title: string; detai
     case "followed_artist_show":
       return { title: `${who} announced ${what}`, detail: "Tickets are on sale." };
     case "event_upcoming":
+      // Deliberately about the show rather than "your gig" - the recipient is
+      // whoever holds a ticket, which is the audience, not the performer.
       return { title: `${what} is tomorrow`, detail: "Your ticket is in the Tickets tab." };
   }
 }

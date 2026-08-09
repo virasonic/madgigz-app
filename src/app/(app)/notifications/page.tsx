@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchCurrentUser } from "@/lib/supabase/queries";
+import { isArtistRole } from "@/lib/roles";
 import { fetchNotifications } from "@/lib/notifications";
 import NotificationsClient from "./NotificationsClient";
 
@@ -20,5 +21,11 @@ export default async function NotificationsPage() {
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
 
-  return <NotificationsClient initialNotifications={notifications} now={now} />;
+  return (
+    <NotificationsClient
+      initialNotifications={notifications}
+      now={now}
+      isArtist={isArtistRole(user.role)}
+    />
+  );
 }
