@@ -7,36 +7,9 @@ import {
   fetchShowsByArtist,
 } from "@/lib/supabase/queries";
 import Avatar from "@/components/ui/Avatar";
+import SocialLinks from "@/components/ui/SocialLinks";
 import ArtistShowsGrid from "./ArtistShowsGrid";
 import BackButton from "./BackButton";
-
-const SOCIALS: {
-  key: "instagram" | "tiktok" | "twitter" | "spotify" | "youtube";
-  label: string;
-  // Instagram/TikTok/Twitter are collected as handles at signup ("@yourname"),
-  // Spotify/YouTube as full links - so only the handle-shaped ones get a
-  // prefix built for them. A value already typed with "http" is trusted as-is
-  // either way, since an artist may have pasted a full URL into any of them.
-  buildHref: (value: string) => string;
-}[] = [
-  {
-    key: "instagram",
-    label: "Instagram",
-    buildHref: (v) => (v.startsWith("http") ? v : `https://instagram.com/${v.replace(/^@/, "")}`),
-  },
-  {
-    key: "tiktok",
-    label: "TikTok",
-    buildHref: (v) => (v.startsWith("http") ? v : `https://tiktok.com/@${v.replace(/^@/, "")}`),
-  },
-  {
-    key: "twitter",
-    label: "X",
-    buildHref: (v) => (v.startsWith("http") ? v : `https://x.com/${v.replace(/^@/, "")}`),
-  },
-  { key: "spotify", label: "Spotify", buildHref: (v) => v },
-  { key: "youtube", label: "YouTube", buildHref: (v) => v },
-];
 
 export default async function PublicArtistProfilePage({
   params,
@@ -65,11 +38,6 @@ export default async function PublicArtistProfilePage({
   // Manage view needs to see hidden shows too.
   const visibleShows = shows.filter((show) => show.active && !show.cancelled);
 
-  const socialLinks = SOCIALS.filter(({ key }) => artist[key]).map(({ key, label, buildHref }) => ({
-    label,
-    href: buildHref(artist[key] as string),
-  }));
-
   return (
     <div className="p-4">
       <BackButton />
@@ -88,21 +56,7 @@ export default async function PublicArtistProfilePage({
         <p className="mt-4 text-sm leading-relaxed text-foreground/90">{artist.artistBio}</p>
       )}
 
-      {socialLinks.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {socialLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full border border-muted/30 px-3 py-1.5 text-xs font-heading text-foreground"
-            >
-              {link.label}
-            </a>
-          ))}
-        </div>
-      )}
+      <SocialLinks source={artist} className="mt-4" />
 
       <h2 className="mb-3 mt-8 font-heading text-sm uppercase tracking-wide text-muted">
         Upcoming shows

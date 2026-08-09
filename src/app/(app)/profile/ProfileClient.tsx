@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Avatar from "@/components/ui/Avatar";
+import SocialLinks from "@/components/ui/SocialLinks";
+import { buildSocialLinks } from "@/lib/socials";
 import Button from "@/components/ui/Button";
 import ManageShowModal from "@/components/artist/ManageShowModal";
 import PayoutCard from "@/components/artist/PayoutCard";
@@ -128,6 +130,7 @@ export default function ProfileClient({
 
   const roleLabel = user.role === "artist" ? "Artist" : "Fan";
   const displayName = user.artistName ?? user.username;
+  const hasSocials = buildSocialLinks(user).length > 0;
   const ticketsSold = useMemo(() => shows.reduce((sum, show) => sum + show.sold, 0), [shows]);
   const visibleShows = useMemo(() => shows.filter((show) => show.active), [shows]);
   const hiddenShows = useMemo(() => shows.filter((show) => !show.active), [shows]);
@@ -175,8 +178,15 @@ export default function ProfileClient({
       {/* Without this an artist writes a bio in Edit Profile and never sees it
           again - it only showed on the public page, which they get redirected
           away from. */}
-      {user.role === "artist" && user.artistBio && (
-        <p className="-mt-2 mb-6 text-sm leading-relaxed text-foreground/90">{user.artistBio}</p>
+      {/* One wrapper so bio-only, links-only, and both all get the same spacing
+          against the header above and whatever follows. */}
+      {user.role === "artist" && (user.artistBio || hasSocials) && (
+        <div className="-mt-2 mb-6 flex flex-col gap-3">
+          {user.artistBio && (
+            <p className="text-sm leading-relaxed text-foreground/90">{user.artistBio}</p>
+          )}
+          <SocialLinks source={user} />
+        </div>
       )}
 
       {user.role === "fan" ? (

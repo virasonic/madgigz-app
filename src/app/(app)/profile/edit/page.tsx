@@ -3,10 +3,23 @@
 import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 import { fetchCurrentUser } from "@/lib/supabase/queries";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { AppUser } from "@/lib/types";
+
+// Same set the signup claim collects, so an artist can correct a typo or add
+// a link they skipped without going through support.
+const SOCIAL_FIELDS = [
+  { key: "instagram", column: "instagram", label: "Instagram", placeholder: "@yourname" },
+  { key: "tiktok", column: "tiktok", label: "TikTok", placeholder: "@yourname" },
+  { key: "twitter", column: "twitter", label: "Twitter / X", placeholder: "@yourname" },
+  { key: "spotify", column: "spotify", label: "Spotify", placeholder: "Artist profile link" },
+  { key: "youtube", column: "youtube", label: "YouTube", placeholder: "Channel link" },
+] as const;
+
+type SocialKey = (typeof SOCIAL_FIELDS)[number]["key"];
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -14,6 +27,13 @@ export default function EditProfilePage() {
 
   const [user, setUser] = useState<AppUser | null>(null);
   const [bio, setBio] = useState("");
+  const [socials, setSocials] = useState<Record<SocialKey, string>>({
+    instagram: "",
+    tiktok: "",
+    twitter: "",
+    spotify: "",
+    youtube: "",
+  });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
@@ -28,6 +48,13 @@ export default function EditProfilePage() {
       }
       setUser(current);
       setBio(current.artistBio ?? "");
+      setSocials({
+        instagram: current.instagram ?? "",
+        tiktok: current.tiktok ?? "",
+        twitter: current.twitter ?? "",
+        spotify: current.spotify ?? "",
+        youtube: current.youtube ?? "",
+      });
       setPhotoPreview(current.artistPhotoUrl);
     });
   }, [router]);
@@ -57,6 +84,11 @@ export default function EditProfilePage() {
       .from("profiles")
       .update({
         artist_bio: bio.trim() || null,
+        // Cleared fields become null rather than "", so the public profile's
+        // truthiness check drops the link instead of rendering a dead one.
+        ...Object.fromEntries(
+          SOCIAL_FIELDS.map(({ key, column }) => [column, socials[key].trim() || null])
+        ),
         ...(photoUrl !== undefined ? { artist_photo_url: photoUrl } : {}),
       })
       .eq("id", user.id);
@@ -127,6 +159,22 @@ export default function EditProfilePage() {
           />
           <p className="text-xs text-muted">
             Shown on your public profile, next to your upcoming shows.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <h2 className="font-heading text-sm text-muted">Social links</h2>
+          {SOCIAL_FIELDS.map(({ key, label, placeholder }) => (
+            <Input
+              key={key}
+              label={label}
+              placeholder={placeholder}
+              value={socials[key]}
+              onChange={(e) => setSocials((prev) => ({ ...prev, [key]: e.target.value }))}
+            />
+          ))}
+          <p className="text-xs text-muted">
+            Fans see these as links on your public profile. Leave one blank to remove it.
           </p>
         </div>
 
