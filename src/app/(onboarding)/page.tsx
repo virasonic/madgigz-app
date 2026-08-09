@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import RoleCard from "@/components/ui/RoleCard";
+import { safeNext } from "@/lib/site";
 
 function HeartIcon() {
   return (
@@ -29,7 +30,14 @@ function NoteIcon() {
   );
 }
 
-export default function LandingPage() {
+export default async function LandingPage({ searchParams }: PageProps<"/">) {
+  // Carried through from a shared event link: someone arrived at /e/<id>, had
+  // no account, and picked "Create a MadGigz account". Every onward link here
+  // has to relay it or the gig they were sent is lost at the first hop.
+  const next = safeNext(((await searchParams).next as string) ?? null);
+  const withNext = (path: string) =>
+    next ? `${path}${path.includes("?") ? "&" : "?"}next=${encodeURIComponent(next)}` : path;
+
   // justify-center balances the whole group in the middle of the screen. The
   // wordmark block deliberately has no flex-1: giving it one made it absorb
   // all the spare height, pinning the logo to the top and the cards to the
@@ -53,14 +61,14 @@ export default function LandingPage() {
       <div className="mt-10 flex flex-col gap-4">
         <RoleCard
           role="fan"
-          href="/signup?role=fan"
+          href={withNext("/signup?role=fan")}
           icon={<span className="text-foreground"><HeartIcon /></span>}
           title="I'm a Fan"
           description="Discover events, buy tickets, vibe out"
         />
         <RoleCard
           role="artist"
-          href="/signup?role=artist"
+          href={withNext("/signup?role=artist")}
           icon={<span className="text-accent"><NoteIcon /></span>}
           title="I'm an Artist"
           description="Claim your profile, sell your shows"
@@ -70,7 +78,7 @@ export default function LandingPage() {
 
       <p className="mt-8 text-center text-sm text-muted">
         Already have an account?{" "}
-        <Link href="/signin" className="font-heading text-foreground">
+        <Link href={withNext("/signin")} className="font-heading text-foreground">
           Sign in
         </Link>
       </p>

@@ -4,10 +4,14 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext } from "@/lib/site";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
+  // Kept on the resend so a second link lands the person on the same event the
+  // first one would have - a shared gig shouldn't be lost to a bounced email.
+  const next = safeNext(searchParams.get("next"));
   const [resent, setResent] = useState(false);
 
   async function handleResend() {
@@ -15,7 +19,11 @@ function VerifyEmailContent() {
     await supabase.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/confirm${
+          next ? `?next=${encodeURIComponent(next)}` : ""
+        }`,
+      },
     });
     setResent(true);
   }

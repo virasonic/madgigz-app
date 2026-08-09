@@ -6,6 +6,7 @@ import { useState } from "react";
 import Button from "@/components/ui/Button";
 import { createCheckout, previewPromoCode } from "@/app/(app)/checkout-actions";
 import { EventItem } from "@/lib/types";
+import ShareEventButton from "./ShareEventButton";
 
 type Tab = "tickets" | "info";
 
@@ -143,7 +144,13 @@ export default function TicketModal({
               <Image src={event.image} alt={event.title} fill sizes="480px" className="object-contain" />
             </div>
 
-            <h2 className="font-display text-2xl text-foreground">{event.title}</h2>
+            {/* This sheet is the only way into an event from Explore and This
+                Week, so without a share button here those two tabs had no way
+                to share a gig at all - only the For You rail did. */}
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="font-display text-2xl text-foreground">{event.title}</h2>
+              <ShareEventButton event={event} showLabel className="shrink-0 pt-1" />
+            </div>
             {event.artistId ? (
               <Link href={`/profile/${event.artistId}`} className="mt-1 inline-block text-sm text-accent">
                 {event.artist}

@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Turnstile, { TurnstileHandle } from "@/components/ui/Turnstile";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext } from "@/lib/site";
 import { verifyTurnstileToken } from "./turnstile-actions";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
@@ -64,6 +65,10 @@ function SignUpForm() {
   const role: Role = isRole(searchParams.get("role"))
     ? (searchParams.get("role") as Role)
     : "fan";
+  // Where to land once the account exists - set when a shared event link
+  // brought them here. It has to survive the email round-trip, so it rides in
+  // emailRedirectTo as well as the in-app navigation below.
+  const next = safeNext(searchParams.get("next"));
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -172,7 +177,9 @@ function SignUpForm() {
       password,
       options: {
         data: { username, role, date_of_birth: dob },
-        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm${
+          next ? `?next=${encodeURIComponent(next)}` : ""
+        }`,
       },
     });
     setSubmitting(false);
@@ -196,6 +203,7 @@ function SignUpForm() {
     }
 
     const params = new URLSearchParams({ email });
+    if (next) params.set("next", next);
     router.push(`/signup/verify-email?${params.toString()}`);
   }
 

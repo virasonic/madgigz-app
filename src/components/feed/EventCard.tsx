@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { EventItem } from "@/lib/types";
+import ShareEventButton from "./ShareEventButton";
 
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
@@ -29,21 +30,6 @@ function BookmarkIcon({ filled }: { filled: boolean }) {
   );
 }
 
-function ShareIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <circle cx="18" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="6" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="18" cy="19" r="2.5" stroke="currentColor" strokeWidth="1.8" />
-      <path
-        d="m8.2 10.7 7.6-4.4M8.2 13.3l7.6 4.4"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
     weekday: "short",
@@ -51,25 +37,6 @@ function formatDate(iso: string) {
     month: "short",
     timeZone: "UTC",
   });
-}
-
-async function shareEvent(event: EventItem) {
-  const shareData = {
-    title: event.title,
-    text: `${event.title} at ${event.venue}, ${formatDate(event.date)}`,
-    url: typeof window !== "undefined" ? window.location.href : undefined,
-  };
-  if (typeof navigator !== "undefined" && navigator.share) {
-    try {
-      await navigator.share(shareData);
-      return;
-    } catch {
-      // user cancelled - ignore
-    }
-  }
-  if (typeof navigator !== "undefined" && navigator.clipboard && shareData.url) {
-    navigator.clipboard.writeText(shareData.url).catch(() => {});
-  }
 }
 
 interface EventCardProps {
@@ -154,12 +121,7 @@ export default function EventCard({
         >
           <BookmarkIcon filled={saved} />
         </button>
-        <button
-          onClick={() => shareEvent(event)}
-          className="flex flex-col items-center gap-1 text-foreground"
-        >
-          <ShareIcon />
-        </button>
+        <ShareEventButton event={event} />
       </div>
 
       <button

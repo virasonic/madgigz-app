@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { ContentPost, EventItem } from "@/lib/types";
+import ShareEventButton from "./ShareEventButton";
 
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
@@ -13,17 +14,6 @@ function HeartIcon({ filled }: { filled: boolean }) {
         stroke="currentColor"
         strokeWidth={filled ? 0 : 1.8}
       />
-    </svg>
-  );
-}
-
-function ShareIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-      <circle cx="18" cy="5" r="2.5" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="6" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="18" cy="19" r="2.5" stroke="currentColor" strokeWidth="1.8" />
-      <path d="m8.2 10.7 7.6-4.4M8.2 13.3l7.6 4.4" stroke="currentColor" strokeWidth="1.8" />
     </svg>
   );
 }
@@ -170,9 +160,9 @@ export default function ContentReelCard({
         >
           <HeartIcon filled={liked} />
         </button>
-        <button className="text-foreground">
-          <ShareIcon />
-        </button>
+        {/* Shares the gig, not the reel. A reel is an artist's post *about* a
+            show; the recipient wants the show. */}
+        <ShareEventButton event={event} />
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-3 p-5 pb-8">

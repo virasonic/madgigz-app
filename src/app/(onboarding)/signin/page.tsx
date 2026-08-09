@@ -6,6 +6,7 @@ import { FormEvent, Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext } from "@/lib/site";
 
 // The route that sends people here only ever passes a safe code, never
 // Supabase's own error text (see src/app/auth/confirm/route.ts) - this maps
@@ -44,9 +45,7 @@ const LINK_NOTICES: Record<
   },
 };
 
-function LinkNotice() {
-  const searchParams = useSearchParams();
-  const code = searchParams.get("notice");
+function LinkNotice({ code }: { code: string | null }) {
   if (!code) return null;
 
   const notice = LINK_NOTICES[code] ?? LINK_NOTICES.link_invalid;
@@ -62,8 +61,13 @@ function LinkNotice() {
   );
 }
 
-export default function SignInPage() {
+function SignInContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Set when a shared event link sent a logged-out visitor here. Validated
+  // rather than trusted - see safeNext - because it ends up in a redirect.
+  const next = safeNext(searchParams.get("next"));
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -93,6 +97,10 @@ export default function SignInPage() {
     // it. It used to be reachable only through the confirmation email's
     // redirect, but mail scanners consume that link before the artist taps it -
     // so they'd sign in here and never see the form at all.
+    //
+    // That outranks ?next deliberately: an unclaimed artist account can't buy
+    // or manage anything until the form is done, so honouring the shared link
+    // first would just strand them somewhere they can't act.
     const { data: profile } = await supabase
       .from("profiles")
       .select("role, evidence_submitted")
@@ -102,7 +110,7 @@ export default function SignInPage() {
     const destination =
       profile?.role === "artist" && !profile.evidence_submitted
         ? "/signup/artist-profile"
-        : "/feed";
+        : (next ?? "/feed");
 
     router.push(destination);
     router.refresh();
@@ -113,9 +121,7 @@ export default function SignInPage() {
       <h1 className="font-display mt-8 text-3xl text-foreground">Welcome back</h1>
       <p className="mt-1 text-sm text-muted">Sign in to keep the vibe going.</p>
 
-      <Suspense>
-        <LinkNotice />
-      </Suspense>
+      <LinkNotice code={searchParams.get("notice")} />
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <Input
@@ -164,10 +170,23 @@ export default function SignInPage() {
 
       <p className="mt-8 text-center text-sm text-muted">
         Don&apos;t have an account?{" "}
-        <Link href="/" className="font-heading text-foreground">
+        <Link
+          href={next ? `/?next=${encodeURIComponent(next)}` : "/"}
+          className="font-heading text-foreground"
+        >
           Sign up
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  // One boundary around everything that reads the query string, so the page
+  // still prerenders instead of being forced dynamic.
+  return (
+    <Suspense>
+      <SignInContent />
+    </Suspense>
   );
 }

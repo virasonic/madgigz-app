@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/site";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
+  // Round-trips from a shared event link: signup put it in emailRedirectTo so
+  // it would survive the trip through the inbox. Validated, not trusted - this
+  // arrives from outside and goes straight into a redirect.
+  const next = safeNext(searchParams.get("next"));
+  const withNext = (path: string) =>
+    next ? `${path}${path.includes("?") ? "&" : "?"}next=${encodeURIComponent(next)}` : path;
 
   if (tokenHash && type) {
     const supabase = await createClient();
@@ -22,7 +29,10 @@ export async function GET(request: NextRequest) {
         .eq("id", data.user.id)
         .single();
 
-      const destination = profile?.role === "artist" ? "/signup/artist-profile" : "/feed";
+      // The artist claim form outranks ?next for the same reason it does on
+      // sign-in: an unclaimed artist account can't act on the gig anyway.
+      const destination =
+        profile?.role === "artist" ? "/signup/artist-profile" : (next ?? "/feed");
       return NextResponse.redirect(`${origin}${destination}`);
     }
 
@@ -44,7 +54,7 @@ export async function GET(request: NextRequest) {
     // another" - telling a locked-out user to sign in would be useless.
     console.error("auth/confirm verifyOtp failed:", { type, message: error?.message });
     const code = type === "recovery" ? "reset_link_spent" : "verify_link_spent";
-    return NextResponse.redirect(`${origin}/signin?notice=${code}`);
+    return NextResponse.redirect(`${origin}${withNext(`/signin?notice=${code}`)}`);
   }
 
   // No token at all. The email templates used to link to {{ .ConfirmationURL }},
@@ -54,5 +64,5 @@ export async function GET(request: NextRequest) {
   // correct advice, not "your link looks broken". Emails sent before the
   // templates were fixed still land here, so this has to stay friendly.
   console.error("auth/confirm missing token_hash/type", { tokenHash, type });
-  return NextResponse.redirect(`${origin}/signin?notice=verify_link_spent`);
+  return NextResponse.redirect(`${origin}${withNext("/signin?notice=verify_link_spent")}`);
 }

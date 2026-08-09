@@ -95,6 +95,22 @@ export async function fetchEventGenreIds(
   return (data ?? []).map((row) => row.genre_id as string);
 }
 
+// Genre names for a single event. fetchGenresByEvent below is the bulk version
+// Explore uses; pulling the whole join table to render one public page would be
+// the wrong trade.
+export async function fetchEventGenreNames(
+  supabase: SupabaseClient,
+  eventId: string
+): Promise<string[]> {
+  const { data } = await supabase
+    .from("event_genres")
+    .select("genres(name)")
+    .eq("event_id", eventId);
+  return ((data ?? []) as unknown as { genres: { name: string } | null }[])
+    .map((row) => row.genres?.name)
+    .filter((name): name is string => Boolean(name));
+}
+
 // Genres for many events at once - Explore needs them for every card, and one
 // query beats one per event.
 export async function fetchGenresByEvent(
@@ -136,6 +152,17 @@ export async function fetchEvents(
   if (options.activeOnly) query = query.eq("active", true);
   const { data } = await query;
   return ((data as EventRow[]) ?? []).map(mapEvent);
+}
+
+// Used by the public /e/[id] page, so this runs unauthenticated as often as
+// not. That's fine - "Events are viewable by everyone" is a real select policy,
+// not an accident - but it does mean nothing sensitive may be added to events.
+export async function fetchEventById(
+  supabase: SupabaseClient,
+  eventId: string
+): Promise<EventItem | null> {
+  const { data } = await supabase.from("events").select("*").eq("id", eventId).maybeSingle();
+  return data ? mapEvent(data as EventRow) : null;
 }
 
 export async function fetchContentPosts(supabase: SupabaseClient): Promise<ContentPost[]> {
