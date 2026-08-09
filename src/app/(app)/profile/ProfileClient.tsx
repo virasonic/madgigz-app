@@ -133,6 +133,9 @@ export default function ProfileClient({
   const roleLabel = user.role === "artist" ? "Artist" : "Fan";
   const displayName = user.artistName ?? user.username;
   const hasSocials = buildSocialLinks(user).length > 0;
+  // Evidence is the one thing only the claim form can set, so it's the reliable
+  // signal that the form was actually completed.
+  const claimSubmitted = Boolean(user.evidenceUrl);
   const ticketsSold = useMemo(() => shows.reduce((sum, show) => sum + show.sold, 0), [shows]);
   const visibleShows = useMemo(() => shows.filter((show) => show.active), [shows]);
   const hiddenShows = useMemo(() => shows.filter((show) => !show.active), [shows]);
@@ -212,13 +215,28 @@ export default function ProfileClient({
                 submit more evidence.
               </p>
             </>
-          ) : (
+          ) : claimSubmitted ? (
             <>
               <p className="font-heading text-foreground">Under review</p>
               <p className="mt-1 text-sm text-muted">
                 We&apos;re verifying your artist profile against your submitted evidence. Once
                 approved, you&apos;ll be able to add shows and post content.
               </p>
+            </>
+          ) : (
+            // The claim form used to be reachable only via the confirmation
+            // email's redirect, and mail scanners consume that link before the
+            // artist taps it - so they'd sign in, never see the form, and sit
+            // here being told we were reviewing evidence they never sent.
+            <>
+              <p className="font-heading text-foreground">Finish your artist profile</p>
+              <p className="mt-1 text-sm text-muted">
+                We still need your artist name, a social link and something that shows the
+                profile is yours, before we can approve you.
+              </p>
+              <Link href="/signup/artist-profile" className="mt-4 block">
+                <Button>Continue</Button>
+              </Link>
             </>
           )}
         </div>

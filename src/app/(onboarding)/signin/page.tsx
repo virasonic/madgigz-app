@@ -67,7 +67,7 @@ export default function SignInPage() {
 
     setSubmitting(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setSubmitting(false);
 
     if (error) {
@@ -75,7 +75,20 @@ export default function SignInPage() {
       return;
     }
 
-    router.push("/feed");
+    // An artist who hasn't submitted the claim form yet gets taken straight to
+    // it. It used to be reachable only through the confirmation email's
+    // redirect, but mail scanners consume that link before the artist taps it -
+    // so they'd sign in here and never see the form at all.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, evidence_url")
+      .eq("id", data.user.id)
+      .single();
+
+    const destination =
+      profile?.role === "artist" && !profile.evidence_url ? "/signup/artist-profile" : "/feed";
+
+    router.push(destination);
     router.refresh();
   }
 
