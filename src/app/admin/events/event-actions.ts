@@ -7,10 +7,6 @@ import { resolveVenue, syncEventArtists, syncEventGenres } from "@/lib/show-sync
 export interface AdminEventInput {
   title: string;
   artistName: string;
-  // The platform account that owns the show, when there is one. Null for an
-  // off-platform artist or a MadGigz night - artist_name still carries who is
-  // actually playing, so the card and the poster read correctly either way.
-  artistId: string | null;
   venueName: string;
   venueId: string | null;
   date: string;
@@ -27,9 +23,6 @@ export interface AdminEventInput {
   ageRestriction: string;
   ticketingMode: "internal" | "external";
   ticketingUrl: string;
-  // Only meaningful with ticketingMode "internal": MadGigz sells and keeps the
-  // money, no Connect transfer and no commission.
-  houseRun: boolean;
 }
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -68,37 +61,18 @@ export async function createAdminEvent(
     }
   }
 
-  // A show sold through MadGigz needs somewhere for the money to land. Either
-  // it's a house show (the platform account) or the named artist has finished
-  // Stripe onboarding - anything else would take a fan's money with nowhere to
-  // send it, and checkout would reject it at the till anyway.
-  if (!external && !input.houseRun) {
-    if (!input.artistId) {
-      return {
-        error:
-          "Pick the platform artist who gets paid, or mark this as a MadGigz house show",
-      };
-    }
-    const { data: artist } = await admin
-      .from("profiles")
-      .select("stripe_payouts_ready")
-      .eq("id", input.artistId)
-      .maybeSingle();
-    if (!artist?.stripe_payouts_ready) {
-      return {
-        error:
-          "That artist hasn't connected payouts yet - use an external ticket link, or mark it as a house show",
-      };
-    }
-  }
-
   const venue = await resolveVenue(admin, input.venueName, input.venueId);
   if (venue.error) return { error: venue.error };
 
   const { data: created, error } = await admin
     .from("events")
     .insert({
-      artist_id: input.artistId,
+      // Always null. An admin-created show is MadGigz's, managed from here -
+      // setting artist_id would hand the artist edit and delete rights over a
+      // night they don't run. Platform artists are attached through
+      // event_artists instead, which is what puts the show on their profile and
+      // lets them post about it, exactly as a tagged support act gets today.
+      artist_id: null,
       venue_id: venue.id,
       title,
       artist_name: artistName,
@@ -122,7 +96,10 @@ export async function createAdminEvent(
       rating: 0,
       ticketing_mode: input.ticketingMode,
       ticketing_url: external ? ticketingUrl : null,
-      house_run: !external && input.houseRun,
+      // Anything MadGigz sells itself is a house show by definition. An artist
+      // selling their own tickets does it from their own Add Show form, where
+      // the payout account and the commission actually apply.
+      house_run: !external,
       active: true,
       cancelled: false,
     })
@@ -142,12 +119,9 @@ export async function createAdminEvent(
   // The show exists from here on. Genre and tag failures are reported but don't
   // pretend the show wasn't created - same reasoning as the artist form.
   const genreError = await syncEventGenres(admin, created.id, input.genreIds);
-  const tagError = await syncEventArtists(
-    admin,
-    created.id,
-    input.artistId,
-    input.taggedArtistIds
-  );
+  // No owner to exclude: the show has no artist_id, so every tagged artist is
+  // a genuine tag.
+  const tagError = await syncEventArtists(admin, created.id, null, input.taggedArtistIds);
 
   revalidatePath("/admin/events");
   revalidatePath("/explore");

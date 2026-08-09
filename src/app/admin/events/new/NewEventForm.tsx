@@ -8,7 +8,6 @@ import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
 import { createAdminEvent } from "../event-actions";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
-import { FEE_PERCENT } from "@/lib/pricing";
 import type { Genre, PublicArtistProfile, Venue } from "@/lib/types";
 
 const ACCENT_SWATCHES = [
@@ -21,7 +20,6 @@ const ACCENT_SWATCHES = [
 const AGE_OPTIONS = ["All ages", "16+", "18+", "21+"];
 
 type Ticketing = "internal" | "external";
-type Payee = "artist" | "house";
 
 function Field({
   label,
@@ -59,7 +57,6 @@ export default function NewEventForm({
 
   const [title, setTitle] = useState("");
   const [artistName, setArtistName] = useState("");
-  const [artistId, setArtistId] = useState<string>("");
   const [venue, setVenue] = useState<VenueSelection>({ name: "", venueId: null });
   const [date, setDate] = useState("");
   const [time, setTime] = useState("21:00");
@@ -73,25 +70,12 @@ export default function NewEventForm({
   const [ageRestriction, setAgeRestriction] = useState("18+");
   const [ticketing, setTicketing] = useState<Ticketing>("external");
   const [ticketingUrl, setTicketingUrl] = useState("");
-  const [payee, setPayee] = useState<Payee>("house");
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
-
-  const selectedArtist = artists.find((a) => a.id === artistId) ?? null;
-  const priceNum = Number(price);
-  const showsFeeBreakdown = ticketing === "internal" && payee === "artist" && priceNum > 0;
 
   function handlePoster(file: File | null) {
     setPosterFile(file);
     setPosterPreview(file ? URL.createObjectURL(file) : null);
-  }
-
-  // Selecting a platform artist fills the display name, but leaves it editable:
-  // a MadGigz night might be billed as something other than the account name.
-  function handleArtistSelect(id: string) {
-    setArtistId(id);
-    const picked = artists.find((a) => a.id === id);
-    if (picked && !artistName.trim()) setArtistName(picked.artistName);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -118,7 +102,6 @@ export default function NewEventForm({
       const result = await createAdminEvent({
         title,
         artistName,
-        artistId: artistId || null,
         venueName: venue.name,
         venueId: venue.venueId,
         date,
@@ -135,7 +118,6 @@ export default function NewEventForm({
         ageRestriction,
         ticketingMode: ticketing,
         ticketingUrl,
-        houseRun: ticketing === "internal" && payee === "house",
       });
 
       if (result.error && !result.id) {
@@ -168,24 +150,6 @@ export default function NewEventForm({
           />
         </Field>
       </div>
-
-      <Field
-        label="Platform artist"
-        hint="Links the show to a MadGigz account: it appears on their profile and they can post about it. Leave blank for an off-platform act."
-      >
-        <select
-          className={inputClass}
-          value={artistId}
-          onChange={(e) => handleArtistSelect(e.target.value)}
-        >
-          <option value="">No platform account</option>
-          {artists.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.artistName}
-            </option>
-          ))}
-        </select>
-      </Field>
 
       <Field label="Venue">
         <VenuePicker value={venue} onChange={setVenue} venues={venues} compact />
@@ -236,9 +200,11 @@ export default function NewEventForm({
               onChange={() => setTicketing("internal")}
             />
             <span>
-              Sold through MadGigz
+              MadGigz house show
               <span className="block text-xs text-muted">
-                Fans buy in the app and get a scannable ticket.
+                Fans buy in the app and get a scannable ticket. The money lands in
+                the MadGigz account — no payout to an artist, and no commission,
+                because we don&apos;t charge ourselves.
               </span>
             </span>
           </label>
@@ -255,44 +221,7 @@ export default function NewEventForm({
               />
             </Field>
           </div>
-        ) : (
-          <div className="mt-4 flex flex-col gap-2">
-            <p className="font-heading text-xs uppercase tracking-wide text-muted">
-              Who gets the money
-            </p>
-            <label className="flex items-start gap-3 text-sm text-foreground">
-              <input
-                type="radio"
-                className="mt-1"
-                checked={payee === "house"}
-                onChange={() => setPayee("house")}
-              />
-              <span>
-                MadGigz (house show)
-                <span className="block text-xs text-muted">
-                  Money lands in the MadGigz Stripe account. No commission — we
-                  don&apos;t charge ourselves a fee.
-                </span>
-              </span>
-            </label>
-            <label className="flex items-start gap-3 text-sm text-foreground">
-              <input
-                type="radio"
-                className="mt-1"
-                checked={payee === "artist"}
-                onChange={() => setPayee("artist")}
-              />
-              <span>
-                The platform artist
-                <span className="block text-xs text-muted">
-                  {selectedArtist
-                    ? `Paid out to ${selectedArtist.artistName}, minus the ${FEE_PERCENT}% fee. They must have connected payouts.`
-                    : "Pick a platform artist above first."}
-                </span>
-              </span>
-            </label>
-          </div>
-        )}
+        ) : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -306,13 +235,6 @@ export default function NewEventForm({
           <input type="number" min={1} className={inputClass} value={maxPerOrder} onChange={(e) => setMaxPerOrder(e.target.value)} />
         </Field>
       </div>
-
-      {showsFeeBreakdown && (
-        <p className="rounded-xl bg-background px-4 py-3 text-sm text-muted">
-          Fans pay <span className="text-foreground">€{priceNum.toFixed(2)}</span> · MadGigz fee (
-          {FEE_PERCENT}% + IVA) · the rest goes to {selectedArtist?.artistName ?? "the artist"}.
-        </p>
-      )}
 
       <Field label="Genres">
         <GenrePicker genres={genres} selectedIds={genreIds} onChange={setGenreIds} />
