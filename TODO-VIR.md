@@ -3,55 +3,33 @@
 Things only you can do — dashboard access, a decision, or a device. Ordered by
 what unblocks the most.
 
-## 1. Add `CRON_SECRET` in Vercel — blocking
+## 1. Roll the Stripe test API keys
 
-Settings → Environment Variables → new variable `CRON_SECRET`, value from
-`openssl rand -hex 32` (or 40+ random characters). Redeploy after saving.
+Your **test-mode secret key** (`sk_test_…`) was printed in full in a chat
+transcript. Anyone with that transcript can read and write your Stripe test
+data — create test charges, read test customers, list connected accounts. No
+real money is reachable, which is why this is not urgent, but it is a live
+credential sitting in a log.
 
-Until this exists the nightly purge returns 503 and refuses to run, so account
-deletions are accepted and then sit pending forever. Verified: production
-returns 503 today.
+Stripe Dashboard → **Developers → API keys** → on the secret key, **Roll key**
+(choose "immediately"). Then update `STRIPE_SECRET_KEY` in two places:
 
-The `Deletetest` account is currently scheduled for deletion and will be purged
-30 days after this is set.
+- `.env.local` on your machine
+- Vercel → Settings → Environment Variables → redeploy
 
-## 2. Run `addendum_020` in the Supabase SQL editor — blocks the new admin form
+The publishable key needs no action — it is public by design.
 
-```sql
-alter table public.events
-  add column if not exists house_run boolean not null default false;
+Your `STRIPE_WEBHOOK_SECRET` is unaffected; it is a different credential and was
+not printed.
 
-comment on column public.events.house_run is
-  'MadGigz sells these tickets on its own account: no Stripe Connect transfer, no application fee, and refunds do not reverse a transfer. Set only from the admin panel.';
+## 2. Add the address for `El Sol` in `/admin/venues`
 
-update public.events set house_run = false where house_run is null;
-```
+Still empty — I checked, and it is the only active venue without one. Its
+previous value was wrong (it carried Café Berlín's address), so it was nulled
+rather than left looking correct.
 
-The code is already deployed and safe without it — existing shows keep working
-and checkout treats a missing column as "not a house show". Only
-`/admin/events/new` needs it, and it says so plainly if you try before running.
-
-## 3. Roll the Stripe test keys
-
-They were printed in full in a chat transcript. Test mode, so low stakes, but
-worth clearing.
-
-## 4. Add the address for `El Sol` in `/admin/venues`
-
-The last venue without one. Its previous value was wrong — it carried Café
-Berlín's address — so it was nulled rather than left looking correct. The real
-one is on Calle de los Jardines.
-
-## Decisions — reply whenever
-
-- **Remove the `deleted-da7ab6e6` tombstone** from `/admin/users`? Left there so
-  a real purged row is visible. Nothing depends on it.
-- **Connect Stripe payouts for Losing The Count and Hard Fuse?** Until they do,
-  their shows can only be free or externally ticketed.
-- **#63 past events** — what should happen to a show once its date passes? Still
-  unscoped, so it can't be planned.
-- **#79 email verification link** — parked pending tester feedback. Say so in
-  the email, drop the button, or leave it.
+Its postal code is already `28013`, which matches Calle de los Jardines — where
+Sala El Sol actually is.
 
 ## Worth a click when you're next in the app
 

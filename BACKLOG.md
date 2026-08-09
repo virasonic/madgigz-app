@@ -10,10 +10,10 @@ the same thing across old conversations. Gaps are shipped items.
 | # | Item | Why it's waiting |
 |---|---|---|
 | 82 | Sign up / sign in with Google and Apple | Supabase supports both providers, but an OAuth callback carries no username, role or date of birth — and the profile trigger and the 16+ age gate both need all three — so it needs a post-callback step to collect them. Also needs a decision on what happens when an OAuth email matches an existing password account. Apple requires a paid Apple Developer account; Google is free. |
-| 79 | Make clear that the email verification link is decorative | Mail scanners open the link within ~15s of sending, so effectively nobody completes verification by tapping it — the sign-in notice *is* the verification experience. Parked pending tester feedback: say so in the email, drop the button, or leave it. |
+| 79 | Make clear that the email verification link is decorative | Deprioritised by Vir. Mail scanners open the link within ~15s of sending, so nobody completes verification by tapping it — the sign-in notice *is* the verification experience. |
 | 59 | Spanish/English localization | Sequenced late on purpose — i18n means pulling every UI string into translation files, so it wants the fan-facing UI settled first, or new strings need a second pass. |
 | 58 | Admin: user activity tracking | Login frequency, geolocation, attendance history. Needs new tracking infrastructure, not just a query. Heaviest lift here, least urgent. |
-| 63 | Past-events storage/function | Unscoped — what should happen to a show once its date passes? Needs deciding before it can be planned. |
+| 63 | Past-events storage/function | Vir is scoping it; not a priority. What should happen to a show once its date passes? |
 | 60 | Fan-follows-artist infrastructure | Post-MVP call. Follower counts are hidden on artist profiles today rather than faked as a permanent 0. |
 
 ## Waiting on Vir
@@ -27,10 +27,6 @@ See [TODO-VIR.md](TODO-VIR.md) for the full list with instructions.
   was wrong (it carried Café Berlín's address), so it was nulled rather than
   left to sit there looking correct.
 - **Stripe test keys** were printed in a chat transcript — worth rolling.
-- **Remove the `deleted-da7ab6e6` tombstone?** Left in `/admin/users` so a real
-  purged row is visible. Nothing depends on it.
-- **Payouts for Losing The Count and Hard Fuse.** Neither has Stripe connected,
-  so their shows can only be free or externally ticketed until they onboard.
 
 ## Verified-by-hand gaps
 
