@@ -42,11 +42,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // api/stripe/webhook is excluded deliberately: it's called by Stripe, not a
-  // signed-in browser, so a Supabase auth round-trip per delivery is pure
-  // overhead - and the cookie rewriting this middleware does has no business
-  // touching a signature-verified machine-to-machine request.
+  // api/stripe/webhook and api/cron are excluded deliberately: they're called
+  // by Stripe and by Vercel Cron, not by a signed-in browser, so a Supabase
+  // auth round-trip per call is pure overhead - and the cookie rewriting this
+  // middleware does has no business touching a machine-to-machine request that
+  // carries its own credential.
   matcher: [
-    "/((?!api/stripe/webhook|api/health|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api/stripe/webhook|api/cron|api/health|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

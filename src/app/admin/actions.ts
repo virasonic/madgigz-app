@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { findDeletionBlockers, purgeDueAccounts } from "@/lib/account-deletion";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import { sendArtistStatusEmail } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
@@ -295,4 +296,51 @@ export async function toggleDiscountActive(discountId: string, active: boolean) 
   const admin = adminClient();
   await admin.from("discounts").update({ active }).eq("id", discountId);
   revalidatePath("/admin/discounts");
+}
+
+// Admin-initiated deletion. Deliberately the same request-and-wait path a
+// person gets rather than an instant wipe: the blockers protect ticket holders,
+// not the account holder, so an admin overriding them would strand exactly the
+// people the rule exists for. The grace period also means a mistaken click here
+// is recoverable.
+export async function requestUserDeletion(profileId: string) {
+  await requireAdmin();
+  const admin = adminClient();
+
+  const blockers = await findDeletionBlockers(admin, profileId);
+  if (blockers.length > 0) {
+    return { error: blockers.map((b) => b.reason).join("; ") };
+  }
+
+  const { error } = await admin
+    .from("profiles")
+    .update({ deletion_requested_at: new Date().toISOString() })
+    .eq("id", profileId)
+    .is("deleted_at", null);
+
+  if (error) return { error: error.message };
+  revalidatePath("/admin/users");
+  return { error: null };
+}
+
+export async function cancelUserDeletion(profileId: string) {
+  await requireAdmin();
+  const admin = adminClient();
+  await admin
+    .from("profiles")
+    .update({ deletion_requested_at: null })
+    .eq("id", profileId)
+    .is("deleted_at", null);
+  revalidatePath("/admin/users");
+  return { error: null };
+}
+
+// The same job the nightly cron runs, on a button. Worth having: it makes the
+// purge testable without waiting 30 days, and it means deletions still complete
+// if the cron is ever misconfigured.
+export async function runAccountPurge() {
+  await requireAdmin();
+  const results = await purgeDueAccounts(adminClient());
+  revalidatePath("/admin/users");
+  return results;
 }

@@ -40,13 +40,15 @@ export interface AdminUserRow {
   createdAt: string;
   lastSignInAt: string | null;
   ticketCount: number;
+  deletionRequestedAt: string | null;
+  deletedAt: string | null;
 }
 
 export async function fetchAllUsers(admin: SupabaseClient): Promise<AdminUserRow[]> {
   const { data: authData } = await admin.auth.admin.listUsers();
   const { data: profileRows } = await admin
     .from("profiles")
-    .select("id, username, role, created_at");
+    .select("id, username, role, created_at, deletion_requested_at, deleted_at");
   const { data: ticketRows } = await admin.from("tickets").select("user_id");
 
   const ticketCounts = new Map<string, number>();
@@ -66,6 +68,8 @@ export async function fetchAllUsers(admin: SupabaseClient): Promise<AdminUserRow
       createdAt: u.created_at,
       lastSignInAt: u.last_sign_in_at ?? null,
       ticketCount: ticketCounts.get(u.id) ?? 0,
+      deletionRequestedAt: (profile?.deletion_requested_at as string | null) ?? null,
+      deletedAt: (profile?.deleted_at as string | null) ?? null,
     };
   });
 }

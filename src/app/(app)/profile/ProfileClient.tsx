@@ -12,6 +12,7 @@ import PayoutCard from "@/components/artist/PayoutCard";
 import { createClient } from "@/lib/supabase/client";
 import { AppUser, EventItem } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
+import DeleteAccountDialog from "@/components/account/DeleteAccountDialog";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -28,6 +29,19 @@ function formatDate(iso: string) {
 // Isolated in its own component because useSearchParams needs a Suspense
 // boundary, and gating that boundary to just this artist-only sheet is
 // cheaper than wrapping the whole page.
+function RestoredNotice() {
+  const searchParams = useSearchParams();
+  if (searchParams.get("restored") !== "1") return null;
+  return (
+    <div className="mb-6 rounded-xl bg-surface px-4 py-3">
+      <p className="font-heading text-sm text-foreground">Welcome back - your account is safe</p>
+      <p className="mt-1 text-xs text-muted">
+        Signing in cancelled the deletion you&apos;d scheduled. Nothing was removed.
+      </p>
+    </div>
+  );
+}
+
 function PayoutReturnDetector({ onReturn }: { onReturn: () => void }) {
   const searchParams = useSearchParams();
   const payoutParam = searchParams.get("payout");
@@ -130,6 +144,7 @@ export default function ProfileClient({
   const [activeShow, setActiveShow] = useState<EventItem | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hiddenOpen, setHiddenOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // Admins keep their own badge - they get the artist tools below, but
   // labelling the account "Artist" would misreport what it actually is.
@@ -153,6 +168,10 @@ export default function ProfileClient({
 
   return (
     <div className="p-4">
+      <Suspense>
+        <RestoredNotice />
+      </Suspense>
+
       <div className="mb-6 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Avatar photoUrl={user.artistPhotoUrl} name={displayName} size={64} />
@@ -365,6 +384,18 @@ export default function ProfileClient({
       <Button variant="ghost" onClick={handleLogOut}>
         Log Out
       </Button>
+
+      {/* Quiet, and below Log Out, because it is a rare and irreversible thing -
+          but present rather than hidden behind an email to support. */}
+      <button
+        type="button"
+        onClick={() => setDeleteOpen(true)}
+        className="mt-4 w-full text-center text-xs text-muted underline underline-offset-4"
+      >
+        Delete my account
+      </button>
+
+      {deleteOpen && <DeleteAccountDialog onClose={() => setDeleteOpen(false)} />}
 
       {activeShow && (
         <ManageShowModal

@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/site";
+import { cancelDeletionOnSignIn } from "@/app/(app)/profile/account-actions";
 
 // The route that sends people here only ever passes a safe code, never
 // Supabase's own error text (see src/app/auth/confirm/route.ts) - this maps
@@ -90,6 +91,17 @@ function SignInContent() {
 
     if (error) {
       setErrors({ password: "Incorrect email or password" });
+      return;
+    }
+
+    // Coming back is the clearest possible statement that they didn't mean to
+    // delete the account, so a pending request is cancelled outright. They land
+    // on their profile with a notice rather than being told nothing - a silent
+    // restore leaves someone unsure whether it actually stopped.
+    const restored = await cancelDeletionOnSignIn(data.user.id);
+    if (restored) {
+      router.push("/profile?restored=1");
+      router.refresh();
       return;
     }
 
