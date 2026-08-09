@@ -21,6 +21,11 @@ const SOCIAL_FIELDS = [
 
 type SocialKey = (typeof SOCIAL_FIELDS)[number]["key"];
 
+// The signup claim requires one of these three as a vetting signal, so editing
+// can't be a way around it - an artist can add and swap links freely, just not
+// end up with none. Spotify/YouTube stay optional, same as at signup.
+const REQUIRED_SOCIALS: SocialKey[] = ["instagram", "tiktok", "twitter"];
+
 export default function EditProfilePage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,6 +42,7 @@ export default function EditProfilePage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
+  const [socialError, setSocialError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -71,8 +77,14 @@ export default function EditProfilePage() {
     event.preventDefault();
     if (!user) return;
 
+    if (!REQUIRED_SOCIALS.some((key) => socials[key].trim())) {
+      setSocialError("Keep at least one of Instagram, TikTok or Twitter / X");
+      return;
+    }
+
     setSubmitting(true);
     setError(undefined);
+    setSocialError(undefined);
     const supabase = createClient();
 
     // Only touch the photo column when a new file was actually picked -
@@ -173,8 +185,10 @@ export default function EditProfilePage() {
               onChange={(e) => setSocials((prev) => ({ ...prev, [key]: e.target.value }))}
             />
           ))}
+          {socialError && <p className="text-sm text-danger">{socialError}</p>}
           <p className="text-xs text-muted">
-            Fans see these as links on your public profile. Leave one blank to remove it.
+            Fans see these as links on your public profile. Keep at least one of Instagram,
+            TikTok or Twitter / X.
           </p>
         </div>
 
