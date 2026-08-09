@@ -10,22 +10,42 @@ import { createClient } from "@/lib/supabase/client";
 // The route that sends people here only ever passes a safe code, never
 // Supabase's own error text (see src/app/auth/confirm/route.ts) - this maps
 // that code to something a fan/artist can actually act on. Any code not
-// recognised here falls back to the same safe message rather than rendering
-// raw text, in case a new code is ever added upstream without updating this.
-const LINK_ERROR_MESSAGES: Record<string, string> = {
-  link_failed:
-    "That link didn't work - it may have expired or already been used. If you're already verified, sign in below. Otherwise, sign up again for a new link.",
+// recognised here falls back to a safe message rather than rendering raw text,
+// in case a new code is ever added upstream without updating this.
+//
+// Deliberately not styled as an error. A spent signup link nearly always means
+// the mail provider's link scanner already completed the verification, so the
+// account is fine - shouting in red at someone whose signup actually worked is
+// the bug this replaced.
+const LINK_NOTICES: Record<string, { text: string; tone: "info" | "warn" }> = {
+  verify_link_spent: {
+    text: "That link has already been opened, which usually means your email is verified. Sign in below - if it doesn't work, sign up again for a fresh link.",
+    tone: "info",
+  },
+  reset_link_spent: {
+    text: "That password reset link has already been opened or has expired. Request a new one with 'Forgot password?' below.",
+    tone: "warn",
+  },
+  link_invalid: {
+    text: "That link looks incomplete - it may have been cut short by your email app. Try opening it again, or request a new one.",
+    tone: "warn",
+  },
 };
 
-function LinkError() {
+function LinkNotice() {
   const searchParams = useSearchParams();
-  const error = searchParams.get("error");
-  if (!error) return null;
-  return (
-    <p className="-mt-2 mb-2 rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger">
-      {LINK_ERROR_MESSAGES[error] ?? LINK_ERROR_MESSAGES.link_failed}
-    </p>
-  );
+  const code = searchParams.get("notice");
+  if (!code) return null;
+
+  const notice = LINK_NOTICES[code] ?? LINK_NOTICES.link_invalid;
+  const tone =
+    notice.tone === "warn"
+      ? "bg-primary/10 text-primary"
+      : "bg-surface text-muted";
+
+  // Positive top margin: the old -mt-2 pulled this up over the "Sign in to keep
+  // the vibe going" line beneath the heading.
+  return <p className={`mt-5 rounded-xl px-4 py-3 text-sm leading-relaxed ${tone}`}>{notice.text}</p>;
 }
 
 export default function SignInPage() {
@@ -65,7 +85,7 @@ export default function SignInPage() {
       <p className="mt-1 text-sm text-muted">Sign in to keep the vibe going.</p>
 
       <Suspense>
-        <LinkError />
+        <LinkNotice />
       </Suspense>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
