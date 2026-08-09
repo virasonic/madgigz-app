@@ -23,6 +23,8 @@ export interface CancelEventResult {
   deleted: boolean;
   refunded: number;
   failed: number;
+  /** Tickets left alone because the holder had already been scanned in. */
+  attended: number;
   errors: string[];
 }
 
@@ -41,7 +43,11 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
     .from("tickets")
     // stripe_account_id: whether this sale was a Connect destination charge, so
     // the refund knows if there is a transfer to reverse. A house show has none.
-    .select("id, quantity, price_paid, refunded, stripe_payment_intent_id, stripe_account_id")
+    // checked_in_at: someone who was scanned through the door got what they
+    // paid for, so cancelling the show doesn't quietly refund them too.
+    .select(
+      "id, quantity, price_paid, refunded, checked_in_at, stripe_payment_intent_id, stripe_account_id"
+    )
     .eq("event_id", eventId);
 
   if (!tickets || tickets.length === 0) {
@@ -58,15 +64,24 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
     await removeEventMedia(admin, [event?.image_url, ...(posts ?? []).map((p) => p.media_url)]);
     await admin.from("events").delete().eq("id", eventId);
     revalidatePath("/admin/events");
-    return { deleted: true, refunded: 0, failed: 0, errors: [] };
+    return { deleted: true, refunded: 0, failed: 0, attended: 0, errors: [] };
   }
 
   let refunded = 0;
   let failed = 0;
+  let attended = 0;
   const errors: string[] = [];
 
   for (const ticket of tickets) {
     if (ticket.refunded) continue;
+
+    // Scanned in means they turned up and the show happened for them. Reported
+    // rather than silently skipped, so the admin can act on it deliberately if
+    // the cancellation really should cover them.
+    if (ticket.checked_in_at) {
+      attended += 1;
+      continue;
+    }
 
     // Free tickets took no money, so there's nothing to send back.
     if (!ticket.stripe_payment_intent_id) {
@@ -113,7 +128,7 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
   await admin.from("events").update({ active: false, cancelled: true }).eq("id", eventId);
 
   revalidatePath("/admin/events");
-  return { deleted: false, refunded, failed, errors };
+  return { deleted: false, refunded, failed, attended, errors };
 }
 
 // Refunds one ticket without touching the rest of the event - for special
@@ -127,12 +142,19 @@ export async function refundTicket(ticketId: string): Promise<{ error: string | 
 
   const { data: ticket } = await admin
     .from("tickets")
-    .select("id, event_id, quantity, refunded, stripe_payment_intent_id, stripe_account_id")
+    .select(
+      "id, event_id, quantity, refunded, checked_in_at, stripe_payment_intent_id, stripe_account_id"
+    )
     .eq("id", ticketId)
     .single();
 
   if (!ticket) return { error: "Ticket not found" };
   if (ticket.refunded) return { error: "Already refunded" };
+  // They were scanned through the door: the gig happened for them. Refunding a
+  // used ticket is giving the money back for something delivered.
+  if (ticket.checked_in_at) {
+    return { error: "That ticket was scanned in at the door - it can't be refunded" };
+  }
 
   // Free tickets took no money; there's nothing to send back, but the ticket
   // still gets invalidated and its seats released.

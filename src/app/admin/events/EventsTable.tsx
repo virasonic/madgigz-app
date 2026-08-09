@@ -65,9 +65,16 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
           text: `Refunded ${outcome.refunded}, but ${outcome.failed} failed: ${outcome.errors[0] ?? "unknown error"}. Re-run to retry the rest.`,
         });
       } else {
+        // The attended count is called out rather than folded into the total:
+        // "3 refunded" when 5 were sold would look like two refunds silently
+        // failed, when in fact two people had already been through the door.
+        const attendedNote =
+          outcome.attended > 0
+            ? ` ${outcome.attended} ${outcome.attended === 1 ? "ticket was" : "tickets were"} not refunded - already scanned in at the door.`
+            : "";
         setResult({
           kind: "ok",
-          text: `Event cancelled and ${outcome.refunded} ${outcome.refunded === 1 ? "ticket" : "tickets"} refunded.`,
+          text: `Event cancelled and ${outcome.refunded} ${outcome.refunded === 1 ? "ticket" : "tickets"} refunded.${attendedNote}`,
         });
       }
     });
