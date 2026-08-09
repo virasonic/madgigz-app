@@ -17,6 +17,14 @@ function isRole(value: string | null): value is Role {
   return value === "fan" || value === "artist";
 }
 
+// Usernames are shown publicly (Explore artist search renders "@username"), so
+// they need to read as handles. Deliberately case-preserving rather than
+// lowercase-only: existing accounts like "Frejar" are fine as they are, and the
+// problem being fixed is whitespace, not capitals. Mirrored by a check
+// constraint in addendum_010 - the signup trigger copies this straight from
+// auth metadata, so a rule that lived only here could be bypassed.
+const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,30}$/;
+
 const MIN_AGE = 16;
 // Computed once at module load rather than during render, per React's purity rules.
 const TODAY = new Date();
@@ -54,7 +62,13 @@ function SignUpForm() {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
 
-    if (!username.trim()) nextErrors.username = "Username is required";
+    if (!username.trim()) {
+      nextErrors.username = "Username is required";
+    } else if (/\s/.test(username)) {
+      nextErrors.username = "Usernames can't contain spaces";
+    } else if (!USERNAME_PATTERN.test(username)) {
+      nextErrors.username = "Use 3-30 letters, numbers, dots, dashes or underscores";
+    }
     if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = "Enter a valid email";
     if (password.length < 8) nextErrors.password = "Use at least 8 characters";
     if (confirmPassword !== password) nextErrors.confirmPassword = "Passwords don't match";
@@ -132,7 +146,13 @@ function SignUpForm() {
           onChange={(e) => setUsername(e.target.value)}
           error={errors.username}
           autoComplete="username"
+          placeholder="hardfuse"
         />
+        {!errors.username && (
+          <p className="-mt-3 text-xs text-muted">
+            No spaces. Letters, numbers, dots, dashes and underscores.
+          </p>
+        )}
         <Input
           label="Email"
           type="email"
