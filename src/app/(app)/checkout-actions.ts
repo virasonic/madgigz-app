@@ -50,14 +50,17 @@ export async function createCheckout(
     return { error: "Tickets for this event are sold externally" };
   }
 
-  // The artist must be able to receive money before we take any.
-  const { data: artist } = await supabase
+  const admin = createAdminClient();
+
+  // The artist must be able to receive money before we take any. Read through
+  // the admin client, not the buyer's: stripe_account_id is no longer granted
+  // to authenticated (addendum_018), and a fan's session having any route to
+  // another user's Stripe id was the wrong shape regardless.
+  const { data: artist } = await admin
     .from("profiles")
     .select("stripe_account_id, stripe_payouts_ready")
     .eq("id", event.artistId ?? "")
     .maybeSingle();
-
-  const admin = createAdminClient();
 
   // Price and discount both come from the database, never the client.
   const discount = promoCode ? await validateDiscountCode(supabase, promoCode, event.id) : null;

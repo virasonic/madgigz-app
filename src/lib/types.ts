@@ -114,7 +114,9 @@ export interface AppUser {
   youtube: string | null;
   artistStatus: ArtistStatus | null;
   evidenceSubmitted: boolean;
-  stripeAccountId: string | null;
+  // Whether a Stripe account exists, not which one. The id itself is
+  // service-role-only (addendum_018) and the UI only ever needed the boolean.
+  stripeAccountConnected: boolean;
   stripePayoutsReady: boolean;
 }
 
@@ -277,7 +279,7 @@ export interface ProfileRow {
   youtube: string | null;
   artist_status: ArtistStatus | null;
   evidence_submitted: boolean | null;
-  stripe_account_id: string | null;
+  stripe_account_connected: boolean | null;
   stripe_payouts_ready: boolean | null;
 }
 
@@ -296,7 +298,7 @@ export function mapProfile(row: ProfileRow, email: string): AppUser {
     spotify: row.spotify,
     artistStatus: row.artist_status,
     evidenceSubmitted: Boolean(row.evidence_submitted),
-    stripeAccountId: row.stripe_account_id,
+    stripeAccountConnected: Boolean(row.stripe_account_connected),
     stripePayoutsReady: row.stripe_payouts_ready ?? false,
     youtube: row.youtube,
   };

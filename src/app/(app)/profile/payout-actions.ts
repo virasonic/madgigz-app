@@ -14,7 +14,11 @@ async function requireArtist() {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not signed in");
 
-  const { data: profile } = await supabase
+  // stripe_account_id isn't granted to authenticated any more (addendum_018),
+  // and column grants can't say "but you may read your own" - so the lookup
+  // runs through the service-role client. The session above is still what
+  // identifies the caller; this only widens which columns come back.
+  const { data: profile } = await createAdminClient()
     .from("profiles")
     .select("role, artist_status, artist_name, stripe_account_id")
     .eq("id", user.id)

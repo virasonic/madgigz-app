@@ -373,7 +373,7 @@ export default function ProfileClient({
       {settingsOpen && (
         <SettingsSheet
           onClose={() => setSettingsOpen(false)}
-          payoutConnected={Boolean(user.stripeAccountId)}
+          payoutConnected={user.stripeAccountConnected}
           payoutReady={user.stripePayoutsReady}
         />
       )}
