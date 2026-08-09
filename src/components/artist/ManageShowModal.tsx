@@ -39,6 +39,11 @@ interface ManageShowModalProps {
   artistName: string;
   onClose: () => void;
   onChanged: () => void;
+  // False when the viewer is only tagged on the bill. They can see the show and
+  // post about it - that is the whole point of being tagged - but the show is
+  // not theirs to change, its takings are not theirs to see, and the fee split
+  // is between MadGigz and whoever is actually being paid.
+  canManage?: boolean;
 }
 
 function formatDate(iso: string) {
@@ -55,6 +60,7 @@ export default function ManageShowModal({
   artistName,
   onClose,
   onChanged,
+  canManage = true,
 }: ManageShowModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("overview");
@@ -337,6 +343,17 @@ export default function ManageShowModal({
           {details.venue} · {formatDate(details.date)} · {toTimeInput(details.time)}
         </p>
 
+        {/* The owner learns this from the visibility controls further down, which
+            a tagged artist doesn't get - without this they'd see a normal sheet
+            and be invited to post about a gig that is off. */}
+        {!canManage && (show.cancelled || !show.active) && (
+          <p className="mt-2 rounded-xl bg-primary/10 px-3 py-2 text-xs text-primary">
+            {show.cancelled
+              ? "This show has been cancelled."
+              : "This show is currently hidden from fans."}
+          </p>
+        )}
+
         <div className="mt-5 flex gap-2 rounded-full bg-background p-1">
           <button
             onClick={() => setTab("overview")}
@@ -354,14 +371,16 @@ export default function ManageShowModal({
           >
             Content
           </button>
-          <button
-            onClick={() => setTab("buyers")}
-            className={`flex-1 rounded-full py-2 text-sm font-heading ${
-              tab === "buyers" ? "bg-primary text-foreground" : "text-muted"
-            }`}
-          >
-            Buyers
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setTab("buyers")}
+              className={`flex-1 rounded-full py-2 text-sm font-heading ${
+                tab === "buyers" ? "bg-primary text-foreground" : "text-muted"
+              }`}
+            >
+              Buyers
+            </button>
+          )}
         </div>
 
         {tab === "overview" ? (
@@ -394,7 +413,7 @@ export default function ManageShowModal({
               </div>
             </div>
 
-            {show.ticketing?.mode !== "external" && (
+            {canManage && show.ticketing?.mode !== "external" && (
               <div className="flex flex-col gap-2">
                 <p className="text-sm text-muted">Ticket price</p>
                 <FeeBreakdown priceEuros={show.price} />
@@ -516,15 +535,18 @@ export default function ManageShowModal({
               </div>
             ) : (
               <div className="flex gap-3">
-                <Button variant="ghost" className="flex-1" onClick={startEditing}>
-                  Edit details
-                </Button>
+                {canManage && (
+                  <Button variant="ghost" className="flex-1" onClick={startEditing}>
+                    Edit details
+                  </Button>
+                )}
                 <Button className="flex-1" onClick={() => setTab("content")}>
                   Add Content
                 </Button>
               </div>
             )}
 
+            {canManage && (
             <div className="flex flex-col gap-5 border-t border-muted/15 pt-5">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between gap-4">
@@ -614,6 +636,7 @@ export default function ManageShowModal({
                 </button>
               )}
             </div>
+            )}
           </div>
         ) : tab === "buyers" ? (
           <div className="mt-6 flex flex-col gap-3">

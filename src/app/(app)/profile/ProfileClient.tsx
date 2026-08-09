@@ -142,6 +142,9 @@ export default function ProfileClient({
 }: ProfileClientProps) {
   const router = useRouter();
   const [activeShow, setActiveShow] = useState<EventItem | null>(null);
+  // Kept separate from activeShow so the modal knows which one it is looking at:
+  // the artist's own show is managed, a show they are only tagged on is not.
+  const [activeTaggedShow, setActiveTaggedShow] = useState<EventItem | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hiddenOpen, setHiddenOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -347,9 +350,12 @@ export default function ProfileClient({
             </div>
           )}
 
-          {/* Kept apart from Your Shows on purpose: these belong to another
-              artist, so there's nothing to manage here - tapping opens the
-              show's public page, not the Manage sheet. */}
+          {/* Kept apart from Your Shows on purpose: these belong to someone
+              else, so tapping opens the show read-only - details and content,
+              no editing, no takings. It used to link to /profile/{artistId},
+              which 404s for a show with no owning artist (anything created from
+              the admin panel) and was the wrong destination even when it
+              didn't - you want the show, not the promoter's profile. */}
           {taggedShows.length > 0 && (
             <>
               <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">
@@ -357,10 +363,10 @@ export default function ProfileClient({
               </h2>
               <div className="mb-8 flex flex-col gap-3">
                 {taggedShows.map((show) => (
-                  <Link
+                  <button
                     key={show.id}
-                    href={`/profile/${show.artistId}`}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface p-4"
+                    onClick={() => setActiveTaggedShow(show)}
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface p-4 text-left"
                   >
                     <div className="min-w-0">
                       <p className="truncate font-heading text-sm text-foreground">{show.title}</p>
@@ -373,7 +379,7 @@ export default function ProfileClient({
                         · {show.venue} · by {show.artist}
                       </p>
                     </div>
-                  </Link>
+                  </button>
                 ))}
               </div>
             </>
@@ -396,6 +402,16 @@ export default function ProfileClient({
       </button>
 
       {deleteOpen && <DeleteAccountDialog onClose={() => setDeleteOpen(false)} />}
+
+      {activeTaggedShow && (
+        <ManageShowModal
+          show={activeTaggedShow}
+          artistName={displayName}
+          canManage={false}
+          onClose={() => setActiveTaggedShow(null)}
+          onChanged={() => router.refresh()}
+        />
+      )}
 
       {activeShow && (
         <ManageShowModal
