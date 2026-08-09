@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { AppNotification, describeNotification } from "@/lib/notifications";
+import { useEffect, useMemo, useState } from "react";
+import { AppNotification, describeGroup, groupNotifications } from "@/lib/notifications";
 import { markNotificationsRead } from "./actions";
 
 function timeAgo(iso: string, now: number) {
@@ -34,6 +34,7 @@ export default function NotificationsClient({
 }) {
   const router = useRouter();
   const [notifications] = useState(initialNotifications);
+  const groups = useMemo(() => groupNotifications(notifications), [notifications]);
 
   // Opening the screen is the act of reading them. Marking on mount rather than
   // per-row means the badge clears when you'd expect it to, instead of counting
@@ -62,13 +63,14 @@ export default function NotificationsClient({
       <h1 className="font-display mb-6 text-2xl text-foreground">Notifications</h1>
 
       <div className="flex flex-col gap-2">
-        {notifications.map((n) => {
-          const { title, detail } = describeNotification(n);
+        {groups.map((g) => {
+          const { title, detail } = describeGroup(g);
+          const n = g.latest;
           const body = (
             <>
               <div className="flex items-start justify-between gap-3">
                 <p className="font-heading text-sm text-foreground">{title}</p>
-                {!n.readAt && (
+                {g.unread && (
                   <span
                     aria-label="Unread"
                     className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary"
@@ -86,14 +88,14 @@ export default function NotificationsClient({
           // has no page worth opening - a dead tap is worse than none.
           return n.eventId ? (
             <button
-              key={n.id}
+              key={g.key}
               onClick={() => router.push(`/e/${n.eventId}`)}
               className="rounded-2xl bg-surface p-3.5 text-left"
             >
               {body}
             </button>
           ) : (
-            <div key={n.id} className="rounded-2xl bg-surface p-3.5">
+            <div key={g.key} className="rounded-2xl bg-surface p-3.5">
               {body}
             </div>
           );
