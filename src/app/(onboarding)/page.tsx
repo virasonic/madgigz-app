@@ -30,9 +30,13 @@ function NoteIcon() {
 }
 
 export default function LandingPage() {
+  // justify-center balances the whole group in the middle of the screen. The
+  // wordmark block deliberately has no flex-1: giving it one made it absorb
+  // all the spare height, pinning the logo to the top and the cards to the
+  // bottom with a dead gap between them.
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="mt-8 flex flex-1 flex-col items-center text-center">
+    <div className="flex flex-1 flex-col justify-center">
+      <div className="flex flex-col items-center text-center">
         <Image
           src="/logos/madgigz-wordmark.png"
           alt="MadGigz"
@@ -46,7 +50,7 @@ export default function LandingPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="mt-10 flex flex-col gap-4">
         <RoleCard
           role="fan"
           href="/signup?role=fan"

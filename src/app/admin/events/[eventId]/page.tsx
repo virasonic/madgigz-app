@@ -63,7 +63,7 @@ export default async function AdminEventDetailPage({
         </div>
         <p className="text-sm text-muted">
           {event.artist} · {event.venue} ·{" "}
-          {new Date(event.date).toLocaleDateString(undefined, { timeZone: "UTC" })}
+          {new Date(event.date).toLocaleDateString("en-GB", { timeZone: "UTC" })}
         </p>
       </div>
 

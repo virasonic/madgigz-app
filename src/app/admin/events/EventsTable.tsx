@@ -1,14 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { cancelEvent, toggleEventActive } from "../actions";
+import FilterTabs from "../FilterTabs";
 import type { EventItem } from "@/lib/types";
+
+type EventFilter = "live" | "hidden" | "cancelled" | "all";
+
+// Mirrors the Status column: cancelled wins over active, since a cancelled
+// event is left inactive too and would otherwise count as hidden.
+function statusOf(event: EventItem): Exclude<EventFilter, "all"> {
+  if (event.cancelled) return "cancelled";
+  return event.active ? "live" : "hidden";
+}
 
 export default function EventsTable({ events }: { events: EventItem[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  // Defaults to live - what's actually on sale is the usual question.
+  const [filter, setFilter] = useState<EventFilter>("live");
+
+  const visible = useMemo(
+    () => (filter === "all" ? events : events.filter((e) => statusOf(e) === filter)),
+    [events, filter]
+  );
+
+  const counts = useMemo(
+    () => ({
+      live: events.filter((e) => statusOf(e) === "live").length,
+      hidden: events.filter((e) => statusOf(e) === "hidden").length,
+      cancelled: events.filter((e) => statusOf(e) === "cancelled").length,
+      all: events.length,
+    }),
+    [events]
+  );
 
   function handleToggle(eventId: string, nextActive: boolean) {
     setPendingId(eventId);
@@ -57,6 +84,17 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
           {result.text}
         </p>
       )}
+      <FilterTabs
+        value={filter}
+        onChange={setFilter}
+        options={[
+          { value: "live", label: "Live", count: counts.live },
+          { value: "hidden", label: "Hidden", count: counts.hidden },
+          { value: "cancelled", label: "Cancelled", count: counts.cancelled },
+          { value: "all", label: "All", count: counts.all },
+        ]}
+      />
+
       <table className="w-full text-left text-sm">
       <thead>
         <tr className="border-b border-muted/15 text-muted">
@@ -70,7 +108,14 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
         </tr>
       </thead>
       <tbody>
-        {events.map((e) => (
+        {visible.length === 0 && (
+          <tr>
+            <td colSpan={7} className="py-4 text-muted">
+              No {filter === "all" ? "" : filter + " "}events.
+            </td>
+          </tr>
+        )}
+        {visible.map((e) => (
           <tr key={e.id} className="border-b border-muted/10 last:border-0">
             <td className="py-2 text-foreground">
               <Link href={`/admin/events/${e.id}`} className="hover:text-accent hover:underline">
@@ -80,7 +125,10 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
             <td className="py-2 text-muted">{e.artist}</td>
             <td className="py-2 text-muted">{e.venue}</td>
             <td className="py-2 text-muted">
-              {new Date(e.date).toLocaleDateString(undefined, { timeZone: "UTC" })}
+              {/* Explicit locale, not undefined: the server resolves to en-US
+                  and the browser to en-GB, which rendered two different date
+                  strings and failed hydration. en-GB matches the rest of app. */}
+              {new Date(e.date).toLocaleDateString("en-GB", { timeZone: "UTC" })}
             </td>
             <td className="py-2 text-muted">
               {e.sold} / {e.capacity}

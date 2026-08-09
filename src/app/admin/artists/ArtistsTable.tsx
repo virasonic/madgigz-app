@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { setArtistStatus, resetArtistPayoutAccount } from "../actions";
+import FilterTabs from "../FilterTabs";
 import type { AdminArtistApplication } from "@/lib/supabase/admin-queries";
 import type { ArtistStatus } from "@/lib/types";
+
+type ReviewFilter = "open" | "approved" | "rejected" | "all";
 
 const SOCIAL_FIELDS: { key: keyof AdminArtistApplication; label: string }[] = [
   { key: "instagram", label: "Instagram" },
@@ -35,6 +38,30 @@ export default function ArtistsTable({
   const [isPending, startTransition] = useTransition();
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetConfirm, setResetConfirm] = useState<string | null>(null);
+  // Defaults to open reviews - those are the ones actually waiting on someone.
+  const [filter, setFilter] = useState<ReviewFilter>("open");
+
+  const visible = useMemo(
+    () =>
+      filter === "all"
+        ? applications
+        : applications.filter((app) =>
+            filter === "open"
+              ? app.artistStatus === "pending"
+              : app.artistStatus === filter
+          ),
+    [applications, filter]
+  );
+
+  const counts = useMemo(
+    () => ({
+      open: applications.filter((a) => a.artistStatus === "pending").length,
+      approved: applications.filter((a) => a.artistStatus === "approved").length,
+      rejected: applications.filter((a) => a.artistStatus === "rejected").length,
+      all: applications.length,
+    }),
+    [applications]
+  );
 
   function handleSetStatus(id: string, email: string, status: ArtistStatus) {
     setPendingId(id);
@@ -66,9 +93,31 @@ export default function ArtistsTable({
     return <p className="text-sm text-muted">No artist accounts yet.</p>;
   }
 
+  const emptyText: Record<ReviewFilter, string> = {
+    open: "No artists waiting on a review.",
+    approved: "No approved artists yet.",
+    rejected: "No rejected artists.",
+    all: "No artist accounts yet.",
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      {applications.map((app) => (
+    <div>
+      <FilterTabs
+        value={filter}
+        onChange={setFilter}
+        options={[
+          { value: "open", label: "Open", count: counts.open },
+          { value: "approved", label: "Approved", count: counts.approved },
+          { value: "rejected", label: "Rejected", count: counts.rejected },
+          { value: "all", label: "All", count: counts.all },
+        ]}
+      />
+
+      {visible.length === 0 ? (
+        <p className="text-sm text-muted">{emptyText[filter]}</p>
+      ) : (
+        <div className="flex flex-col gap-4">
+      {visible.map((app) => (
         <div key={app.id} className="rounded-2xl bg-surface p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -153,6 +202,8 @@ export default function ArtistsTable({
           </div>
         </div>
       ))}
+        </div>
+      )}
     </div>
   );
 }

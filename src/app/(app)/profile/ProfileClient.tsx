@@ -172,6 +172,13 @@ export default function ProfileClient({
         )}
       </div>
 
+      {/* Without this an artist writes a bio in Edit Profile and never sees it
+          again - it only showed on the public page, which they get redirected
+          away from. */}
+      {user.role === "artist" && user.artistBio && (
+        <p className="-mt-2 mb-6 text-sm leading-relaxed text-foreground/90">{user.artistBio}</p>
+      )}
+
       {user.role === "fan" ? (
         <div className="mb-8 grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-surface p-4 text-center">
