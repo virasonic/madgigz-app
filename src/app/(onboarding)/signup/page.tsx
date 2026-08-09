@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useRef, useState } from "react";
+import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Turnstile, { TurnstileHandle } from "@/components/ui/Turnstile";
@@ -24,6 +24,23 @@ function isRole(value: string | null): value is Role {
 // constraint in addendum_010 - the signup trigger copies this straight from
 // auth metadata, so a rule that lived only here could be bypassed.
 const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,30}$/;
+
+// Checked through an RPC rather than a PostgREST filter: usernames may contain
+// underscores, and "_" is a wildcard in ILIKE, so "hard_fuse" would match
+// "hardXfuse" and be wrongly reported as taken. See addendum_011.
+async function isUsernameAvailable(
+  supabase: ReturnType<typeof createClient>,
+  candidate: string
+): Promise<boolean | null> {
+  const { data, error } = await supabase.rpc("username_available", { candidate });
+  if (error) {
+    // Don't block signup on a failed check - the unique index is the real
+    // guarantee, and the submit path handles the collision if it happens.
+    console.error("username_available failed:", error.message);
+    return null;
+  }
+  return data as boolean;
+}
 
 const MIN_AGE = 16;
 // Computed once at module load rather than during render, per React's purity rules.
@@ -57,6 +74,40 @@ function SignUpForm() {
   const [submitting, setSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileHandle>(null);
+  // The answer is stored against the name it was for, so a slow reply about a
+  // previous value can never be mistaken for the current one - and the status
+  // below is derived rather than stored, so there's no second copy to keep in
+  // sync (and no setState in the effect body).
+  const [checkedName, setCheckedName] = useState<{ name: string; available: boolean } | null>(
+    null
+  );
+
+  const usernameFormatValid = USERNAME_PATTERN.test(username);
+  const usernameStatus: "idle" | "checking" | "available" | "taken" = !usernameFormatValid
+    ? "idle"
+    : checkedName?.name !== username
+      ? "checking"
+      : checkedName.available
+        ? "available"
+        : "taken";
+
+  // Debounced so typing doesn't fire a request per keystroke, and only once the
+  // format is valid - no point asking the server about "ab".
+  useEffect(() => {
+    if (!USERNAME_PATTERN.test(username)) return;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const available = await isUsernameAvailable(createClient(), username);
+      if (cancelled || available === null) return;
+      setCheckedName({ name: username, available });
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [username]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -68,6 +119,8 @@ function SignUpForm() {
       nextErrors.username = "Usernames can't contain spaces";
     } else if (!USERNAME_PATTERN.test(username)) {
       nextErrors.username = "Use 3-30 letters, numbers, dots, dashes or underscores";
+    } else if (usernameStatus === "taken") {
+      nextErrors.username = "That username is taken";
     }
     if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = "Enter a valid email";
     if (password.length < 8) nextErrors.password = "Use at least 8 characters";
@@ -103,6 +156,17 @@ function SignUpForm() {
     }
 
     const supabase = createClient();
+
+    // Re-check right before creating the account. The debounced check above can
+    // be several seconds stale by the time someone finishes the form.
+    const stillAvailable = await isUsernameAvailable(supabase, username);
+    if (stillAvailable === false) {
+      setSubmitting(false);
+      setCheckedName({ name: username, available: false });
+      setErrors({ username: "That username is taken" });
+      return;
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -114,7 +178,18 @@ function SignUpForm() {
     setSubmitting(false);
 
     if (error) {
-      setErrors({ email: error.message });
+      // Two people can pass the check above simultaneously - the unique index
+      // is what actually stops the duplicate, and it surfaces here as a generic
+      // "Database error saving new user" from the signup trigger. Ask again to
+      // find out whether that's what happened, rather than showing the raw
+      // message under the email field.
+      const availableNow = await isUsernameAvailable(supabase, username);
+      if (availableNow === false) {
+        setCheckedName({ name: username, available: false });
+        setErrors({ username: "That username was just taken - try another" });
+      } else {
+        setErrors({ email: error.message });
+      }
       turnstileRef.current?.reset();
       setTurnstileToken(null);
       return;
@@ -148,11 +223,16 @@ function SignUpForm() {
           autoComplete="username"
           placeholder="hardfuse"
         />
-        {!errors.username && (
-          <p className="-mt-3 text-xs text-muted">
-            No spaces. Letters, numbers, dots, dashes and underscores.
-          </p>
-        )}
+        {!errors.username &&
+          (usernameStatus === "taken" ? (
+            <p className="-mt-3 text-xs text-danger">That username is taken</p>
+          ) : usernameStatus === "available" ? (
+            <p className="-mt-3 text-xs text-accent">Username available</p>
+          ) : (
+            <p className="-mt-3 text-xs text-muted">
+              No spaces. Letters, numbers, dots, dashes and underscores.
+            </p>
+          ))}
         <Input
           label="Email"
           type="email"
