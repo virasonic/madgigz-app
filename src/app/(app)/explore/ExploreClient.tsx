@@ -14,6 +14,7 @@ interface ExploreClientProps {
   initialEvents: EventItem[];
   initialSavedIds: string[];
   artists: PublicArtistProfile[];
+  genresByEvent: Record<string, string[]>;
 }
 
 export default function ExploreClient({
@@ -21,22 +22,36 @@ export default function ExploreClient({
   initialEvents,
   initialSavedIds,
   artists,
+  genresByEvent,
 }: ExploreClientProps) {
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [query, setQuery] = useState("");
+  const [activeGenre, setActiveGenre] = useState<string | null>(null);
+
+  // Only genres actually on a live show - a filter chip that returns nothing is
+  // worse than no chip.
+  const availableGenres = useMemo(() => {
+    const names = new Set<string>();
+    initialEvents.forEach((e) => (genresByEvent[e.id] ?? []).forEach((g) => names.add(g)));
+    return [...names].sort();
+  }, [initialEvents, genresByEvent]);
 
   const trimmedQuery = query.trim().toLowerCase();
 
   const filteredEvents = useMemo(() => {
-    if (!trimmedQuery) return initialEvents;
-    return initialEvents.filter((event) =>
-      [event.title, event.artist, event.venue, event.category]
+    let list = initialEvents;
+    if (activeGenre) {
+      list = list.filter((event) => (genresByEvent[event.id] ?? []).includes(activeGenre));
+    }
+    if (!trimmedQuery) return list;
+    return list.filter((event) =>
+      [event.title, event.artist, event.venue, ...(genresByEvent[event.id] ?? [])]
         .join(" ")
         .toLowerCase()
         .includes(trimmedQuery)
     );
-  }, [initialEvents, trimmedQuery]);
+  }, [initialEvents, trimmedQuery, activeGenre, genresByEvent]);
 
   // Artists only appear once someone searches - listing every artist above the
   // grid by default would bury the shows Explore exists to surface.
@@ -67,6 +82,24 @@ export default function ExploreClient({
         placeholder="Search events, artists, venues..."
         className="mb-4 w-full rounded-2xl border border-muted/20 bg-surface px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
       />
+
+      {availableGenres.length > 0 && (
+        <div className="mb-4 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          {availableGenres.map((genre) => (
+            <button
+              key={genre}
+              onClick={() => setActiveGenre((current) => (current === genre ? null : genre))}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-heading transition-colors ${
+                activeGenre === genre
+                  ? "bg-primary text-foreground"
+                  : "bg-surface text-muted"
+              }`}
+            >
+              {genre}
+            </button>
+          ))}
+        </div>
+      )}
 
       {filteredArtists.length > 0 && (
         <div className="mb-6">

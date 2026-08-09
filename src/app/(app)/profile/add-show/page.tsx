@@ -6,11 +6,18 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import FeeBreakdown from "@/components/artist/FeeBreakdown";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
+import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
+import GenrePicker from "@/components/artist/GenrePicker";
 import { createClient } from "@/lib/supabase/client";
-import { fetchApprovedArtists, fetchCurrentUser } from "@/lib/supabase/queries";
+import {
+  fetchApprovedArtists,
+  fetchCurrentUser,
+  fetchGenres,
+  fetchVenues,
+} from "@/lib/supabase/queries";
 import { uploadEventMedia } from "@/lib/supabase/storage";
-import { AppUser, PublicArtistProfile } from "@/lib/types";
-import { tagArtistsOnShow } from "../show-actions";
+import { AppUser, Genre, PublicArtistProfile, Venue } from "@/lib/types";
+import { finaliseNewShow } from "../show-actions";
 
 const ACCENT_SWATCHES = [
   { name: "Orange", value: "#d76616" },
@@ -27,8 +34,10 @@ export default function AddShowPage() {
 
   const [user, setUser] = useState<AppUser | null>(null);
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
-  const [location, setLocation] = useState("");
+  const [venue, setVenue] = useState<VenueSelection>({ name: "", venueId: null });
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [allGenres, setAllGenres] = useState<Genre[]>([]);
+  const [genreIds, setGenreIds] = useState<string[]>([]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [price, setPrice] = useState("");
@@ -57,6 +66,8 @@ export default function AddShowPage() {
       // still edit or replace it, this is just a sane starting point.
       setLineup([{ name: current.artistName ?? current.username, profileId: null }]);
       fetchApprovedArtists(supabase).then(setArtists);
+      fetchVenues(supabase).then(setVenues);
+      fetchGenres(supabase).then(setAllGenres);
     });
   }, [router]);
 
@@ -73,7 +84,7 @@ export default function AddShowPage() {
     const nextErrors: Record<string, string> = {};
 
     if (!name.trim()) nextErrors.name = "Show name is required";
-    if (!location.trim()) nextErrors.location = "Location is required";
+    if (!venue.name.trim()) nextErrors.location = "Venue is required";
     if (!date) nextErrors.date = "Date is required";
     if (!time) nextErrors.time = "Time is required";
     if (!description.trim()) nextErrors.description = "Description is required";
@@ -131,14 +142,14 @@ export default function AddShowPage() {
       artist_id: user.id,
       title: name.trim(),
       artist_name: artistName,
-      venue: location.trim(),
+      venue: venue.name.trim(),
       city: "Madrid",
       event_date: date,
       event_time: time,
       price: priceNum,
       currency: "EUR",
       accent_color: accentColor,
-      category: category.trim() || "Live Music",
+      category: "Live Music",
       image_url: imageUrl,
       capacity: capacityNum,
       max_per_order: maxPerOrderNum,
@@ -166,13 +177,16 @@ export default function AddShowPage() {
       .map((entry) => entry.profileId)
       .filter((id): id is string => Boolean(id));
 
-    if (taggedIds.length > 0) {
-      const { error: tagError } = await tagArtistsOnShow(created.id, taggedIds);
-      if (tagError) {
-        setSubmitting(false);
-        setErrors({ lineup: `Show created, but tagging failed: ${tagError}` });
-        return;
-      }
+    const { error: finaliseError } = await finaliseNewShow(created.id, {
+      venueName: venue.name,
+      venueId: venue.venueId,
+      genreIds,
+      taggedArtistIds: taggedIds,
+    });
+    if (finaliseError) {
+      setSubmitting(false);
+      setErrors({ lineup: `Show created, but: ${finaliseError}` });
+      return;
     }
 
     setSubmitting(false);
@@ -189,19 +203,20 @@ export default function AddShowPage() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <Input label="Show name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
-        <Input
-          label="Category"
-          placeholder="Rock, Electronic, Jazz..."
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        />
-        <Input
-          label="Location"
-          placeholder="Venue name"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          error={errors.location}
-        />
+        <div className="flex flex-col gap-1.5">
+          <span className="font-heading text-sm text-muted">Venue</span>
+          <VenuePicker
+            value={venue}
+            onChange={setVenue}
+            venues={venues}
+            error={errors.location}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="font-heading text-sm text-muted">Genres</span>
+          <GenrePicker genres={allGenres} selectedIds={genreIds} onChange={setGenreIds} />
+        </div>
         <Input
           label="Date"
           type="date"

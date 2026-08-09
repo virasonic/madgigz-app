@@ -16,8 +16,16 @@ import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/types";
 import { updateShow } from "@/app/(app)/profile/show-actions";
 import LineupEditor, { LineupEntry, lineupToEntries } from "@/components/artist/LineupEditor";
-import { fetchApprovedArtists, fetchTaggedArtistIds } from "@/lib/supabase/queries";
-import { PublicArtistProfile } from "@/lib/types";
+import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
+import GenrePicker from "@/components/artist/GenrePicker";
+import {
+  fetchApprovedArtists,
+  fetchEventGenreIds,
+  fetchGenres,
+  fetchTaggedArtistIds,
+  fetchVenues,
+} from "@/lib/supabase/queries";
+import { Genre, PublicArtistProfile, Venue } from "@/lib/types";
 
 // <input type="time"> wants HH:MM; Postgres hands back HH:MM:SS.
 function toTimeInput(value: string) {
@@ -73,6 +81,7 @@ export default function ManageShowModal({
     lineup: show.lineup,
     date: show.date,
     time: show.time,
+    venue: show.venue,
   });
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(details);
@@ -81,11 +90,21 @@ export default function ManageShowModal({
   const [artists, setArtists] = useState<PublicArtistProfile[]>([]);
   const [taggedIds, setTaggedIds] = useState<string[]>([]);
   const [lineupEntries, setLineupEntries] = useState<LineupEntry[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [allGenres, setAllGenres] = useState<Genre[]>([]);
+  const [genreIds, setGenreIds] = useState<string[]>([]);
+  const [venueDraft, setVenueDraft] = useState<VenueSelection>({
+    name: show.venue,
+    venueId: show.venueId,
+  });
 
   useEffect(() => {
     const supabase = createClient();
     fetchApprovedArtists(supabase).then(setArtists);
     fetchTaggedArtistIds(supabase, show.id).then(setTaggedIds);
+    fetchVenues(supabase).then(setVenues);
+    fetchGenres(supabase).then(setAllGenres);
+    fetchEventGenreIds(supabase, show.id).then(setGenreIds);
   }, [show.id]);
 
   useEffect(() => {
@@ -213,6 +232,7 @@ export default function ManageShowModal({
 
   function startEditing() {
     setDraft(details);
+    setVenueDraft({ name: details.venue, venueId: show.venueId });
     setLineupEntries(
       lineupToEntries(
         details.lineup,
@@ -236,6 +256,9 @@ export default function ManageShowModal({
       lineup: cleaned.map((entry) => entry.name),
       date: draft.date,
       time: draft.time,
+      venueName: venueDraft.name,
+      venueId: venueDraft.venueId,
+      genreIds,
       taggedArtistIds: cleaned
         .map((entry) => entry.profileId)
         .filter((id): id is string => Boolean(id)),
@@ -252,6 +275,7 @@ export default function ManageShowModal({
       ...draft,
       description: draft.description.trim(),
       lineup: cleaned.map((entry) => entry.name),
+      venue: venueDraft.name.trim(),
     });
     setTaggedIds(
       cleaned.map((entry) => entry.profileId).filter((id): id is string => Boolean(id))
@@ -310,7 +334,7 @@ export default function ManageShowModal({
 
         <h2 className="font-display text-2xl text-foreground">{show.title}</h2>
         <p className="mt-1 text-sm text-muted">
-          {show.venue} · {formatDate(details.date)} · {toTimeInput(details.time)}
+          {details.venue} · {formatDate(details.date)} · {toTimeInput(details.time)}
         </p>
 
         <div className="mt-5 flex gap-2 rounded-full bg-background p-1">
@@ -345,7 +369,7 @@ export default function ManageShowModal({
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted">Location</p>
-                <p className="text-foreground">{show.venue}</p>
+                <p className="text-foreground">{details.venue}</p>
               </div>
               <div>
                 <p className="text-muted">Date &amp; time</p>
@@ -418,6 +442,25 @@ export default function ManageShowModal({
                     tickets - let them know yourself if you move the date or time.
                   </p>
                 )}
+
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs text-muted">Venue</span>
+                  <VenuePicker
+                    value={venueDraft}
+                    onChange={setVenueDraft}
+                    venues={venues}
+                    compact
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs text-muted">Genres</span>
+                  <GenrePicker
+                    genres={allGenres}
+                    selectedIds={genreIds}
+                    onChange={setGenreIds}
+                  />
+                </div>
 
                 <div className="flex flex-col gap-2">
                   <span className="text-xs text-muted">Lineup</span>

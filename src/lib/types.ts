@@ -6,9 +6,50 @@ export interface Ticketing {
   url?: string;
 }
 
+export interface Venue {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string;
+  postalCode: string | null;
+  capacity: number | null;
+  verified: boolean;
+  active: boolean;
+}
+
+export interface VenueRow {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string;
+  postal_code: string | null;
+  capacity: number | null;
+  verified: boolean;
+  active: boolean;
+}
+
+export function mapVenue(row: VenueRow): Venue {
+  return {
+    id: row.id,
+    name: row.name,
+    address: row.address,
+    city: row.city,
+    postalCode: row.postal_code,
+    capacity: row.capacity,
+    verified: row.verified,
+    active: row.active,
+  };
+}
+
+export interface Genre {
+  id: string;
+  name: string;
+}
+
 export interface EventItem {
   id: string;
   artistId: string | null;
+  venueId: string | null;
   title: string;
   artist: string;
   venue: string;
@@ -110,6 +151,7 @@ export interface Discount {
 export interface EventRow {
   id: string;
   artist_id: string | null;
+  venue_id: string | null;
   title: string;
   artist_name: string;
   venue: string;
@@ -139,6 +181,7 @@ export function mapEvent(row: EventRow): EventItem {
   return {
     id: row.id,
     artistId: row.artist_id,
+    venueId: row.venue_id ?? null,
     title: row.title,
     artist: row.artist_name,
     venue: row.venue,

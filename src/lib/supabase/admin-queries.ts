@@ -154,6 +154,50 @@ export async function fetchArtistApplications(
   return applications.sort((a, b) => statusOrder[a.artistStatus] - statusOrder[b.artistStatus]);
 }
 
+export interface AdminVenue {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string;
+  postalCode: string | null;
+  capacity: number | null;
+  verified: boolean;
+  active: boolean;
+  showCount: number;
+  upcomingCount: number;
+  ticketsSold: number;
+}
+
+// Venue list with the numbers that make it worth having a tab: how much is
+// actually being advertised there, and how much of it has sold.
+export async function fetchVenuesAdmin(admin: SupabaseClient): Promise<AdminVenue[]> {
+  const [{ data: venues }, { data: events }] = await Promise.all([
+    admin.from("venues").select("*").order("verified").order("name"),
+    admin.from("events").select("id, venue_id, event_date, sold, cancelled"),
+  ]);
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  return ((venues ?? []) as Record<string, unknown>[]).map((v) => {
+    const mine = ((events ?? []) as Record<string, unknown>[]).filter(
+      (e) => e.venue_id === v.id && !e.cancelled
+    );
+    return {
+      id: v.id as string,
+      name: v.name as string,
+      address: (v.address as string) ?? null,
+      city: v.city as string,
+      postalCode: (v.postal_code as string) ?? null,
+      capacity: (v.capacity as number) ?? null,
+      verified: v.verified as boolean,
+      active: v.active as boolean,
+      showCount: mine.length,
+      upcomingCount: mine.filter((e) => (e.event_date as string) >= today).length,
+      ticketsSold: mine.reduce((sum, e) => sum + ((e.sold as number) ?? 0), 0),
+    };
+  });
+}
+
 export async function fetchAllEventsAdmin(admin: SupabaseClient) {
   const { data } = await admin.from("events").select("*").order("event_date");
   return ((data as EventRow[]) ?? []).map(mapEvent);

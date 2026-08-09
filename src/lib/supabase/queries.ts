@@ -16,6 +16,10 @@ import {
   ProfileRow,
   PublicArtistProfile,
   PublicArtistProfileRow,
+  Genre,
+  Venue,
+  VenueRow,
+  mapVenue,
   Ticket,
   TicketRow,
 } from "@/lib/types";
@@ -57,6 +61,54 @@ export async function fetchArtistProfile(
 
   if (!data) return null;
   return mapPublicArtistProfile(data as PublicArtistProfileRow);
+}
+
+// Madrid-only for now. The city column exists so opening a second city later
+// is a filter change here rather than a migration.
+export async function fetchVenues(
+  supabase: SupabaseClient,
+  options: { includeInactive?: boolean } = {}
+): Promise<Venue[]> {
+  let query = supabase.from("venues").select("*").order("name");
+  if (!options.includeInactive) query = query.eq("active", true);
+  const { data } = await query;
+  return ((data as VenueRow[]) ?? []).map(mapVenue);
+}
+
+export async function fetchGenres(supabase: SupabaseClient): Promise<Genre[]> {
+  const { data } = await supabase
+    .from("genres")
+    .select("id, name")
+    .order("sort_order")
+    .order("name");
+  return (data as Genre[]) ?? [];
+}
+
+export async function fetchEventGenreIds(
+  supabase: SupabaseClient,
+  eventId: string
+): Promise<string[]> {
+  const { data } = await supabase
+    .from("event_genres")
+    .select("genre_id")
+    .eq("event_id", eventId);
+  return (data ?? []).map((row) => row.genre_id as string);
+}
+
+// Genres for many events at once - Explore needs them for every card, and one
+// query beats one per event.
+export async function fetchGenresByEvent(
+  supabase: SupabaseClient
+): Promise<Record<string, string[]>> {
+  const { data } = await supabase.from("event_genres").select("event_id, genres(name)");
+  const byEvent: Record<string, string[]> = {};
+  ((data ?? []) as unknown as { event_id: string; genres: { name: string } | null }[]).forEach(
+    (row) => {
+      if (!row.genres) return;
+      byEvent[row.event_id] = [...(byEvent[row.event_id] ?? []), row.genres.name];
+    }
+  );
+  return byEvent;
 }
 
 // Only approved artists, matching what the public profile page will actually
