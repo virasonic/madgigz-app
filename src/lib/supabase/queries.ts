@@ -59,6 +59,23 @@ export async function fetchArtistProfile(
   return mapPublicArtistProfile(data as PublicArtistProfileRow);
 }
 
+// Only approved artists, matching what the public profile page will actually
+// serve - a search hit on a pending or rejected artist would 404 on tap.
+export async function fetchApprovedArtists(
+  supabase: SupabaseClient
+): Promise<PublicArtistProfile[]> {
+  const { data } = await supabase
+    .from("profiles")
+    .select(
+      "id, username, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, role, artist_status"
+    )
+    .eq("role", "artist")
+    .eq("artist_status", "approved")
+    .order("artist_name");
+
+  return ((data as PublicArtistProfileRow[]) ?? []).map(mapPublicArtistProfile);
+}
+
 export async function fetchEvents(
   supabase: SupabaseClient,
   options: { activeOnly?: boolean } = {}

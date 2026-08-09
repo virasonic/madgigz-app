@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { fetchCurrentUser, fetchEvents, fetchSavedEventIds } from "@/lib/supabase/queries";
+import {
+  fetchApprovedArtists,
+  fetchCurrentUser,
+  fetchEvents,
+  fetchSavedEventIds,
+} from "@/lib/supabase/queries";
 import ExploreClient from "./ExploreClient";
 
 export default async function ExplorePage() {
@@ -8,10 +13,18 @@ export default async function ExplorePage() {
   const user = await fetchCurrentUser(supabase);
   if (!user) redirect("/");
 
-  const [events, savedIds] = await Promise.all([
+  const [events, savedIds, artists] = await Promise.all([
     fetchEvents(supabase, { activeOnly: true }),
     fetchSavedEventIds(supabase, user.id),
+    fetchApprovedArtists(supabase),
   ]);
 
-  return <ExploreClient userId={user.id} initialEvents={events} initialSavedIds={savedIds} />;
+  return (
+    <ExploreClient
+      userId={user.id}
+      initialEvents={events}
+      initialSavedIds={savedIds}
+      artists={artists}
+    />
+  );
 }
