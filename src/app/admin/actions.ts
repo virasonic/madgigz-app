@@ -39,7 +39,9 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
 
   const { data: tickets } = await admin
     .from("tickets")
-    .select("id, quantity, price_paid, refunded, stripe_payment_intent_id")
+    // stripe_account_id: whether this sale was a Connect destination charge, so
+    // the refund knows if there is a transfer to reverse. A house show has none.
+    .select("id, quantity, price_paid, refunded, stripe_payment_intent_id, stripe_account_id")
     .eq("event_id", eventId);
 
   if (!tickets || tickets.length === 0) {
@@ -84,8 +86,14 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
           // Destination charges put the money in the artist's balance. Without
           // reverse_transfer the fan gets refunded out of MadGigz's balance
           // while the artist keeps the payment.
-          reverse_transfer: true,
-          refund_application_fee: true,
+          //
+          // A house show never transferred anything and was charged no fee, so
+          // both flags are omitted - Stripe errors on a reversal with nothing
+          // to reverse. The ticket's own snapshot decides, not the event's
+          // current flag, since the event may have been edited since the sale.
+          ...(ticket.stripe_account_id
+            ? { reverse_transfer: true, refund_application_fee: true }
+            : {}),
         },
         { idempotencyKey: `refund_${ticket.id}` }
       );
@@ -119,7 +127,7 @@ export async function refundTicket(ticketId: string): Promise<{ error: string | 
 
   const { data: ticket } = await admin
     .from("tickets")
-    .select("id, event_id, quantity, refunded, stripe_payment_intent_id")
+    .select("id, event_id, quantity, refunded, stripe_payment_intent_id, stripe_account_id")
     .eq("id", ticketId)
     .single();
 
@@ -135,9 +143,11 @@ export async function refundTicket(ticketId: string): Promise<{ error: string | 
           payment_intent: ticket.stripe_payment_intent_id,
           // Funds sit in the artist's balance under destination charges -
           // without reverse_transfer the fan would be repaid out of MadGigz's
-          // pocket while the artist keeps the money.
-          reverse_transfer: true,
-          refund_application_fee: true,
+          // pocket while the artist keeps the money. A house show transferred
+          // nothing, so there is nothing to reverse and Stripe would error.
+          ...(ticket.stripe_account_id
+            ? { reverse_transfer: true, refund_application_fee: true }
+            : {}),
         },
         { idempotencyKey: `refund_${ticket.id}` }
       );

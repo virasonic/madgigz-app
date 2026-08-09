@@ -118,15 +118,22 @@ export async function createCheckout(
     return { freeTicketId: ticketId as string };
   }
 
-  if (!artist?.stripe_payouts_ready || !artist.stripe_account_id) {
+  // A MadGigz house show has no artist to pay: the money lands in the platform
+  // account directly, so there is no Connect transfer and no commission to take
+  // from ourselves. Everything else about checkout is identical.
+  const houseRun = Boolean((eventRow as { house_run?: boolean }).house_run);
+
+  if (!houseRun && (!artist?.stripe_payouts_ready || !artist.stripe_account_id)) {
     await release();
     return { error: "This artist can't accept payments yet" };
   }
 
   // Stripe collects the whole fee (commission + IVA) as one application fee;
   // the VAT portion is carried in metadata so it can be recorded separately on
-  // the ticket for tax reporting.
-  const { feeCents, feeVatCents } = breakdownFor(totalCents);
+  // the ticket for tax reporting. A house show is charged no fee at all.
+  const { feeCents, feeVatCents } = houseRun
+    ? { feeCents: 0, feeVatCents: 0 }
+    : breakdownFor(totalCents);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   try {
@@ -153,10 +160,17 @@ export async function createCheckout(
           },
         },
       ],
-      payment_intent_data: {
-        application_fee_amount: feeCents,
-        transfer_data: { destination: artist.stripe_account_id },
-      },
+      // Omitted entirely for a house show. Passing application_fee_amount: 0
+      // with no destination is not the same thing - Stripe rejects a transfer
+      // to nowhere, and a zero fee on a normal charge is a different intent.
+      ...(houseRun
+        ? {}
+        : {
+            payment_intent_data: {
+              application_fee_amount: feeCents,
+              transfer_data: { destination: artist!.stripe_account_id },
+            },
+          }),
       metadata: {
         event_id: event.id,
         user_id: user.id,
@@ -164,7 +178,7 @@ export async function createCheckout(
         discount_id: discount?.id ?? "",
         application_fee_cents: String(feeCents),
         application_fee_vat_cents: String(feeVatCents),
-        stripe_account_id: artist.stripe_account_id,
+        stripe_account_id: houseRun ? "" : artist!.stripe_account_id,
       },
     });
 
