@@ -15,6 +15,25 @@ export async function uploadEventMedia(
   return publicUrl;
 }
 
+export const ARTIST_EVIDENCE_BUCKET = "artist-evidence";
+
+// Deliberately not uploadEventMedia: that writes to a public bucket, which is
+// right for posters and reels and wrong for anything an artist sends to prove
+// who they are. Returns the storage path, not a URL - there is no public URL to
+// return, and admins read it through a signed link instead.
+export async function uploadArtistEvidence(
+  supabase: SupabaseClient,
+  file: File,
+  userId: string
+): Promise<string> {
+  // The user id has to be the first path segment: the bucket's insert policy
+  // checks it, so an artist can't write into someone else's folder.
+  const path = `${userId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+  const { error } = await supabase.storage.from(ARTIST_EVIDENCE_BUCKET).upload(path, file);
+  if (error) throw error;
+  return path;
+}
+
 const PUBLIC_URL_PREFIX = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/event-media/`;
 
 // Picsum seed-data URLs return null here and are left alone - only our own

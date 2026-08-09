@@ -95,12 +95,14 @@ export default function SignInPage() {
     // so they'd sign in here and never see the form at all.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role, evidence_url")
+      .select("role, evidence_submitted")
       .eq("id", data.user.id)
       .single();
 
     const destination =
-      profile?.role === "artist" && !profile.evidence_url ? "/signup/artist-profile" : "/feed";
+      profile?.role === "artist" && !profile.evidence_submitted
+        ? "/signup/artist-profile"
+        : "/feed";
 
     router.push(destination);
     router.refresh();

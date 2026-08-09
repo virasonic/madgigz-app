@@ -135,7 +135,7 @@ export default function ProfileClient({
   const hasSocials = buildSocialLinks(user).length > 0;
   // Evidence is the one thing only the claim form can set, so it's the reliable
   // signal that the form was actually completed.
-  const claimSubmitted = Boolean(user.evidenceUrl);
+  const claimSubmitted = user.evidenceSubmitted;
   const ticketsSold = useMemo(() => shows.reduce((sum, show) => sum + show.sold, 0), [shows]);
   const visibleShows = useMemo(() => shows.filter((show) => show.active), [shows]);
   const hiddenShows = useMemo(() => shows.filter((show) => !show.active), [shows]);

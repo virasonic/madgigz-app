@@ -5,7 +5,7 @@ import { ChangeEvent, FormEvent, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
-import { uploadEventMedia } from "@/lib/supabase/storage";
+import { uploadArtistEvidence } from "@/lib/supabase/storage";
 
 export default function ArtistProfilePage() {
   const router = useRouter();
@@ -51,7 +51,22 @@ export default function ArtistProfilePage() {
       return;
     }
 
-    const evidenceUrl = file ? await uploadEventMedia(supabase, file, "evidence") : null;
+    // Goes to the private bucket, and the path is recorded in artist_evidence
+    // rather than on profiles - profiles is readable by everyone, so a column
+    // there would put verification documents on the open internet.
+    const evidencePath = file ? await uploadArtistEvidence(supabase, file, user.id) : null;
+
+    if (evidencePath) {
+      const { error: evidenceError } = await supabase
+        .from("artist_evidence")
+        .upsert({ profile_id: user.id, storage_path: evidencePath });
+
+      if (evidenceError) {
+        setSubmitting(false);
+        setErrors({ evidence: "Couldn't save that file. Please try again." });
+        return;
+      }
+    }
 
     const { error } = await supabase
       .from("profiles")
@@ -63,7 +78,7 @@ export default function ArtistProfilePage() {
         twitter: twitter.trim() || null,
         spotify: spotify.trim() || null,
         youtube: youtube.trim() || null,
-        evidence_url: evidenceUrl,
+        evidence_submitted: Boolean(evidencePath),
       })
       .eq("id", user.id);
 
@@ -112,6 +127,11 @@ export default function ArtistProfilePage() {
 
         <div className="flex flex-col gap-3">
           <h2 className="font-heading text-sm text-muted">Social links</h2>
+          {/* Said before the fields, not after a failed submit - people fill
+              all three assuming they must. */}
+          <p className="-mt-1 text-xs text-muted">
+            One is enough. Add more if you want them on your profile.
+          </p>
           <Input
             label="Instagram"
             placeholder="@yourname"
@@ -150,7 +170,26 @@ export default function ArtistProfilePage() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="font-heading text-sm text-muted">Upload evidence</span>
+          <span className="font-heading text-sm text-muted">Prove the profile is yours</span>
+          {/* Always visible rather than behind a tooltip: you can't act without
+              knowing what counts, and guessing wrong means a rejected
+              application and a second round trip. */}
+          <div className="mb-1 rounded-2xl bg-surface px-4 py-3">
+            <p className="text-xs text-muted">Any one of these works:</p>
+            <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-4 text-xs text-muted">
+              <li>
+                A screenshot of your <span className="text-foreground">Spotify for Artists</span>{" "}
+                dashboard — the clearest one
+              </li>
+              <li>Song credits on Spotify showing your artist name</li>
+              <li>
+                A screenshot showing you logged in to the social account you listed above
+              </li>
+            </ul>
+            <p className="mt-2 text-xs text-muted">
+              Only we see this, and it&apos;s never shown on your profile.
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}

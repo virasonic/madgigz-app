@@ -113,7 +113,7 @@ export interface AppUser {
   spotify: string | null;
   youtube: string | null;
   artistStatus: ArtistStatus | null;
-  evidenceUrl: string | null;
+  evidenceSubmitted: boolean;
   stripeAccountId: string | null;
   stripePayoutsReady: boolean;
 }
@@ -276,7 +276,7 @@ export interface ProfileRow {
   spotify: string | null;
   youtube: string | null;
   artist_status: ArtistStatus | null;
-  evidence_url: string | null;
+  evidence_submitted: boolean | null;
   stripe_account_id: string | null;
   stripe_payouts_ready: boolean | null;
 }
@@ -295,7 +295,7 @@ export function mapProfile(row: ProfileRow, email: string): AppUser {
     twitter: row.twitter,
     spotify: row.spotify,
     artistStatus: row.artist_status,
-    evidenceUrl: row.evidence_url,
+    evidenceSubmitted: Boolean(row.evidence_submitted),
     stripeAccountId: row.stripe_account_id,
     stripePayoutsReady: row.stripe_payouts_ready ?? false,
     youtube: row.youtube,

@@ -113,6 +113,8 @@ export interface AdminArtistApplication {
   twitter: string | null;
   spotify: string | null;
   youtube: string | null;
+  /** Short-lived signed URL, minted per page load - the file lives in a private
+   *  bucket and has no public URL. */
   evidenceUrl: string | null;
   artistStatus: ArtistStatus;
   stripeAccountId: string | null;
@@ -127,11 +129,30 @@ export async function fetchArtistApplications(
   const { data: profileRows } = await admin
     .from("profiles")
     .select(
-      "id, username, artist_name, instagram, tiktok, twitter, spotify, youtube, evidence_url, artist_status, stripe_account_id, stripe_payouts_ready, created_at"
+      "id, username, artist_name, instagram, tiktok, twitter, spotify, youtube, artist_status, stripe_account_id, stripe_payouts_ready, created_at"
     )
     .eq("role", "artist");
 
   const emailById = new Map((authData?.users ?? []).map((u) => [u.id, u.email ?? ""]));
+
+  // Evidence paths live in their own table, not on profiles - profiles is
+  // readable by everyone, so a column there would have put verification
+  // documents on the open internet.
+  const { data: evidenceRows } = await admin
+    .from("artist_evidence")
+    .select("profile_id, storage_path");
+
+  const signedByProfile = new Map<string, string>();
+  await Promise.all(
+    (evidenceRows ?? []).map(async (row) => {
+      const { data: signed } = await admin.storage
+        .from("artist-evidence")
+        // An hour is plenty to look at it, and the link dies afterwards rather
+        // than being forwardable forever.
+        .createSignedUrl(row.storage_path as string, 60 * 60);
+      if (signed?.signedUrl) signedByProfile.set(row.profile_id as string, signed.signedUrl);
+    })
+  );
 
   const applications = (profileRows ?? []).map((p) => ({
     id: p.id,
@@ -143,7 +164,7 @@ export async function fetchArtistApplications(
     twitter: p.twitter,
     spotify: p.spotify,
     youtube: p.youtube,
-    evidenceUrl: p.evidence_url,
+    evidenceUrl: signedByProfile.get(p.id as string) ?? null,
     artistStatus: (p.artist_status ?? "approved") as ArtistStatus,
     stripeAccountId: p.stripe_account_id,
     stripePayoutsReady: p.stripe_payouts_ready ?? false,
