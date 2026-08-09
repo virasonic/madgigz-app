@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   fetchCurrentUser,
-  fetchEvents,
   fetchSavedEventIds,
   fetchShowsByArtist,
   fetchTaggedShows,
@@ -11,26 +10,25 @@ import {
 import ProfileClient from "./ProfileClient";
 import { isArtistRole } from "@/lib/roles";
 
-// Computed once at module load rather than during render, per React's purity rules.
-const NOW = Date.now();
-
 export default async function ProfilePage() {
   const supabase = await createClient();
   const user = await fetchCurrentUser(supabase);
   if (!user) redirect("/");
 
-  const [savedIds, tickets, events, shows, taggedShows] = await Promise.all([
+  const [savedIds, tickets, shows, taggedShows] = await Promise.all([
     fetchSavedEventIds(supabase, user.id),
     fetchTickets(supabase, user.id),
-    fetchEvents(supabase),
     isArtistRole(user.role) ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
     isArtistRole(user.role) ? fetchTaggedShows(supabase, user.id) : Promise.resolve([]),
   ]);
 
-  const attendedCount = tickets.filter((ticket) => {
-    const event = events.find((e) => e.id === ticket.eventId);
-    return event && new Date(event.date).getTime() < NOW;
-  }).length;
+  // Scanned at the door, not "the date has passed". A ticket bought and never
+  // used isn't a gig you attended, and this number sits on the same screen as
+  // the Tickets tab's "Where you've been", which counts the same thing.
+  //
+  // It also means this page no longer reads the whole events table: the old
+  // version fetched every event solely to look up each ticket's date.
+  const attendedCount = tickets.filter((ticket) => ticket.checkedInAt).length;
 
   return (
     <ProfileClient

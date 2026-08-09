@@ -60,7 +60,7 @@ export default function SavedClient({
     [initialEvents, savedIds]
   );
 
-  const ticketRows = useMemo(
+  const allTicketRows = useMemo(
     () =>
       tickets
         .map((ticket) => ({
@@ -69,6 +69,23 @@ export default function SavedClient({
         }))
         .filter((row): row is { ticket: Ticket; event: EventItem } => Boolean(row.event)),
     [initialEvents, tickets]
+  );
+
+  // Attendance means the ticket was scanned at the door, not that the date has
+  // passed - plenty of tickets are bought and never used, and calling those
+  // "where you've been" would be a nice lie. checked_in_at is the only record
+  // of someone actually turning up.
+  const attendedRows = useMemo(
+    () =>
+      allTicketRows
+        .filter((row) => row.ticket.checkedInAt)
+        .sort((a, b) => b.event.date.localeCompare(a.event.date)),
+    [allTicketRows]
+  );
+
+  const ticketRows = useMemo(
+    () => allTicketRows.filter((row) => !row.ticket.checkedInAt),
+    [allTicketRows]
   );
 
   // A real toggle rather than unsave-only. From this list it always unsaves -
@@ -177,11 +194,14 @@ export default function SavedClient({
             ))}
           </div>
         )
-      ) : ticketRows.length === 0 ? (
+      ) : ticketRows.length === 0 && attendedRows.length === 0 ? (
         <p className="text-sm text-muted">Tickets you buy will show up here.</p>
       ) : (
         <div className="flex flex-col gap-3">
           {removeError && <p className="text-sm text-danger">{removeError}</p>}
+          {ticketRows.length === 0 && (
+            <p className="text-sm text-muted">No upcoming tickets right now.</p>
+          )}
           {ticketRows.map(({ ticket, event }) => (
             <div key={ticket.id} className="rounded-2xl bg-surface p-3">
               <div className="flex gap-3">
@@ -236,6 +256,46 @@ export default function SavedClient({
               )}
             </div>
           ))}
+
+          {attendedRows.length > 0 && (
+            <div className="mt-4">
+              <h2 className="font-heading text-sm uppercase tracking-wide text-muted">
+                Where you&apos;ve been
+              </h2>
+              <p className="mt-1 text-xs text-muted">
+                {attendedRows.length} {attendedRows.length === 1 ? "gig" : "gigs"} you turned
+                up to.
+              </p>
+
+              {/* Capped and scrollable: this list only grows, and someone who
+                  goes out a lot shouldn't have to scroll past two years of gigs
+                  to reach the bottom of the page. */}
+              <div className="mt-3 flex max-h-72 flex-col gap-2 overflow-y-auto">
+                {attendedRows.map(({ ticket, event }) => (
+                  <button
+                    key={ticket.id}
+                    onClick={() => setActiveTicket({ ticket, event })}
+                    className="flex items-center gap-3 rounded-2xl bg-surface p-2.5 text-left"
+                  >
+                    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg">
+                      <Image src={event.image} alt={event.title} fill className="object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-heading text-sm text-foreground">
+                        {event.title}
+                      </p>
+                      <p className="truncate text-xs text-muted">
+                        {event.venue} · {formatDate(event.date)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs text-muted">
+                      {event.artist}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
