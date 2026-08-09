@@ -115,6 +115,7 @@ interface ProfileClientProps {
   savedCount: number;
   attendedCount: number;
   shows: EventItem[];
+  taggedShows: EventItem[];
 }
 
 export default function ProfileClient({
@@ -122,6 +123,7 @@ export default function ProfileClient({
   savedCount,
   attendedCount,
   shows,
+  taggedShows,
 }: ProfileClientProps) {
   const router = useRouter();
   const [activeShow, setActiveShow] = useState<EventItem | null>(null);
@@ -302,6 +304,38 @@ export default function ProfileClient({
                 </>
               )}
             </div>
+          )}
+
+          {/* Kept apart from Your Shows on purpose: these belong to another
+              artist, so there's nothing to manage here - tapping opens the
+              show's public page, not the Manage sheet. */}
+          {taggedShows.length > 0 && (
+            <>
+              <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">
+                Tagged in
+              </h2>
+              <div className="mb-8 flex flex-col gap-3">
+                {taggedShows.map((show) => (
+                  <Link
+                    key={show.id}
+                    href={`/profile/${show.artistId}`}
+                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface p-4"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-heading text-sm text-foreground">{show.title}</p>
+                      <p className="truncate text-xs text-muted">
+                        {new Date(show.date).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          timeZone: "UTC",
+                        })}{" "}
+                        · {show.venue} · by {show.artist}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </>
           )}
         </>
       )}

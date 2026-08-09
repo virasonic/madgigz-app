@@ -5,6 +5,7 @@ import {
   fetchEvents,
   fetchSavedEventIds,
   fetchShowsByArtist,
+  fetchTaggedShows,
   fetchTickets,
 } from "@/lib/supabase/queries";
 import ProfileClient from "./ProfileClient";
@@ -17,11 +18,12 @@ export default async function ProfilePage() {
   const user = await fetchCurrentUser(supabase);
   if (!user) redirect("/");
 
-  const [savedIds, tickets, events, shows] = await Promise.all([
+  const [savedIds, tickets, events, shows, taggedShows] = await Promise.all([
     fetchSavedEventIds(supabase, user.id),
     fetchTickets(supabase, user.id),
     fetchEvents(supabase),
     user.role === "artist" ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
+    user.role === "artist" ? fetchTaggedShows(supabase, user.id) : Promise.resolve([]),
   ]);
 
   const attendedCount = tickets.filter((ticket) => {
@@ -35,6 +37,7 @@ export default async function ProfilePage() {
       savedCount={savedIds.length}
       attendedCount={attendedCount}
       shows={shows}
+      taggedShows={taggedShows}
     />
   );
 }

@@ -5,10 +5,12 @@ import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import FeeBreakdown from "@/components/artist/FeeBreakdown";
+import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
 import { createClient } from "@/lib/supabase/client";
-import { fetchCurrentUser } from "@/lib/supabase/queries";
+import { fetchApprovedArtists, fetchCurrentUser } from "@/lib/supabase/queries";
 import { uploadEventMedia } from "@/lib/supabase/storage";
-import { AppUser } from "@/lib/types";
+import { AppUser, PublicArtistProfile } from "@/lib/types";
+import { tagArtistsOnShow } from "../show-actions";
 
 const ACCENT_SWATCHES = [
   { name: "Orange", value: "#d76616" },
@@ -32,7 +34,8 @@ export default function AddShowPage() {
   const [price, setPrice] = useState("");
   const [capacity, setCapacity] = useState("");
   const [maxPerOrder, setMaxPerOrder] = useState("6");
-  const [lineup, setLineup] = useState<string[]>([""]);
+  const [lineup, setLineup] = useState<LineupEntry[]>([{ name: "", profileId: null }]);
+  const [artists, setArtists] = useState<PublicArtistProfile[]>([]);
   const [description, setDescription] = useState("");
   const [accentColor, setAccentColor] = useState(ACCENT_SWATCHES[0].value);
   const [ticketingMode, setTicketingMode] = useState<TicketingMode>("internal");
@@ -52,21 +55,10 @@ export default function AddShowPage() {
       setUser(current);
       // Pre-fills the headliner slot with the artist's own name - they can
       // still edit or replace it, this is just a sane starting point.
-      setLineup([current.artistName ?? current.username]);
+      setLineup([{ name: current.artistName ?? current.username, profileId: null }]);
+      fetchApprovedArtists(supabase).then(setArtists);
     });
   }, [router]);
-
-  function updateLineupEntry(index: number, value: string) {
-    setLineup((current) => current.map((act, i) => (i === index ? value : act)));
-  }
-
-  function addLineupEntry() {
-    setLineup((current) => [...current, ""]);
-  }
-
-  function removeLineupEntry(index: number) {
-    setLineup((current) => current.filter((_, i) => i !== index));
-  }
 
   function handlePosterChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -86,7 +78,10 @@ export default function AddShowPage() {
     if (!time) nextErrors.time = "Time is required";
     if (!description.trim()) nextErrors.description = "Description is required";
 
-    const cleanedLineup = lineup.map((act) => act.trim()).filter(Boolean);
+    const cleanedEntries = lineup
+      .map((entry) => ({ ...entry, name: entry.name.trim() }))
+      .filter((entry) => entry.name);
+    const cleanedLineup = cleanedEntries.map((entry) => entry.name);
     if (cleanedLineup.length === 0) nextErrors.lineup = "Add at least one artist to the lineup";
 
     // price.trim() rather than !price, so "0" (a free event) is accepted.
@@ -130,7 +125,9 @@ export default function AddShowPage() {
       ? await uploadEventMedia(supabase, posterFile, "posters")
       : `https://picsum.photos/seed/show-${Date.now()}/800/1200`;
 
-    const { error } = await supabase.from("events").insert({
+    const { data: created, error } = await supabase
+      .from("events")
+      .insert({
       artist_id: user.id,
       title: name.trim(),
       artist_name: artistName,
@@ -152,15 +149,33 @@ export default function AddShowPage() {
       rating: 0,
       ticketing_mode: ticketingMode,
       ticketing_url: ticketingMode === "external" ? externalUrl.trim() : null,
-    });
+      })
+      .select("id")
+      .single();
 
-    setSubmitting(false);
-
-    if (error) {
-      setErrors({ name: error.message });
+    if (error || !created) {
+      setSubmitting(false);
+      setErrors({ name: error?.message ?? "Couldn't create the show" });
       return;
     }
 
+    // The show exists either way - a tagging failure shouldn't strand the
+    // artist on a form for a show that was already created, so it surfaces as
+    // a message on the lineup rather than blocking the redirect.
+    const taggedIds = cleanedEntries
+      .map((entry) => entry.profileId)
+      .filter((id): id is string => Boolean(id));
+
+    if (taggedIds.length > 0) {
+      const { error: tagError } = await tagArtistsOnShow(created.id, taggedIds);
+      if (tagError) {
+        setSubmitting(false);
+        setErrors({ lineup: `Show created, but tagging failed: ${tagError}` });
+        return;
+      }
+    }
+
+    setSubmitting(false);
     router.push("/profile");
   }
 
@@ -278,33 +293,16 @@ export default function AddShowPage() {
 
         <div className="flex flex-col gap-2">
           <span className="font-heading text-sm text-muted">Lineup</span>
-          {lineup.map((act, i) => (
-            <div key={i} className="flex gap-2">
-              <input
-                value={act}
-                onChange={(e) => updateLineupEntry(i, e.target.value)}
-                placeholder={i === 0 ? "Headliner" : "Support act"}
-                className="w-full min-w-0 flex-1 rounded-2xl border border-muted/20 bg-surface px-4 py-3.5 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-              {lineup.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeLineupEntry(i)}
-                  aria-label="Remove from lineup"
-                  className="shrink-0 rounded-2xl border border-muted/20 px-4 text-muted"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={addLineupEntry}
-            className="self-start text-sm font-heading text-accent"
-          >
-            + Add artist
-          </button>
+          <LineupEditor
+            entries={lineup}
+            onChange={setLineup}
+            artists={artists}
+            excludeProfileId={user.id}
+          />
+          <p className="text-xs text-muted">
+            Acts already on MadGigz can be tagged - the show appears on their profile and they
+            can post about it. You stay the only one who manages it.
+          </p>
           {errors.lineup && <p className="text-sm text-danger">{errors.lineup}</p>}
         </div>
 

@@ -256,6 +256,38 @@ export async function fetchShowTicketCounts(
   return { total: rows.length, live: rows.filter((row) => !row.refunded).length };
 }
 
+// Which platform artists are tagged on a show. Ids only - the lineup names
+// themselves still live on events.lineup, so an untagged act keeps working.
+export async function fetchTaggedArtistIds(
+  supabase: SupabaseClient,
+  eventId: string
+): Promise<string[]> {
+  const { data } = await supabase
+    .from("event_artists")
+    .select("profile_id")
+    .eq("event_id", eventId);
+  return (data ?? []).map((row) => row.profile_id as string);
+}
+
+// Shows an artist was tagged on but doesn't own. Kept separate from
+// fetchShowsByArtist so the Manage view can never offer management controls on
+// a show that isn't theirs.
+export async function fetchTaggedShows(
+  supabase: SupabaseClient,
+  artistId: string
+): Promise<EventItem[]> {
+  const { data } = await supabase
+    .from("event_artists")
+    .select("events(*)")
+    .eq("profile_id", artistId);
+
+  return ((data ?? []) as unknown as { events: EventRow | null }[])
+    .map((row) => row.events)
+    .filter((event): event is EventRow => Boolean(event) && event!.artist_id !== artistId)
+    .map(mapEvent)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export async function fetchShowsByArtist(
   supabase: SupabaseClient,
   artistId: string

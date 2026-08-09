@@ -15,6 +15,9 @@ import { removeEventMedia, uploadEventMedia } from "@/lib/supabase/storage";
 import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/types";
 import { updateShow } from "@/app/(app)/profile/show-actions";
+import LineupEditor, { LineupEntry, lineupToEntries } from "@/components/artist/LineupEditor";
+import { fetchApprovedArtists, fetchTaggedArtistIds } from "@/lib/supabase/queries";
+import { PublicArtistProfile } from "@/lib/types";
 
 // <input type="time"> wants HH:MM; Postgres hands back HH:MM:SS.
 function toTimeInput(value: string) {
@@ -75,6 +78,15 @@ export default function ManageShowModal({
   const [draft, setDraft] = useState(details);
   const [savingEdits, setSavingEdits] = useState(false);
   const [editError, setEditError] = useState<string | undefined>();
+  const [artists, setArtists] = useState<PublicArtistProfile[]>([]);
+  const [taggedIds, setTaggedIds] = useState<string[]>([]);
+  const [lineupEntries, setLineupEntries] = useState<LineupEntry[]>([]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    fetchApprovedArtists(supabase).then(setArtists);
+    fetchTaggedArtistIds(supabase, show.id).then(setTaggedIds);
+  }, [show.id]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -201,6 +213,12 @@ export default function ManageShowModal({
 
   function startEditing() {
     setDraft(details);
+    setLineupEntries(
+      lineupToEntries(
+        details.lineup,
+        artists.filter((a) => taggedIds.includes(a.id))
+      )
+    );
     setEditError(undefined);
     setEditing(true);
   }
@@ -209,11 +227,18 @@ export default function ManageShowModal({
     setSavingEdits(true);
     setEditError(undefined);
 
+    const cleaned = lineupEntries
+      .map((entry) => ({ ...entry, name: entry.name.trim() }))
+      .filter((entry) => entry.name);
+
     const result = await updateShow(show.id, {
       description: draft.description,
-      lineup: draft.lineup,
+      lineup: cleaned.map((entry) => entry.name),
       date: draft.date,
       time: draft.time,
+      taggedArtistIds: cleaned
+        .map((entry) => entry.profileId)
+        .filter((id): id is string => Boolean(id)),
     });
 
     setSavingEdits(false);
@@ -226,8 +251,11 @@ export default function ManageShowModal({
     setDetails({
       ...draft,
       description: draft.description.trim(),
-      lineup: draft.lineup.map((a) => a.trim()).filter(Boolean),
+      lineup: cleaned.map((entry) => entry.name),
     });
+    setTaggedIds(
+      cleaned.map((entry) => entry.profileId).filter((id): id is string => Boolean(id))
+    );
     setEditing(false);
     onChanged();
   }
@@ -393,43 +421,17 @@ export default function ManageShowModal({
 
                 <div className="flex flex-col gap-2">
                   <span className="text-xs text-muted">Lineup</span>
-                  {draft.lineup.map((act, i) => (
-                    <div key={i} className="flex gap-2">
-                      <input
-                        value={act}
-                        onChange={(e) =>
-                          setDraft((d) => ({
-                            ...d,
-                            lineup: d.lineup.map((a, j) => (j === i ? e.target.value : a)),
-                          }))
-                        }
-                        placeholder={i === 0 ? "Headliner" : "Support act"}
-                        className="w-full min-w-0 flex-1 rounded-xl border border-muted/20 bg-surface px-3 py-2.5 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                      {draft.lineup.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setDraft((d) => ({
-                              ...d,
-                              lineup: d.lineup.filter((_, j) => j !== i),
-                            }))
-                          }
-                          aria-label="Remove from lineup"
-                          className="shrink-0 rounded-xl border border-muted/20 px-3 text-muted"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setDraft((d) => ({ ...d, lineup: [...d.lineup, ""] }))}
-                    className="self-start text-sm font-heading text-accent"
-                  >
-                    + Add artist
-                  </button>
+                  <LineupEditor
+                    entries={lineupEntries}
+                    onChange={setLineupEntries}
+                    artists={artists}
+                    excludeProfileId={show.artistId ?? undefined}
+                    compact
+                  />
+                  <p className="text-xs text-muted">
+                    Tagged acts get this show on their profile and can post about it. Managing it
+                    stays with you.
+                  </p>
                 </div>
 
                 <label className="flex flex-col gap-1.5">

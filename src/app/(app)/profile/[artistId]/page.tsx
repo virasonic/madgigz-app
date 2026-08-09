@@ -5,6 +5,7 @@ import {
   fetchCurrentUser,
   fetchSavedEventIds,
   fetchShowsByArtist,
+  fetchTaggedShows,
 } from "@/lib/supabase/queries";
 import Avatar from "@/components/ui/Avatar";
 import SocialLinks from "@/components/ui/SocialLinks";
@@ -25,9 +26,10 @@ export default async function PublicArtistProfilePage({
   // (Add Show, Settings, hidden shows) instead of the stripped-down public one.
   if (artistId === currentUser.id) redirect("/profile");
 
-  const [artist, shows, savedIds] = await Promise.all([
+  const [artist, shows, taggedShows, savedIds] = await Promise.all([
     fetchArtistProfile(supabase, artistId),
     fetchShowsByArtist(supabase, artistId),
+    fetchTaggedShows(supabase, artistId),
     fetchSavedEventIds(supabase, currentUser.id),
   ]);
 
@@ -35,8 +37,11 @@ export default async function PublicArtistProfilePage({
 
   // Cancelled or hidden shows aren't this artist's to show off to a browsing
   // fan - fetchShowsByArtist returns everything because the artist's own
-  // Manage view needs to see hidden shows too.
-  const visibleShows = shows.filter((show) => show.active && !show.cancelled);
+  // Manage view needs to see hidden shows too. Shows they were tagged on are
+  // billed the same way here: to a fan, being on the bill is being on the bill.
+  const visibleShows = [...shows, ...taggedShows]
+    .filter((show) => show.active && !show.cancelled)
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   return (
     <div className="p-4">
