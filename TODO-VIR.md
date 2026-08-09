@@ -60,6 +60,12 @@ Built and shipped, but never exercised through the UI:
 - **The new admin show form** (`/admin/events` → *New show*), after step 2.
   Two options only: *Sold elsewhere* (link out) or *MadGigz house show* (we sell,
   we keep it, no commission). Try one of each.
+- **The like button on Explore cards.** New, and I could not test it myself —
+  it needs a signed-in session, which I have no way to create. Tap a heart in
+  Explore, then check the event shows under Tickets → Saved. It should also
+  fill in on an artist's profile grid, and match what the reels show.
+- **The Add Show form** now leads with a payout notice when you have no payout
+  account connected. Worth a look as an artist without one.
 - **Account deletion dialog**, sign-in cancellation, and the "your account is
   safe" notice. *(You've now done this — it works.)*
 
