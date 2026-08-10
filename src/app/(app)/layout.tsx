@@ -1,5 +1,7 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import BottomNav from "@/components/ui/BottomNav";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { createClient } from "@/lib/supabase/server";
 import { fetchUnreadCount } from "@/lib/notifications";
 
@@ -18,6 +20,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     fetchUnreadCount(supabase, user.id),
   ]);
 
+  // Set only while an admin is acting as this user (see impersonation-actions).
+  const impersonating = (await cookies()).get("mg_impersonating")?.value;
+
   // A Google account that never finished the completion screen has a
   // placeholder username and no date of birth on file, so it must not reach a
   // checkout. Enforced here rather than only in the callback, because the
@@ -32,6 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // clears the notch permanently instead of sliding under it once scrolled.
     // Paired with pb-safe on BottomNav; both collapse to zero in a browser tab.
     <div className="pt-safe mx-auto flex h-screen w-full max-w-md flex-col bg-background">
+      {impersonating && <ImpersonationBanner username={impersonating} />}
       <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       <BottomNav role={profile?.role ?? "fan"} unreadCount={unreadCount} />
     </div>

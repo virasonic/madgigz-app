@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { adminClient, fetchUserDetail, requireAdmin } from "@/lib/supabase/admin-queries";
 import { formatEuros } from "@/lib/pricing";
+import ActAsButton from "../ActAsButton";
+import { IMPERSONATION_ENABLED } from "../impersonation-config";
 
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -90,6 +92,10 @@ export default async function AdminUserDetailPage({
           </div>
         </div>
       </div>
+
+      {IMPERSONATION_ENABLED && !user.deletedAt && (
+        <ActAsButton userId={userId} username={user.username} />
+      )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard
