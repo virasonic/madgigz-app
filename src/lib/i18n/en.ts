@@ -102,6 +102,8 @@ export const en = {
     buyFree: "Get tickets",
     buyPay: "Continue to payment",
     finalSale: "Tickets are final sale. If something comes up, contact the organiser.",
+    testMode:
+      "Preview mode — payments aren't live yet, so you won't be charged. To try checkout, use test card 4242 4242 4242 4242 with any future date and any CVC.",
     lineup: "Lineup",
     headliner: "Headliner",
     venue: "Venue",

@@ -102,6 +102,8 @@ export const es: Messages = {
     buyFree: "Conseguir entradas",
     buyPay: "Continuar al pago",
     finalSale: "Las entradas son venta final. Si surge algo, contacta con el organizador.",
+    testMode:
+      "Modo de prueba — los pagos aún no están activos, así que no se te cobrará. Para probar el pago, usa la tarjeta de prueba 4242 4242 4242 4242 con cualquier fecha futura y cualquier CVC.",
     lineup: "Cartel",
     headliner: "Cabeza de cartel",
     venue: "Sala",

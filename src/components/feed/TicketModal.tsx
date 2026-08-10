@@ -43,6 +43,9 @@ export default function TicketModal({
 }: TicketModalProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
+  // A test-mode Stripe key can't charge a real card, so this is a heads-up, not
+  // a guard. Reads the publishable key's prefix, so it turns itself off on live.
+  const isTestMode = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith("pk_test") ?? false;
   const [tab, setTab] = useState<Tab>(initialTab);
   const [quantity, setQuantity] = useState(1);
   const [purchased, setPurchased] = useState(false);
@@ -297,6 +300,15 @@ export default function TicketModal({
                   <span className="font-display text-xl text-foreground">€{total.toFixed(2)}</span>
                 </div>
                 {buyError && <p className="text-sm text-danger">{buyError}</p>}
+
+                {/* Auto-detected from the Stripe key, so it shows for the
+                    test-mode soft launch and vanishes the moment live keys are
+                    set. Only for paid tickets - free ones never touch Stripe. */}
+                {isTestMode && !soldOut && total > 0 && (
+                  <div className="rounded-2xl bg-accent-dark/20 px-4 py-3 text-xs leading-relaxed text-foreground">
+                    {t("ticket.testMode")}
+                  </div>
+                )}
 
                 <Button onClick={handleBuy} disabled={soldOut || buying}>
                   {soldOut
