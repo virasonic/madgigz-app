@@ -225,7 +225,7 @@ export const es: Messages = {
     finishBody:
       "Todavía necesitamos tu nombre artístico, un enlace social y algo que demuestre que el perfil es tuyo, antes de poder aprobarte.",
     addShow: "Añadir bolo",
-    scanTickets: "Escanear entradas",
+    scanTickets: "Escanear",
     followers: "Seguidores",
     shows: "Bolos",
     ticketsSold: "Entradas vendidas",
