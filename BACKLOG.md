@@ -161,6 +161,13 @@ checklist instead of something to remember. The i18n add-a-string flow is the
 clearest candidate: it's now four coordinated steps (en.ts, es.ts, the JSON
 export, the PDF) and easy to half-do.
 
+_First skill shipped 10 Aug 2026: `.claude/skills/simulate-users/` — a
+self-contained load / end-to-end harness (`scripts/simulate-users.mjs`) that
+onboards N synthetic users and drives real fan sessions under concurrency, then
+tears the cohort down. Sends no email, touches no money, and is dry-run by
+default. The convention-checklist skills (migration two-phase, i18n add-a-string,
+adversarial-probe, "read the Next docs first") are still to come._
+
 **#105 ("web version") needs one sentence from Vir before it's scoped.** The app
 is *already* web — so this means one of two different jobs: a wide-screen/desktop
 layout for the existing app (multi-column, not a phone in the middle of a
