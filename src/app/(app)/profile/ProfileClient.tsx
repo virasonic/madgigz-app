@@ -18,9 +18,10 @@ import SwitchToArtistRow from "./SwitchToArtistRow";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { LOCALES, LOCALE_LABELS } from "@/lib/i18n/config";
 import { useUrlModal } from "@/lib/useUrlModal";
+import { dateLocale } from "@/lib/dates";
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, dl: string) {
+  return new Date(iso).toLocaleDateString(dl, {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
@@ -151,7 +152,8 @@ function SettingsSheet({
 }
 
 function ShowRow({ show, onOpen }: { show: EventItem; onOpen: () => void }) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const dl = dateLocale(locale);
   return (
     <button
       onClick={onOpen}
@@ -167,7 +169,7 @@ function ShowRow({ show, onOpen }: { show: EventItem; onOpen: () => void }) {
           )}
         </div>
         <p className="truncate text-xs text-muted">
-          {formatDate(show.date)} · {show.venue}
+          {formatDate(show.date, dl)} · {show.venue}
         </p>
       </div>
       <span className="shrink-0 text-xs text-muted">{t("profile.soldCount", { count: show.sold })}</span>
@@ -192,7 +194,8 @@ export default function ProfileClient({
   taggedShows,
   unreadCount,
 }: ProfileClientProps) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const dl = dateLocale(locale);
   const router = useRouter();
   const [activeShow, setActiveShow] = useState<EventItem | null>(null);
   // Kept separate from activeShow so the modal knows which one it is looking at:
@@ -441,7 +444,7 @@ export default function ProfileClient({
                     <div className="min-w-0">
                       <p className="truncate font-heading text-sm text-foreground">{show.title}</p>
                       <p className="truncate text-xs text-muted">
-                        {new Date(show.date).toLocaleDateString("en-GB", {
+                        {new Date(show.date).toLocaleDateString(dl, {
                           day: "numeric",
                           month: "short",
                           timeZone: "UTC",

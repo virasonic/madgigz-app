@@ -7,6 +7,7 @@ import { fetchEventById, fetchEventGenreNames } from "@/lib/supabase/queries";
 import { absoluteUrl, eventPath, mapsUrl } from "@/lib/site";
 import PublicEventActions from "./PublicEventActions";
 import { getServerT } from "@/lib/i18n/server";
+import { dateLocale } from "@/lib/dates";
 
 // The one page in the app that a logged-out stranger is meant to see. Everything
 // else redirects to "/" without a session; this is what a shared link opens, so
@@ -16,8 +17,8 @@ import { getServerT } from "@/lib/i18n/server";
 // the point of sharing: the person receiving the link has no account and no
 // reason to make one until they can see what the gig actually is.
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, dl: string) {
+  return new Date(iso).toLocaleDateString(dl, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -38,11 +39,12 @@ export async function generateMetadata({
     return { title: t("eventPage.notFoundTitle") };
   }
 
+  const { locale } = await getServerT();
   // This is the part that makes a link worth sending. Pasted into WhatsApp or
   // iMessage, what sells the gig is the poster and the line underneath it - a
   // bare URL converts nothing.
   const title = `${event.title} - ${event.artist}`;
-  const description = `${event.venue}, Madrid · ${formatDate(event.date)} · ${event.time}`;
+  const description = `${event.venue}, Madrid · ${formatDate(event.date, dateLocale(locale))} · ${event.time}`;
   const url = absoluteUrl(eventPath(event.id));
 
   return {
@@ -81,7 +83,7 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
     supabase.auth.getUser(),
   ]);
   const signedIn = Boolean(auth.user);
-  const { t } = await getServerT();
+  const { t, locale } = await getServerT();
 
   const soldOut = event.capacity - event.sold <= 0;
 
@@ -135,7 +137,7 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
           {event.venueAddress ? ` · ${event.venueAddress}` : ` · ${event.city}`} &rarr;
         </a>
         <p className="text-sm text-muted">
-          {formatDate(event.date)} · {t("eventPage.doors")} {event.doors}
+          {formatDate(event.date, dateLocale(locale))} · {t("eventPage.doors")} {event.doors}
         </p>
 
         {genres.length > 0 && (

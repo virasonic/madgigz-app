@@ -28,6 +28,7 @@ import {
 } from "@/lib/supabase/queries";
 import { Genre, PublicArtistProfile, Venue } from "@/lib/types";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { dateLocale } from "@/lib/dates";
 
 // <input type="time"> wants HH:MM; Postgres hands back HH:MM:SS.
 function toTimeInput(value: string) {
@@ -48,8 +49,8 @@ interface ManageShowModalProps {
   canManage?: boolean;
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, dl: string) {
+  return new Date(iso).toLocaleDateString(dl, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -64,7 +65,8 @@ export default function ManageShowModal({
   onChanged,
   canManage = true,
 }: ManageShowModalProps) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const dl = dateLocale(locale);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [posts, setPosts] = useState<ContentPost[]>([]);
@@ -342,7 +344,7 @@ export default function ManageShowModal({
 
         <h2 className="font-display text-2xl text-foreground">{show.title}</h2>
         <p className="mt-1 text-sm text-muted">
-          {details.venue} · {formatDate(details.date)} · {toTimeInput(details.time)}
+          {details.venue} · {formatDate(details.date, dl)} · {toTimeInput(details.time)}
         </p>
 
         {/* The owner learns this from the visibility controls further down, which
@@ -395,7 +397,7 @@ export default function ManageShowModal({
               <div>
                 <p className="text-muted">{t("manageShow.dateTime")}</p>
                 <p className="text-foreground">
-                  {formatDate(details.date)}, {toTimeInput(details.time)}
+                  {formatDate(details.date, dl)}, {toTimeInput(details.time)}
                 </p>
               </div>
             </div>
@@ -691,7 +693,7 @@ export default function ManageShowModal({
                         {buyer.username}
                       </p>
                       <p className="text-xs text-muted">
-                        {new Date(buyer.purchasedAt).toLocaleDateString("en-GB", {
+                        {new Date(buyer.purchasedAt).toLocaleDateString(dl, {
                           day: "numeric",
                           month: "short",
                         })}{" "}

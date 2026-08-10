@@ -8,6 +8,7 @@ import ShareEventButton from "./ShareEventButton";
 import LikeButton from "./LikeButton";
 import ReportButton from "./ReportButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { dateLocale } from "@/lib/dates";
 
 function NoteIcon() {
   return (
@@ -37,8 +38,8 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
   );
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, dl: string) {
+  return new Date(iso).toLocaleDateString(dl, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -65,7 +66,8 @@ export default function ContentReelCard({
   liked,
   onToggleLike,
 }: ContentReelCardProps) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const dl = dateLocale(locale);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const showVideo = post.mediaType === "video" && post.videoUrl;
@@ -169,7 +171,7 @@ export default function ContentReelCard({
           <h2 className="font-display text-2xl text-foreground">{event.title}</h2>
           <p className="mt-1 text-sm text-muted">{event.venue}</p>
           <p className="text-sm text-muted">
-            {formatDate(event.date)} · {event.time}
+            {formatDate(event.date, dl)} · {event.time}
           </p>
         </div>
 

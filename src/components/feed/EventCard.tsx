@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import { EventItem } from "@/lib/types";
+import { useT } from "@/lib/i18n/LocaleProvider";
+import { dateLocale } from "@/lib/dates";
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, dl: string) {
+  return new Date(iso).toLocaleDateString(dl, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -23,6 +25,7 @@ export default function EventCard({
   event: EventItem;
   onOpen: () => void;
 }) {
+  const { locale } = useT();
   return (
     <button
       onClick={onOpen}
@@ -32,7 +35,7 @@ export default function EventCard({
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
       <div className="absolute bottom-0 left-0 right-0 p-3">
         <p className="font-display text-sm text-foreground line-clamp-1">{event.title}</p>
-        <p className="text-xs text-muted">{formatDate(event.date)}</p>
+        <p className="text-xs text-muted">{formatDate(event.date, dateLocale(locale))}</p>
       </div>
     </button>
   );

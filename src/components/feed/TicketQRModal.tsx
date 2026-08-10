@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { EventItem, Ticket } from "@/lib/types";
 import { mapsUrl } from "@/lib/site";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { dateLocale } from "@/lib/dates";
 
 interface TicketQRModalProps {
   ticket: Ticket;
@@ -12,8 +13,8 @@ interface TicketQRModalProps {
   onClose: () => void;
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, dl: string) {
+  return new Date(iso).toLocaleDateString(dl, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -22,7 +23,8 @@ function formatDate(iso: string) {
 }
 
 export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalProps) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const dl = dateLocale(locale);
   const [qrSrc, setQrSrc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalP
         <div className="text-center">
           <h2 className="font-display text-2xl text-foreground">{event.title}</h2>
           <p className="mt-1 text-sm text-muted">
-            {event.venue} · {formatDate(event.date)} · {event.time}
+            {event.venue} · {formatDate(event.date, dl)} · {event.time}
           </p>
 
           {/* The one screen someone has open while standing outside trying to

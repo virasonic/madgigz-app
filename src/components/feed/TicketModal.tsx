@@ -9,6 +9,7 @@ import { EventItem } from "@/lib/types";
 import ShareEventButton from "./ShareEventButton";
 import LikeButton from "./LikeButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { dateLocale } from "@/lib/dates";
 
 type Tab = "tickets" | "info";
 
@@ -23,8 +24,8 @@ interface TicketModalProps {
   onToggleLike?: () => void;
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, dl: string) {
+  return new Date(iso).toLocaleDateString(dl, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -40,7 +41,8 @@ export default function TicketModal({
   liked = false,
   onToggleLike,
 }: TicketModalProps) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const dl = dateLocale(locale);
   const [tab, setTab] = useState<Tab>(initialTab);
   const [quantity, setQuantity] = useState(1);
   const [purchased, setPurchased] = useState(false);
@@ -180,7 +182,7 @@ export default function TicketModal({
               <p className="mt-1 text-sm text-muted">{event.artist}</p>
             )}
             <p className="text-sm text-muted">
-              {event.venue} · {formatDate(event.date)} · {event.time}
+              {event.venue} · {formatDate(event.date, dl)} · {event.time}
             </p>
 
             <div className="mt-5 flex gap-2 rounded-full bg-background p-1">

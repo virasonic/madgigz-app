@@ -10,11 +10,12 @@ import { EventItem, Ticket } from "@/lib/types";
 import { hideRefundedTicket } from "./actions";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { dateLocale } from "@/lib/dates";
 
 type SubTab = "events" | "tickets";
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, dl: string) {
+  return new Date(iso).toLocaleDateString(dl, {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
@@ -47,7 +48,8 @@ export default function SavedClient({
   initialSavedIds,
   initialTickets,
 }: SavedClientProps) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const dl = dateLocale(locale);
   const [subTab, setSubTab] = useState<SubTab>("tickets");
   // #102: a tapped liked-event opens ?ticket=<id> so back closes the sheet and
   // the link is shareable. The QR modal stays local state - it holds a specific
@@ -187,7 +189,7 @@ export default function SavedClient({
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-heading text-sm text-foreground">{event.title}</p>
                     <p className="truncate text-xs text-muted">
-                      {event.venue} · {formatDate(event.date)}
+                      {event.venue} · {formatDate(event.date, dl)}
                     </p>
                   </div>
                 </button>
@@ -232,7 +234,7 @@ export default function SavedClient({
                     </span>
                   </div>
                   <p className="truncate text-xs text-muted">
-                    {event.venue} · {formatDate(event.date)} · {event.time}
+                    {event.venue} · {formatDate(event.date, dl)} · {event.time}
                   </p>
                   <p className="text-xs text-muted">
                     {ticket.quantity} {ticket.quantity === 1 ? t("ticket.one") : t("ticket.many")}
@@ -296,7 +298,7 @@ export default function SavedClient({
                         {event.title}
                       </p>
                       <p className="truncate text-xs text-muted">
-                        {event.venue} · {formatDate(event.date)}
+                        {event.venue} · {formatDate(event.date, dl)}
                       </p>
                     </div>
                     <span className="shrink-0 text-xs text-muted">

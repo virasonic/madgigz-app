@@ -13,6 +13,7 @@ import { canActAsArtist } from "@/lib/roles";
 import { getSeenAnnouncements, markAnnouncementSeen } from "@/lib/seen-announcements";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { dateLocale } from "@/lib/dates";
 
 type Pane = "forYou" | "thisWeek";
 
@@ -168,18 +169,17 @@ export default function FeedClient({
   // groupByDay re-sorts by date, and Array.sort is stable, so pre-sorting
   // followed-first keeps the days in order while lifting followed artists
   // within each one. This Week is a schedule; it can't stop being chronological.
-  // The day headers ("viernes 15 agosto") follow the app's language; en-GB keeps
-  // the day-then-month order English readers expect.
-  const dateLocale = locale === "es" ? "es-ES" : "en-GB";
+  // The day headers ("viernes 15 agosto") follow the app's language.
+  const dl = dateLocale(locale);
   const weeklyGroups = useMemo(
     () =>
       groupByDay(
         [...withinNextWeek(initialEvents)].sort(
           (a, b) => Number(followed.has(b.id)) - Number(followed.has(a.id))
         ),
-        dateLocale
+        dl
       ),
-    [initialEvents, followed, dateLocale]
+    [initialEvents, followed, dl]
   );
 
   async function refreshContent() {

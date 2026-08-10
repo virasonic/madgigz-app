@@ -11,9 +11,10 @@ import {
 } from "@/app/(app)/profile/account-actions";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { dateLocale } from "@/lib/dates";
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
+function formatDate(iso: string, dl: string) {
+  return new Date(iso).toLocaleDateString(dl, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -21,7 +22,8 @@ function formatDate(iso: string) {
 }
 
 export default function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const dl = dateLocale(locale);
   const router = useRouter();
   const [state, setState] = useState<DeletionState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +97,7 @@ export default function DeleteAccountDialog({ onClose }: { onClose: () => void }
             </h2>
             <p className="mt-2 text-sm text-muted">
               {t("deleteAccount.scheduledLead")}{" "}
-              <span className="text-foreground">{formatDate(state.purgeAt!)}</span>.{" "}
+              <span className="text-foreground">{formatDate(state.purgeAt!, dl)}</span>.{" "}
               {t("deleteAccount.scheduledTail")}
             </p>
             <Button className="mt-6" onClick={handleKeep} disabled={isPending}>

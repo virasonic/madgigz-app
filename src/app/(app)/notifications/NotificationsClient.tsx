@@ -6,8 +6,9 @@ import { AppNotification, describeGroup, groupNotifications, Translate } from "@
 import { markNotificationsRead } from "./actions";
 import BackButton from "@/components/ui/BackButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { dateLocale } from "@/lib/dates";
 
-function timeAgo(iso: string, now: number, t: Translate) {
+function timeAgo(iso: string, now: number, t: Translate, dl: string) {
   const mins = Math.floor((now - new Date(iso).getTime()) / 60000);
   if (mins < 1) return t("notifications.justNow");
   if (mins < 60) return t("notifications.minsAgo", { mins });
@@ -15,7 +16,7 @@ function timeAgo(iso: string, now: number, t: Translate) {
   if (hours < 24) return t("notifications.hoursAgo", { hours });
   const days = Math.floor(hours / 24);
   if (days < 7) return t("notifications.daysAgo", { days });
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return new Date(iso).toLocaleDateString(dl, { day: "numeric", month: "short" });
 }
 
 export default function NotificationsClient({
@@ -34,7 +35,8 @@ export default function NotificationsClient({
   // "5m ago" doesn't tick while the screen sits open, which nobody minds.
   now: number;
 }) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const dl = dateLocale(locale);
   const router = useRouter();
   const [notifications] = useState(initialNotifications);
   const groups = useMemo(() => groupNotifications(notifications), [notifications]);
@@ -86,7 +88,7 @@ export default function NotificationsClient({
               </div>
               {detail && <p className="mt-0.5 text-xs text-muted">{detail}</p>}
               <p className="mt-1 text-[11px] text-muted">
-                {timeAgo(n.createdAt, now, t)}
+                {timeAgo(n.createdAt, now, t, dl)}
               </p>
             </>
           );
