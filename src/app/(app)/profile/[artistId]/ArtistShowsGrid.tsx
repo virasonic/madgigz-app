@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import EventCard from "@/components/feed/EventCard";
 import TicketModal from "@/components/feed/TicketModal";
 import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem } from "@/lib/types";
+import { useUrlModal } from "@/lib/useUrlModal";
 
 export default function ArtistShowsGrid({
   userId,
@@ -17,7 +18,12 @@ export default function ArtistShowsGrid({
   initialSavedIds: string[];
 }) {
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
-  const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
+  // #102: open ticket sheet is ?ticket=<id>, resolved from this artist's shows.
+  const ticketModal = useUrlModal("ticket");
+  const activeEvent = useMemo(
+    () => shows.find((s) => s.id === ticketModal.value) ?? null,
+    [shows, ticketModal.value]
+  );
 
   async function handleToggleSave(eventId: string) {
     const wasSaved = savedIds.includes(eventId);
@@ -40,7 +46,7 @@ export default function ArtistShowsGrid({
           <EventCard
             key={show.id}
             event={show}
-            onOpen={() => setActiveEvent(show)}
+            onOpen={() => ticketModal.open(show.id)}
           />
         ))}
       </div>
@@ -51,7 +57,7 @@ export default function ArtistShowsGrid({
           event={activeEvent}
           liked={savedIds.includes(activeEvent.id)}
           onToggleLike={() => handleToggleSave(activeEvent.id)}
-          onClose={() => setActiveEvent(null)}
+          onClose={ticketModal.close}
         />
       )}
     </>

@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem, Ticket } from "@/lib/types";
 import { hideRefundedTicket } from "./actions";
+import { useUrlModal } from "@/lib/useUrlModal";
 
 type SubTab = "events" | "tickets";
 
@@ -46,7 +47,10 @@ export default function SavedClient({
   initialTickets,
 }: SavedClientProps) {
   const [subTab, setSubTab] = useState<SubTab>("tickets");
-  const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
+  // #102: a tapped liked-event opens ?ticket=<id> so back closes the sheet and
+  // the link is shareable. The QR modal stays local state - it holds a specific
+  // ticket, isn't a browse target, and there's nothing to deep-link to.
+  const ticketModal = useUrlModal("ticket");
   const [activeTicket, setActiveTicket] = useState<{ ticket: Ticket; event: EventItem } | null>(
     null
   );
@@ -58,6 +62,11 @@ export default function SavedClient({
   const savedEvents = useMemo(
     () => initialEvents.filter((event) => savedIds.includes(event.id)),
     [initialEvents, savedIds]
+  );
+
+  const activeEvent = useMemo(
+    () => initialEvents.find((event) => event.id === ticketModal.value) ?? null,
+    [initialEvents, ticketModal.value]
   );
 
   const allTicketRows = useMemo(
@@ -169,7 +178,7 @@ export default function SavedClient({
                 className="flex items-center gap-3 rounded-2xl bg-surface p-3"
               >
                 <button
-                  onClick={() => setActiveEvent(event)}
+                  onClick={() => ticketModal.open(event.id)}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
                   <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl">
@@ -306,7 +315,7 @@ export default function SavedClient({
           initialTab="info"
           liked={savedIds.includes(activeEvent.id)}
           onToggleLike={() => handleToggleSaved(activeEvent.id)}
-          onClose={() => setActiveEvent(null)}
+          onClose={ticketModal.close}
         />
       )}
 

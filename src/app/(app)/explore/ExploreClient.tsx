@@ -8,6 +8,7 @@ import Avatar from "@/components/ui/Avatar";
 import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem, PublicArtistProfile } from "@/lib/types";
+import { useUrlModal } from "@/lib/useUrlModal";
 
 interface ExploreClientProps {
   userId: string;
@@ -27,7 +28,13 @@ export default function ExploreClient({
   followedEventIds,
 }: ExploreClientProps) {
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
-  const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
+  // #102: the open ticket sheet lives in ?ticket=<id> so back closes it and the
+  // link is shareable. Resolved from the param against the events on this page.
+  const ticketModal = useUrlModal("ticket");
+  const activeEvent = useMemo(
+    () => initialEvents.find((e) => e.id === ticketModal.value) ?? null,
+    [initialEvents, ticketModal.value]
+  );
   const [query, setQuery] = useState("");
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
 
@@ -149,7 +156,7 @@ export default function ExploreClient({
               <EventCard
                 key={event.id}
                 event={event}
-                onOpen={() => setActiveEvent(event)}
+                onOpen={() => ticketModal.open(event.id)}
               />
             ))}
           </div>
@@ -168,7 +175,7 @@ export default function ExploreClient({
           event={activeEvent}
           liked={savedIds.includes(activeEvent.id)}
           onToggleLike={() => handleToggleSave(activeEvent.id)}
-          onClose={() => setActiveEvent(null)}
+          onClose={ticketModal.close}
         />
       )}
     </div>

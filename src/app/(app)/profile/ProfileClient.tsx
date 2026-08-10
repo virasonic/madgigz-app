@@ -16,6 +16,7 @@ import DeleteAccountDialog from "@/components/account/DeleteAccountDialog";
 import FeedbackDialog from "@/components/account/FeedbackDialog";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { LOCALES, LOCALE_LABELS } from "@/lib/i18n/config";
+import { useUrlModal } from "@/lib/useUrlModal";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -191,7 +192,11 @@ export default function ProfileClient({
   // Kept separate from activeShow so the modal knows which one it is looking at:
   // the artist's own show is managed, a show they are only tagged on is not.
   const [activeTaggedShow, setActiveTaggedShow] = useState<EventItem | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  // #102: the settings sheet lives in ?settings=1 so the back button closes it
+  // instead of leaving the profile. The Stripe payout round-trip (below) and the
+  // gear button both open it through this.
+  const settingsModal = useUrlModal("settings");
+  const settingsOpen = settingsModal.isOpen;
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [hiddenOpen, setHiddenOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -257,7 +262,7 @@ export default function ProfileClient({
             change their picture. Payouts stay artist-only inside the sheet. */}
         <button
           type="button"
-          onClick={() => setSettingsOpen(true)}
+          onClick={() => settingsModal.open("1")}
           aria-label="Settings"
           className="flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground"
         >
@@ -337,7 +342,7 @@ export default function ProfileClient({
       ) : (
         <>
           <Suspense>
-            <PayoutReturnDetector onReturn={() => setSettingsOpen(true)} />
+            <PayoutReturnDetector onReturn={() => settingsModal.open("1")} />
           </Suspense>
 
           <div className="mb-6 flex gap-3">
@@ -495,12 +500,12 @@ export default function ProfileClient({
       )}
       {settingsOpen && (
         <SettingsSheet
-          onClose={() => setSettingsOpen(false)}
+          onClose={settingsModal.close}
           // Closes Settings on the way, so the feedback sheet isn't stacked on
           // top of another one and closing it doesn't reveal a sheet nobody
           // asked to still be there.
           onSendFeedback={() => {
-            setSettingsOpen(false);
+            settingsModal.close();
             setFeedbackOpen(true);
           }}
           payoutConnected={user.stripeAccountConnected}

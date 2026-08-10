@@ -11,6 +11,7 @@ import { fetchContentPosts, toggleSavedEvent } from "@/lib/supabase/queries";
 import { AppUser, ContentPost, EventItem } from "@/lib/types";
 import { canActAsArtist } from "@/lib/roles";
 import { getSeenAnnouncements, markAnnouncementSeen } from "@/lib/seen-announcements";
+import { useUrlModal } from "@/lib/useUrlModal";
 
 type Pane = "forYou" | "thisWeek";
 
@@ -119,9 +120,13 @@ export default function FeedClient({
 }: FeedClientProps) {
   const [pane, setPane] = useState<Pane>("forYou");
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
-  const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
+  // #102: the open ticket and the announcements sheet live in the URL now, so
+  // the back button closes them, they survive a refresh, and a ticket link is
+  // shareable. activeEvent is resolved from the ?ticket=<id> param below.
+  const ticketModal = useUrlModal("ticket");
+  const announcementsModal = useUrlModal("panel");
+  const announcementsOpen = announcementsModal.value === "announcements";
   const [addContentOpen, setAddContentOpen] = useState(false);
-  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   // Browsers block autoplay-with-sound, so reels start muted like TikTok/Reels;
   // shared (not per-card) so unmuting once stays unmuted as you scroll.
@@ -146,6 +151,13 @@ export default function FeedClient({
   const handleAnnouncementSeen = useCallback((id: string) => {
     markAnnouncementSeen(id);
   }, []);
+
+  // The show behind ?ticket=<id>. Null when the param is absent or points at an
+  // event this feed doesn't hold (e.g. a stale link) - the sheet just stays shut.
+  const activeEvent = useMemo(
+    () => initialEvents.find((e) => e.id === ticketModal.value) ?? null,
+    [initialEvents, ticketModal.value]
+  );
 
   const forYouFeed = useMemo(
     () => buildForYouFeed(initialEvents, allPosts, followed, seenAnnouncements),
@@ -200,7 +212,7 @@ export default function FeedClient({
         {announcements.length > 0 && (
           <button
             type="button"
-            onClick={() => setAnnouncementsOpen(true)}
+            onClick={() => announcementsModal.open("announcements")}
             aria-label="From MadGigz"
             className="absolute left-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface text-muted"
           >
@@ -251,7 +263,7 @@ export default function FeedClient({
                       event={entry.event}
                       muted={reelsMuted}
                       onToggleMute={() => setReelsMuted((v) => !v)}
-                      onOpen={() => setActiveEvent(entry.event!)}
+                      onOpen={() => ticketModal.open(entry.event!.id)}
                       liked={savedIds.includes(entry.event.id)}
                       onToggleLike={() => handleToggleLike(entry.event!.id)}
                     />
@@ -283,7 +295,7 @@ export default function FeedClient({
                     {dayEvents.map((event) => (
                       <button
                         key={event.id}
-                        onClick={() => setActiveEvent(event)}
+                        onClick={() => ticketModal.open(event.id)}
                         className="flex items-center gap-3 rounded-2xl bg-surface p-3 text-left"
                       >
                         <div className="relative h-14 w-14 overflow-hidden rounded-xl">
@@ -327,7 +339,7 @@ export default function FeedClient({
           event={activeEvent}
           liked={savedIds.includes(activeEvent.id)}
           onToggleLike={() => handleToggleLike(activeEvent.id)}
-          onClose={() => setActiveEvent(null)}
+          onClose={ticketModal.close}
         />
       )}
 
@@ -343,7 +355,7 @@ export default function FeedClient({
       {announcementsOpen && (
         <AnnouncementsSheet
           announcements={announcements}
-          onClose={() => setAnnouncementsOpen(false)}
+          onClose={announcementsModal.close}
         />
       )}
     </div>

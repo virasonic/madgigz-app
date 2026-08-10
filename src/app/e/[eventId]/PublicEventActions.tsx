@@ -8,6 +8,7 @@ import TicketModal from "@/components/feed/TicketModal";
 import { shareEvent } from "@/lib/share";
 import { absoluteUrl, eventPath } from "@/lib/site";
 import { EventItem } from "@/lib/types";
+import { useUrlModal } from "@/lib/useUrlModal";
 
 export default function PublicEventActions({
   event,
@@ -19,7 +20,11 @@ export default function PublicEventActions({
   soldOut: boolean;
 }) {
   const router = useRouter();
-  const [modalOpen, setModalOpen] = useState(false);
+  // #102: ?buy=1 opens the ticket sheet - the event is already this page, so a
+  // boolean is enough. The win here is the back button closing the sheet rather
+  // than leaving the shared link.
+  const buyModal = useUrlModal("buy");
+  const modalOpen = buyModal.isOpen;
   const [shareLabel, setShareLabel] = useState<string | null>(null);
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
 
@@ -66,7 +71,7 @@ export default function PublicEventActions({
       );
     }
 
-    return <Button onClick={() => setModalOpen(true)}>Get tickets</Button>;
+    return <Button onClick={() => buyModal.open("1")}>Get tickets</Button>;
   }
 
   return (
@@ -104,7 +109,7 @@ export default function PublicEventActions({
       {modalOpen && (
         <TicketModal
           event={event}
-          onClose={() => setModalOpen(false)}
+          onClose={buyModal.close}
           onPurchased={() => router.refresh()}
         />
       )}
