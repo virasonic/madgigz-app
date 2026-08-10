@@ -10,7 +10,6 @@ the same thing across old conversations. Gaps are shipped items.
 | Order | # | Item | What the work actually is | Blocked on | Size |
 |---|---|---|---|---|---|
 | 1 | 82b | **Apple sign-in** | Enable the provider, add the button next to Google's. Small, because 82a already built the post-callback screen and it is provider-agnostic. | **Apple**, approving your developer verification. | S |
-| 2 | 59 | **Spanish/English localization** | Every UI string into translation files, a language switch, and the Spanish itself. Dates and currency are already `en-GB`/EUR. | A fluent Spanish pass on the copy — yours or a translator's. | L |
 | 3 | 95 | **Go live on `madgigz.aurasonic.es`** | Decided 10 Aug 2026: the webapp gets a subdomain of the domain Vir already owns, with `aurasonic.es` itself left for the main AuraSonic site. Vercel stays the host. A DNS record and a Vercel domain, then the settings that must move with it — Stripe live keys, a new webhook endpoint, `NEXT_PUBLIC_APP_URL`, and Supabase's redirect allow-list. See below for what breaks quietly if one is missed. | Nothing. Vir's call on when. | M |
 | 4 | 90 | **"City centric"** | Vir to explain — noted 9 Aug 2026 so it isn't lost. | Vir. | ? |
 | 5 | 101 | **Live updates (Supabase realtime)** | Nothing on the app is live — the notifications bell, the sold count, and new announcements only change on reload. Principle 3 of the Rauch "rich web apps" piece: push data changes to clients rather than making them ask. Supabase ships realtime subscriptions and we use none. Scope it to the two places a stale number actually *misleads* someone: the unread bell and a show's sold/sold-out state. | Nothing. | M |
@@ -31,16 +30,20 @@ provider toggle and a button whenever Apple gets round to Vir's verification.
 It stays at the top because it is nearly free the moment it unblocks — not
 because it is the most valuable thing here.
 
-**#59 before #95, not after.** MadGigz launches in Madrid. Putting an
-English-only app in front of a Spanish audience is a handicap you'd then be
-fixing in public, so the translation belongs on the near side of going live.
-The sequencing constraint that used to hold it back is now satisfied: i18n
-touches every string, and the auth screens it was waiting on are finished, so
-they get translated once instead of twice.
+**#59 shipped (Aug 2026).** Every non-admin surface reads from a typed
+en/es message catalog (`src/lib/i18n/`), locale is a cookie with
+Accept-Language auto-detect and a manual switch in Settings, and the admin
+panel stays English by design. Dates render `en-GB` and prices EUR
+throughout — deliberately left, not forgotten.
 
-The blocker on it is judgement, not code — machine-translated copy in a
-scene-facing app reads as an outsider immediately, and MadGigz's whole pitch is
-being local. Budget for a fluent pass over the strings.
+One thing still needs a person, not code: the Spanish beyond the first
+tranche is **my draft** and wants the same fluent-review pass the reviewer
+gave the opening screens. The review sheet at
+`docs/madgigz-translation-review.pdf` now covers all 487 strings (23 pages,
+English | Español | correction), and it is generated from the live catalog
+(`node scripts/export-i18n-json.mjs && python3
+scripts/make-translation-review-pdf.py`), so it can't drift. Relay any
+corrections and I'll apply them and regenerate.
 
 **#95 is a subdomain, not a migration.** `madgigz.aurasonic.es` points at the
 existing Vercel deployment: one DNS record at whoever hosts `aurasonic.es`, one
