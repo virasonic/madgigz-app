@@ -44,7 +44,7 @@ note = ParagraphStyle("note", parent=styles["Normal"], fontSize=8.5, leading=11,
 # (Screen title, [(English, Spanish draft), ...])
 SECTIONS = [
     ("Welcome screen (first thing a new visitor sees)", [
-        ("Local Gigs & Concerts", "Conciertos y bolos locales"),
+        ("Local Gigs & Concerts", "Conciertos y Bolos"),
         ("I'm a Fan", "Soy fan"),
         ("Discover events, buy tickets, vibe out", "Descubre eventos, compra entradas, disfruta"),
         ("I'm an Artist", "Soy artista"),
@@ -54,7 +54,7 @@ SECTIONS = [
     ]),
     ("Sign in", [
         ("Welcome back", "Bienvenido de nuevo"),
-        ("Sign in to keep the vibe going.", "Inicia sesión para seguir al lío."),
+        ("Sign in to keep the vibe going.", "Inicia sesión para no perder el ritmo."),
         ("Email or username", "Email o usuario"),
         ("Password", "Contraseña"),
         ("Forgot password?", "¿Olvidaste la contraseña?"),

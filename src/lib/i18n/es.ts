@@ -29,7 +29,7 @@ export const es: Messages = {
   },
 
   landing: {
-    tagline: "Conciertos y bolos locales",
+    tagline: "Conciertos y Bolos",
     fanTitle: "Soy fan",
     fanDescription: "Descubre eventos, compra entradas, disfruta",
     artistTitle: "Soy artista",
@@ -40,7 +40,7 @@ export const es: Messages = {
 
   signin: {
     title: "Bienvenido de nuevo",
-    subtitle: "Inicia sesión para seguir al lío.",
+    subtitle: "Inicia sesión para no perder el ritmo.",
     identifierLabel: "Email o usuario",
     passwordLabel: "Contraseña",
     forgotPassword: "¿Olvidaste la contraseña?",
