@@ -9,6 +9,7 @@ import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem, Ticket } from "@/lib/types";
 import { hideRefundedTicket } from "./actions";
 import { useUrlModal } from "@/lib/useUrlModal";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 type SubTab = "events" | "tickets";
 
@@ -46,6 +47,7 @@ export default function SavedClient({
   initialSavedIds,
   initialTickets,
 }: SavedClientProps) {
+  const { t } = useT();
   const [subTab, setSubTab] = useState<SubTab>("tickets");
   // #102: a tapped liked-event opens ?ticket=<id> so back closes the sheet and
   // the link is shareable. The QR modal stays local state - it holds a specific
@@ -143,7 +145,7 @@ export default function SavedClient({
             strokeLinecap="round"
           />
         </svg>
-        <h1 className="font-display text-2xl text-foreground">Tickets</h1>
+        <h1 className="font-display text-2xl text-foreground">{t("savedPage.title")}</h1>
       </div>
 
       <div className="mb-5 flex gap-2 rounded-full bg-surface p-1">
@@ -153,7 +155,7 @@ export default function SavedClient({
             subTab === "tickets" ? "bg-primary text-foreground" : "text-muted"
           }`}
         >
-          My Tickets ({ticketRows.length})
+          {t("savedPage.myTickets")} ({ticketRows.length})
         </button>
         <button
           onClick={() => setSubTab("events")}
@@ -161,15 +163,13 @@ export default function SavedClient({
             subTab === "events" ? "bg-primary text-foreground" : "text-muted"
           }`}
         >
-          Liked Events
+          {t("savedPage.likedEvents")}
         </button>
       </div>
 
       {subTab === "events" ? (
         savedEvents.length === 0 ? (
-          <p className="text-sm text-muted">
-            Events you save will show up here.
-          </p>
+          <p className="text-sm text-muted">{t("savedPage.emptyEvents")}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {savedEvents.map((event) => (
@@ -194,7 +194,7 @@ export default function SavedClient({
                 <span className="shrink-0 text-xs text-muted">€{event.price}</span>
                 <button
                   onClick={() => handleToggleSaved(event.id)}
-                  aria-label="Remove from liked events"
+                  aria-label={t("savedPage.removeLiked")}
                   className="shrink-0 rounded-full p-1.5 text-muted hover:text-foreground"
                 >
                   <CloseIcon />
@@ -204,12 +204,12 @@ export default function SavedClient({
           </div>
         )
       ) : ticketRows.length === 0 && attendedRows.length === 0 ? (
-        <p className="text-sm text-muted">Tickets you buy will show up here.</p>
+        <p className="text-sm text-muted">{t("savedPage.emptyTickets")}</p>
       ) : (
         <div className="flex flex-col gap-3">
           {removeError && <p className="text-sm text-danger">{removeError}</p>}
           {ticketRows.length === 0 && (
-            <p className="text-sm text-muted">No upcoming tickets right now.</p>
+            <p className="text-sm text-muted">{t("savedPage.noUpcoming")}</p>
           )}
           {ticketRows.map(({ ticket, event }) => (
             <div key={ticket.id} className="rounded-2xl bg-surface p-3">
@@ -225,17 +225,17 @@ export default function SavedClient({
                       style={{ backgroundColor: ticket.refunded ? "var(--danger)" : event.accentColor }}
                     >
                       {ticket.refunded
-                        ? "Refunded"
+                        ? t("savedPage.statusRefunded")
                         : ticket.checkedInAt
-                          ? "Checked in"
-                          : "Confirmed"}
+                          ? t("savedPage.statusCheckedIn")
+                          : t("savedPage.statusConfirmed")}
                     </span>
                   </div>
                   <p className="truncate text-xs text-muted">
                     {event.venue} · {formatDate(event.date)} · {event.time}
                   </p>
                   <p className="text-xs text-muted">
-                    {ticket.quantity} {ticket.quantity === 1 ? "ticket" : "tickets"}
+                    {ticket.quantity} {ticket.quantity === 1 ? t("ticket.one") : t("ticket.many")}
                   </p>
                 </div>
               </div>
@@ -245,14 +245,14 @@ export default function SavedClient({
                     onClick={() => setActiveTicket({ ticket, event })}
                     className="flex-1 rounded-full border border-muted/30 py-2 text-sm font-heading text-foreground"
                   >
-                    View Ticket
+                    {t("savedPage.viewTicket")}
                   </button>
                   <button
                     onClick={() => handleRemoveRefunded(ticket.id)}
                     disabled={removingTicketId === ticket.id}
                     className="flex-1 rounded-full border border-danger/40 py-2 text-sm font-heading text-danger disabled:opacity-50"
                   >
-                    {removingTicketId === ticket.id ? "Removing..." : "Remove"}
+                    {removingTicketId === ticket.id ? t("savedPage.removing") : t("savedPage.remove")}
                   </button>
                 </div>
               ) : (
@@ -260,7 +260,7 @@ export default function SavedClient({
                   onClick={() => setActiveTicket({ ticket, event })}
                   className="mt-3 w-full rounded-full border border-muted/30 py-2 text-sm font-heading text-foreground"
                 >
-                  View Ticket
+                  {t("savedPage.viewTicket")}
                 </button>
               )}
             </div>
@@ -269,11 +269,13 @@ export default function SavedClient({
           {attendedRows.length > 0 && (
             <div className="mt-4">
               <h2 className="font-heading text-sm uppercase tracking-wide text-muted">
-                Where you&apos;ve been
+                {t("savedPage.whereYouveBeen")}
               </h2>
               <p className="mt-1 text-xs text-muted">
-                {attendedRows.length} {attendedRows.length === 1 ? "gig" : "gigs"} you turned
-                up to.
+                {t("savedPage.gigsSummary", {
+                  count: attendedRows.length,
+                  gigs: attendedRows.length === 1 ? t("savedPage.gigOne") : t("savedPage.gigMany"),
+                })}
               </p>
 
               {/* Capped and scrollable: this list only grows, and someone who

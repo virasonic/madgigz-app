@@ -8,6 +8,7 @@ import { createCheckout, previewPromoCode } from "@/app/(app)/checkout-actions";
 import { EventItem } from "@/lib/types";
 import ShareEventButton from "./ShareEventButton";
 import LikeButton from "./LikeButton";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 type Tab = "tickets" | "info";
 
@@ -39,6 +40,7 @@ export default function TicketModal({
   liked = false,
   onToggleLike,
 }: TicketModalProps) {
+  const { t } = useT();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [quantity, setQuantity] = useState(1);
   const [purchased, setPurchased] = useState(false);
@@ -62,7 +64,7 @@ export default function TicketModal({
   const total = soldOut ? 0 : (discountedTotal ?? subtotal);
 
   const externalUrl = event.ticketing?.mode === "external" ? event.ticketing.url : undefined;
-  let externalHost = "the external site";
+  let externalHost = t("ticket.externalHostFallback");
   if (externalUrl) {
     try {
       externalHost = new URL(externalUrl).hostname.replace(/^www\./, "");
@@ -80,7 +82,7 @@ export default function TicketModal({
     setCheckingPromo(false);
 
     if (result.error || result.totalEuros === undefined) {
-      setPromoError(result.error ?? "That code isn't valid for this event");
+      setPromoError(result.error ?? t("ticket.promoInvalid"));
       setPromoLabel(null);
       setDiscountedTotal(null);
       return;
@@ -137,12 +139,17 @@ export default function TicketModal({
             >
               ✓
             </div>
-            <h2 className="font-display text-2xl text-foreground">You&apos;re going!</h2>
+            <h2 className="font-display text-2xl text-foreground">{t("ticket.goingTitle")}</h2>
             <p className="text-sm text-muted">
-              {quantity} {quantity === 1 ? "ticket" : "tickets"} for {event.title} at {event.venue}
+              {t("ticket.summary", {
+                count: quantity,
+                tickets: quantity === 1 ? t("ticket.one") : t("ticket.many"),
+                title: event.title,
+                venue: event.venue,
+              })}
             </p>
             <Button className="mt-4" onClick={onClose}>
-              Done
+              {t("common.done")}
             </Button>
           </div>
         ) : (
@@ -183,7 +190,7 @@ export default function TicketModal({
                   tab === "tickets" ? "bg-primary text-foreground" : "text-muted"
                 }`}
               >
-                Get Tickets
+                {t("ticket.getTicketsTab")}
               </button>
               <button
                 onClick={() => setTab("info")}
@@ -191,22 +198,23 @@ export default function TicketModal({
                   tab === "info" ? "bg-primary text-foreground" : "text-muted"
                 }`}
               >
-                More Info
+                {t("ticket.moreInfoTab")}
               </button>
             </div>
 
             {tab === "tickets" && externalUrl ? (
               <div className="mt-6 flex flex-col gap-6">
                 <div className="rounded-2xl border border-muted/20 bg-background p-4 text-sm text-muted">
-                  Tickets for this event are sold by the artist through an external
-                  service. You&apos;ll be taken to {externalHost} to complete your purchase.
+                  {t("ticket.externalNote", { host: externalHost })}
                 </div>
-                <Button onClick={handleBuyExternal}>Buy tickets on {externalHost}</Button>
+                <Button onClick={handleBuyExternal}>
+                  {t("ticket.buyExternal", { host: externalHost })}
+                </Button>
               </div>
             ) : tab === "tickets" ? (
               <div className="mt-6 flex flex-col gap-6">
                 <div className="flex items-center justify-between">
-                  <span className="font-heading text-sm text-muted">Quantity</span>
+                  <span className="font-heading text-sm text-muted">{t("ticket.quantity")}</span>
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => {
@@ -244,11 +252,11 @@ export default function TicketModal({
                     />
                   </div>
                   {soldOut ? (
-                    <p className="mt-2 text-xs text-danger">Sold out</p>
+                    <p className="mt-2 text-xs text-danger">{t("ticket.soldOutBar")}</p>
                   ) : (
                     almostGone && (
                       <p className="mt-2 text-xs text-danger">
-                        Almost gone — only {remaining} left
+                        {t("ticket.almostGone", { remaining })}
                       </p>
                     )
                   )}
@@ -256,7 +264,7 @@ export default function TicketModal({
 
                 {!soldOut && (
                   <div className="flex flex-col gap-1.5">
-                    <span className="font-heading text-sm text-muted">Promo code</span>
+                    <span className="font-heading text-sm text-muted">{t("ticket.promoCode")}</span>
                     <div className="flex gap-2">
                       <input
                         value={promoCode}
@@ -265,7 +273,7 @@ export default function TicketModal({
                           setPromoLabel(null);
                           setDiscountedTotal(null);
                         }}
-                        placeholder="Optional"
+                        placeholder={t("ticket.promoPlaceholder")}
                         className="min-w-0 flex-1 rounded-2xl border border-muted/20 bg-background px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                       <button
@@ -274,7 +282,7 @@ export default function TicketModal({
                         disabled={checkingPromo || !promoCode.trim()}
                         className="shrink-0 rounded-2xl border border-muted/30 px-4 text-sm font-heading text-foreground disabled:opacity-40"
                       >
-                        {checkingPromo ? "..." : "Apply"}
+                        {checkingPromo ? "..." : t("ticket.apply")}
                       </button>
                     </div>
                     {promoError && <p className="text-sm text-danger">{promoError}</p>}
@@ -283,28 +291,26 @@ export default function TicketModal({
                 )}
 
                 <div className="flex items-center justify-between border-t border-muted/15 pt-4">
-                  <span className="font-heading text-muted">Total</span>
+                  <span className="font-heading text-muted">{t("ticket.total")}</span>
                   <span className="font-display text-xl text-foreground">€{total.toFixed(2)}</span>
                 </div>
                 {buyError && <p className="text-sm text-danger">{buyError}</p>}
 
                 <Button onClick={handleBuy} disabled={soldOut || buying}>
                   {soldOut
-                    ? "Sold Out"
+                    ? t("ticket.buySoldOut")
                     : buying
-                      ? "Starting checkout..."
+                      ? t("ticket.buyStarting")
                       : total === 0
-                        ? "Get tickets"
-                        : "Continue to payment"}
+                        ? t("ticket.buyFree")
+                        : t("ticket.buyPay")}
                 </Button>
 
                 {/* Visible, not tapped-for: a fan deciding whether to buy needs
                     this before they pay, not tucked behind an icon they'd have
                     no reason to tap. */}
                 {!soldOut && (
-                  <p className="-mt-3 text-center text-[11px] text-muted">
-                    Tickets are final sale. If something comes up, contact the organiser.
-                  </p>
+                  <p className="-mt-3 text-center text-[11px] text-muted">{t("ticket.finalSale")}</p>
                 )}
               </div>
             ) : (
@@ -312,14 +318,14 @@ export default function TicketModal({
                 <p className="text-sm text-foreground/90">{event.description}</p>
 
                 <div>
-                  <h3 className="font-heading text-sm text-muted">Lineup</h3>
+                  <h3 className="font-heading text-sm text-muted">{t("ticket.lineup")}</h3>
                   <ol className="mt-2 flex flex-col gap-1.5">
                     {event.lineup.map((act, i) => (
                       <li key={act} className="flex items-baseline gap-2 text-sm text-foreground">
                         <span className="text-muted">{i + 1}.</span>
                         <span className={i === 0 ? "font-heading" : undefined}>{act}</span>
                         {i === 0 && (
-                          <span className="text-xs uppercase text-muted">Headliner</span>
+                          <span className="text-xs uppercase text-muted">{t("ticket.headliner")}</span>
                         )}
                       </li>
                     ))}
@@ -328,15 +334,15 @@ export default function TicketModal({
 
                 <div className="grid grid-cols-2 gap-4 border-t border-muted/15 pt-4 text-sm">
                   <div>
-                    <p className="text-muted">Venue</p>
+                    <p className="text-muted">{t("ticket.venue")}</p>
                     <p className="text-foreground">{event.venue}</p>
                   </div>
                   <div>
-                    <p className="text-muted">Doors</p>
+                    <p className="text-muted">{t("ticket.doors")}</p>
                     <p className="text-foreground">{event.doors}</p>
                   </div>
                   <div>
-                    <p className="text-muted">Age</p>
+                    <p className="text-muted">{t("ticket.age")}</p>
                     <p className="text-foreground">{event.ageRestriction}</p>
                   </div>
                   {/* "Rating" was here, rendering event.rating as "0.0 / 5".
@@ -349,7 +355,7 @@ export default function TicketModal({
                       produce a number. */}
                 </div>
 
-                <Button onClick={() => setTab("tickets")}>Get Tickets</Button>
+                <Button onClick={() => setTab("tickets")}>{t("ticket.getTicketsTab")}</Button>
               </div>
             )}
           </>

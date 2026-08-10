@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { EventItem, Ticket } from "@/lib/types";
 import { mapsUrl } from "@/lib/site";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 interface TicketQRModalProps {
   ticket: Ticket;
@@ -21,6 +22,7 @@ function formatDate(iso: string) {
 }
 
 export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalProps) {
+  const { t } = useT();
   const [qrSrc, setQrSrc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,10 +63,10 @@ export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalP
             rel="noopener noreferrer"
             className="mt-2 inline-block text-sm text-accent underline underline-offset-4"
           >
-            {event.venueAddress ?? "Find the venue"} &rarr;
+            {event.venueAddress ?? t("ticket.findVenue")} &rarr;
           </a>
           <p className="mt-1 text-sm text-muted">
-            {ticket.quantity} {ticket.quantity === 1 ? "ticket" : "tickets"}
+            {ticket.quantity} {ticket.quantity === 1 ? t("ticket.one") : t("ticket.many")}
           </p>
         </div>
 
@@ -72,30 +74,24 @@ export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalP
           <div className="mt-6 rounded-2xl bg-danger/10 p-5 text-center">
             {/* Worded around the ticket, not the event: a ticket can be
                 refunded individually while the event goes ahead. */}
-            <p className="font-heading text-danger">This ticket was refunded</p>
-            <p className="mt-1 text-sm text-muted">
-              The payment has been returned to your original payment method - it can take a few
-              days to appear on your statement. This ticket is no longer valid for entry.
-            </p>
+            <p className="font-heading text-danger">{t("ticket.refundedTitle")}</p>
+            <p className="mt-1 text-sm text-muted">{t("ticket.refundedBody")}</p>
           </div>
         ) : (
           <>
             <div className="mx-auto mt-6 flex w-fit flex-col items-center gap-3 rounded-3xl bg-white p-5">
               {qrSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element -- generated data-url QR code
-                <img src={qrSrc} alt="Ticket QR code" className="h-56 w-56" />
+                <img src={qrSrc} alt={t("ticket.qrAlt")} className="h-56 w-56" />
               ) : (
                 <div className="flex h-56 w-56 items-center justify-center text-sm text-black/50">
-                  Generating code...
+                  {t("ticket.generating")}
                 </div>
               )}
               <p className="font-mono text-xs tracking-wide text-black/60">{ticket.id}</p>
             </div>
 
-            <p className="mt-5 text-center text-xs text-muted">
-              Show this code at the door. If it can&apos;t be scanned, give the code above to
-              staff.
-            </p>
+            <p className="mt-5 text-center text-xs text-muted">{t("ticket.showAtDoor")}</p>
           </>
         )}
       </div>

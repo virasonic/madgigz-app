@@ -9,6 +9,7 @@ import { shareEvent } from "@/lib/share";
 import { absoluteUrl, eventPath } from "@/lib/site";
 import { EventItem } from "@/lib/types";
 import { useUrlModal } from "@/lib/useUrlModal";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 export default function PublicEventActions({
   event,
@@ -19,6 +20,7 @@ export default function PublicEventActions({
   signedIn: boolean;
   soldOut: boolean;
 }) {
+  const { t } = useT();
   const router = useRouter();
   // #102: ?buy=1 opens the ticket sheet - the event is already this page, so a
   // boolean is enough. The win here is the back button closing the sheet rather
@@ -32,7 +34,7 @@ export default function PublicEventActions({
     const outcome = await shareEvent(event);
 
     if (outcome === "copied") {
-      setShareLabel("Link copied");
+      setShareLabel(t("publicEvent.linkCopied"));
       setTimeout(() => setShareLabel(null), 2000);
       return;
     }
@@ -54,24 +56,24 @@ export default function PublicEventActions({
     if (externalUrl) {
       return (
         <a href={externalUrl} target="_blank" rel="noopener noreferrer" className="block">
-          <Button>Get tickets</Button>
+          <Button>{t("publicEvent.getTickets")}</Button>
         </a>
       );
     }
 
-    if (soldOut) return <Button disabled>Sold out</Button>;
+    if (soldOut) return <Button disabled>{t("publicEvent.soldOut")}</Button>;
 
     if (!signedIn) {
       // ?next brings them back here after signing in, so the link they were
       // sent is still the thing they end up looking at.
       return (
         <Link href={`/signin?next=${encodeURIComponent(eventPath(event.id))}`} className="block">
-          <Button>Sign in to get tickets</Button>
+          <Button>{t("publicEvent.signInToBuy")}</Button>
         </Link>
       );
     }
 
-    return <Button onClick={() => buyModal.open("1")}>Get tickets</Button>;
+    return <Button onClick={() => buyModal.open("1")}>{t("publicEvent.getTickets")}</Button>;
   }
 
   return (
@@ -79,12 +81,12 @@ export default function PublicEventActions({
       {ticketButton()}
 
       <Button variant="ghost" onClick={handleShare}>
-        {shareLabel ?? "Share this gig"}
+        {shareLabel ?? t("publicEvent.share")}
       </Button>
 
       {fallbackUrl && (
         <div className="rounded-xl bg-surface px-4 py-3">
-          <p className="text-xs text-muted">Copy this link:</p>
+          <p className="text-xs text-muted">{t("publicEvent.copyLink")}</p>
           <input
             readOnly
             value={fallbackUrl}
@@ -96,12 +98,12 @@ export default function PublicEventActions({
 
       {!signedIn && !event.cancelled && (
         <p className="text-center text-xs text-muted">
-          New here?{" "}
+          {t("publicEvent.newHere")}{" "}
           <Link
             href={`/?next=${encodeURIComponent(eventPath(event.id))}`}
             className="text-accent"
           >
-            Create a MadGigz account
+            {t("publicEvent.createAccount")}
           </Link>
         </p>
       )}

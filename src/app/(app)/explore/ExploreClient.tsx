@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem, PublicArtistProfile } from "@/lib/types";
 import { useUrlModal } from "@/lib/useUrlModal";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 interface ExploreClientProps {
   userId: string;
@@ -27,6 +28,7 @@ export default function ExploreClient({
   genresByEvent,
   followedEventIds,
 }: ExploreClientProps) {
+  const { t } = useT();
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   // #102: the open ticket sheet lives in ?ticket=<id> so back closes it and the
   // link is shareable. Resolved from the param against the events on this page.
@@ -92,12 +94,12 @@ export default function ExploreClient({
 
   return (
     <div className="p-4">
-      <h1 className="font-display mb-4 text-2xl text-foreground">Explore</h1>
+      <h1 className="font-display mb-4 text-2xl text-foreground">{t("explore.title")}</h1>
 
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search events, artists, venues..."
+        placeholder={t("explore.searchPlaceholder")}
         className="mb-4 w-full rounded-2xl border border-muted/20 bg-surface px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
       />
 
@@ -121,7 +123,7 @@ export default function ExploreClient({
 
       {filteredArtists.length > 0 && (
         <div className="mb-6">
-          <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">Artists</h2>
+          <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">{t("explore.artistsHeading")}</h2>
           <div className="flex flex-col gap-2">
             {filteredArtists.map((artist) => (
               <Link
@@ -149,7 +151,7 @@ export default function ExploreClient({
       {filteredEvents.length > 0 && (
         <>
           {filteredArtists.length > 0 && (
-            <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">Events</h2>
+            <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">{t("explore.eventsHeading")}</h2>
           )}
           <div className="grid grid-cols-2 gap-3">
             {filteredEvents.map((event) => (
@@ -165,7 +167,7 @@ export default function ExploreClient({
 
       {filteredEvents.length === 0 && filteredArtists.length === 0 && (
         <p className="text-sm text-muted">
-          {trimmedQuery ? "No events or artists found." : "No events found."}
+          {trimmedQuery ? t("explore.noResults") : t("explore.noEvents")}
         </p>
       )}
 
