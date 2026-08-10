@@ -9,32 +9,37 @@ the same thing across old conversations. Gaps are shipped items.
 
 | Order | # | Item | What the work actually is | Blocked on | Size |
 |---|---|---|---|---|---|
-| 1 | 82a | **Google sign-in** | The hard part of #82, and it isn't the provider: an OAuth callback carries no username, role or date of birth, and the profile trigger and 16+ age gate need all three — so it needs a post-callback screen to collect them. Also a decision on what happens when a Google email matches an existing password account. | **You** — a Google Cloud OAuth client. Free, about ten minutes. | M |
-| 2 | 82b | **Apple sign-in** | Enable the provider, add the button. Small, because 82a already built the callback screen — it's provider-agnostic. | **Apple**, approving your developer verification. | S |
-| 3 | 59 | **Spanish/English localization** | Every UI string into translation files, a language switch, and the Spanish itself. Dates and currency are already `en-GB`/EUR. | Sequencing (see below), plus a fluent Spanish pass on the copy. | L |
-| 4 | 79 | **Verification link is decorative** | Say so in the email, drop the button, or leave it. Scanners open the link within ~15s of sending, so nobody completes verification by tapping it — the sign-in notice *is* the verification step. | Your decision. Can jump the queue any time — it's five minutes. | S |
-| 5 | 94 | **Feedback & support inbox** | A "Send feedback" row in profile Settings, a `feedback` table, a Feedback tab in the admin panel with the same open/closed split as the artist review queue (#72), and an open count on the admin dashboard. Naming: **Feedback**, not tickets — see below. | Nothing. | M |
-| 6 | 95 | **Go live on `madgigz.aurasonic.es`** | Decided 10 Aug 2026: the webapp gets a subdomain of the domain Vir already owns, with `aurasonic.es` itself left for the main AuraSonic site. Vercel stays the host. A DNS record and a Vercel domain, then the settings that must move with it — Stripe live keys, a new webhook endpoint, `NEXT_PUBLIC_APP_URL`, and Supabase's redirect allow-list. See below for what breaks quietly if one is missed. | Nothing. Vir's call on when. | M |
-| 7 | 89 | **Let people change their username** | A field on Edit Profile. The database side is already built — `addendum_010`'s format check, `addendum_011`'s case-insensitive unique index and `username_available()` RPC — so this is the signup form's availability check, reused. The real work is the rules around it (see below), not the form. Cooldown decided: **10 days**. | Nothing. | S |
-| 8 | 91 | **Sign in with a username** | Supabase Auth only authenticates on email, so this needs a server-side username→email lookup that signs the person in without ever returning the email to the browser. Build it with #89, not apart from it — a changeable username that is also a login credential is one feature, not two. | Nothing. | M |
-| 9 | 90 | **"City centric"** | Vir to explain — noted 9 Aug 2026 so it isn't lost. | Vir. | ? |
-| 10 | 88 | **Promoter & venue flows** | Account types alongside fan/artist, probably web rather than the app. Groundwork exists: admin-created shows already model a show with no `artist_id` managed by its creator, `venues` rows carry a `verified` flag an account could claim, and the artist claim-and-evidence flow is the precedent for verifying someone represents a venue. | Later, your call. Decide ownership first. | L |
-| 11 | 92 | **Band profiles made of member accounts** | Members keep their own artist accounts but appear under one band profile. Explicitly **not MVP** — parked. `event_artists` (`addendum_012`) is the precedent for profile↔event tagging, but a band is profile↔profile, which is a new table and a new answer to "who owns this". The sharp edge is money, not tagging — see below. | Not now, by Vir's call. | L |
-| 12 | 58 | **Admin activity tracking** | Login frequency, geolocation, attendance history. A new events table and a write path, not just a query. | Nothing technical. Needs a purpose first. | L |
+| 1 | 82b | **Apple sign-in** | Enable the provider, add the button next to Google's. Small, because 82a already built the post-callback screen and it is provider-agnostic. | **Apple**, approving your developer verification. | S |
+| 2 | 79 | **Verification link is decorative** | Say so in the email, drop the button, or leave it. Scanners open the link within ~15s of sending, so nobody completes verification by tapping it — the sign-in notice *is* the verification step. | Your decision. Five minutes once made. | S |
+| 3 | 94 | **Feedback & support inbox** | A "Send feedback" row in profile Settings, a `feedback` table, a Feedback tab in the admin panel with the same open/closed split as the artist review queue (#72), and an open count on the admin dashboard. Naming: **Feedback**, not tickets — see below. | Nothing. | M |
+| 4 | 59 | **Spanish/English localization** | Every UI string into translation files, a language switch, and the Spanish itself. Dates and currency are already `en-GB`/EUR. | A fluent Spanish pass on the copy — yours or a translator's. | L |
+| 5 | 95 | **Go live on `madgigz.aurasonic.es`** | Decided 10 Aug 2026: the webapp gets a subdomain of the domain Vir already owns, with `aurasonic.es` itself left for the main AuraSonic site. Vercel stays the host. A DNS record and a Vercel domain, then the settings that must move with it — Stripe live keys, a new webhook endpoint, `NEXT_PUBLIC_APP_URL`, and Supabase's redirect allow-list. See below for what breaks quietly if one is missed. | Nothing. Vir's call on when. | M |
+| 6 | 89 | **Let people change their username** | A field on Edit Profile. The database side is already built — `addendum_010`'s format check, `addendum_011`'s case-insensitive unique index and `username_available()` RPC — so this is the signup form's availability check, reused. The real work is the rules around it (see below), not the form. Cooldown decided: **10 days**. | Nothing. | S |
+| 7 | 91 | **Sign in with a username** | Supabase Auth only authenticates on email, so this needs a server-side username→email lookup that signs the person in without ever returning the email to the browser. Build it with #89, not apart from it — a changeable username that is also a login credential is one feature, not two. | Nothing. | M |
+| 8 | 90 | **"City centric"** | Vir to explain — noted 9 Aug 2026 so it isn't lost. | Vir. | ? |
+| 9 | 88 | **Promoter & venue flows** | Account types alongside fan/artist, probably web rather than the app. Groundwork exists: admin-created shows already model a show with no `artist_id` managed by its creator, `venues` rows carry a `verified` flag an account could claim, and the artist claim-and-evidence flow is the precedent for verifying someone represents a venue. | Later, your call. Decide ownership first. | L |
+| 10 | 92 | **Band profiles made of member accounts** | Members keep their own artist accounts but appear under one band profile. Explicitly **not MVP** — parked. `event_artists` (`addendum_012`) is the precedent for profile↔event tagging, but a band is profile↔profile, which is a new table and a new answer to "who owns this". The sharp edge is money, not tagging — see below. | Not now, by Vir's call. | L |
+| 11 | 58 | **Admin activity tracking** | Login frequency, geolocation, attendance history. A new events table and a write path, not just a query. | Nothing technical. Needs a purpose first. | L |
 
 ## Why this order
 
-**Google before Apple, not both together.** Apple needs verification you're
-waiting on; Google needs a free OAuth client you can create today. The
-post-callback screen — the actual work — is shared, so building it against
-Google means Apple later is a provider toggle and a button rather than a
-rebuild. Waiting for Apple would block the whole of #82 on something outside
-your control.
+**82a shipped on 10 Aug 2026**, and the split paid off exactly as intended:
+the post-callback screen, the rewritten signup trigger and the
+`complete_onboarding()` door are all provider-agnostic, so 82b really is a
+provider toggle and a button whenever Apple gets round to Vir's verification.
+It stays at the top because it is nearly free the moment it unblocks — not
+because it is the most valuable thing here.
 
-**Localization after the auth screens exist.** i18n means touching every string
-in the app, so anything built afterwards needs its own translation pass. Doing
-#82 first means those screens get translated once instead of twice. This is the
-only ordering constraint that actually costs money to get wrong.
+**#59 before #95, not after.** MadGigz launches in Madrid. Putting an
+English-only app in front of a Spanish audience is a handicap you'd then be
+fixing in public, so the translation belongs on the near side of going live.
+The sequencing constraint that used to hold it back is now satisfied: i18n
+touches every string, and the auth screens it was waiting on are finished, so
+they get translated once instead of twice.
+
+The blocker on it is judgement, not code — machine-translated copy in a
+scene-facing app reads as an outsider immediately, and MadGigz's whole pitch is
+being local. Budget for a fluent pass over the strings.
 
 **#94 goes in before real fans arrive, not after.** Its whole value is catching
 what nobody anticipated, so a feedback channel that lands a month into launch
