@@ -11,13 +11,16 @@ the same thing across old conversations. Gaps are shipped items.
 |---|---|---|---|---|---|
 | 1 | 82b | **Apple sign-in** | Enable the provider, add the button next to Google's. Small, because 82a already built the post-callback screen and it is provider-agnostic. | **Apple**, approving your developer verification. | S |
 | 2 | 59 | **Spanish/English localization** | Every UI string into translation files, a language switch, and the Spanish itself. Dates and currency are already `en-GB`/EUR. | A fluent Spanish pass on the copy — yours or a translator's. | L |
-| 3 | 95 | **Go live on `madgigz.aurasonic.es`** | Decided 10 Aug 2026: the webapp gets a subdomain of the domain Vir already owns, with `aurasonic.es` itself left for the main AuraSonic site. Vercel stays the host. A DNS record and a Vercel domain, then the settings that must move with it — Stripe live keys, a new webhook endpoint, `NEXT_PUBLIC_APP_URL`, and Supabase's redirect allow-list. See below for what breaks quietly if one is missed. | Nothing. Vir's call on when. | M |
-| 4 | 89 | **Let people change their username** | A field on Edit Profile. The database side is already built — `addendum_010`'s format check, `addendum_011`'s case-insensitive unique index and `username_available()` RPC — so this is the signup form's availability check, reused. The real work is the rules around it (see below), not the form. Cooldown decided: **10 days**. | Nothing. | S |
-| 5 | 91 | **Sign in with a username** | Supabase Auth only authenticates on email, so this needs a server-side username→email lookup that signs the person in without ever returning the email to the browser. Build it with #89, not apart from it — a changeable username that is also a login credential is one feature, not two. | Nothing. | M |
-| 6 | 90 | **"City centric"** | Vir to explain — noted 9 Aug 2026 so it isn't lost. | Vir. | ? |
-| 7 | 88 | **Promoter & venue flows** | Account types alongside fan/artist, probably web rather than the app. Groundwork exists: admin-created shows already model a show with no `artist_id` managed by its creator, `venues` rows carry a `verified` flag an account could claim, and the artist claim-and-evidence flow is the precedent for verifying someone represents a venue. | Later, your call. Decide ownership first. | L |
-| 8 | 92 | **Band profiles made of member accounts** | Members keep their own artist accounts but appear under one band profile. Explicitly **not MVP** — parked. `event_artists` (`addendum_012`) is the precedent for profile↔event tagging, but a band is profile↔profile, which is a new table and a new answer to "who owns this". The sharp edge is money, not tagging — see below. | Not now, by Vir's call. | L |
-| 9 | 58 | **Admin activity tracking** | Login frequency, geolocation, attendance history. A new events table and a write path, not just a query. | Nothing technical. Needs a purpose first. | L |
+| 3 | 96 | **Content moderation** | Fans and artists upload photos and video straight to a public feed with nothing between them and it. Needs, at minimum: a Report button on every reel, a moderation queue in the admin panel, and the ability to pull a post. Automated screening (an image/video classifier) is the bigger version and can come second. | Nothing. Should land before the app is public. | M |
+| 4 | 95 | **Go live on `madgigz.aurasonic.es`** | Decided 10 Aug 2026: the webapp gets a subdomain of the domain Vir already owns, with `aurasonic.es` itself left for the main AuraSonic site. Vercel stays the host. A DNS record and a Vercel domain, then the settings that must move with it — Stripe live keys, a new webhook endpoint, `NEXT_PUBLIC_APP_URL`, and Supabase's redirect allow-list. See below for what breaks quietly if one is missed. | Nothing. Vir's call on when. | M |
+| 5 | 89 | **Let people change their username** | A field on Edit Profile. The database side is already built — `addendum_010`'s format check, `addendum_011`'s case-insensitive unique index and `username_available()` RPC — so this is the signup form's availability check, reused. The real work is the rules around it (see below), not the form. Cooldown decided: **10 days**. | Nothing. | S |
+| 6 | 91 | **Sign in with a username** | Supabase Auth only authenticates on email, so this needs a server-side username→email lookup that signs the person in without ever returning the email to the browser. Build it with #89, not apart from it — a changeable username that is also a login credential is one feature, not two. | Nothing. | M |
+| 7 | 90 | **"City centric"** | Vir to explain — noted 9 Aug 2026 so it isn't lost. | Vir. | ? |
+| 8 | 88 | **Promoter & venue flows** | Account types alongside fan/artist, probably web rather than the app. Groundwork exists: admin-created shows already model a show with no `artist_id` managed by its creator, `venues` rows carry a `verified` flag an account could claim, and the artist claim-and-evidence flow is the precedent for verifying someone represents a venue. | Later, your call. Decide ownership first. | L |
+| 9 | 92 | **Band profiles made of member accounts** | Members keep their own artist accounts but appear under one band profile. Explicitly **not MVP** — parked. `event_artists` (`addendum_012`) is the precedent for profile↔event tagging, but a band is profile↔profile, which is a new table and a new answer to "who owns this". The sharp edge is money, not tagging — see below. | Not now, by Vir's call. | L |
+| 10 | 58 | **Admin activity tracking** | Login frequency, geolocation, attendance history. A new events table and a write path, not just a query. | Nothing technical. Needs a purpose first. | L |
+| 11 | 97 | **Tax & invoicing compliance** | Spanish IVA on the MadGigz fee, invoices artists can give their accountant, and whatever an artist selling tickets needs to declare. Stage 6 deliberately left VAT out of scope as "an accountant's question, not a guess in code" — this is that question coming back. | An accountant. Genuinely not a coding decision. | L |
+| 12 | 98 | **In-house payments** | Replacing Stripe Connect with direct payment handling. **Much later, by Vir's note.** Would mean becoming a payment facilitator: PSD2/SCA, PCI scope, holding other people's money, and a licence. Stripe's 1.5% + €0.25 buys all of that. | Far future. Only worth it at real volume. | XL |
 
 ## Why this order
 
@@ -38,6 +41,15 @@ they get translated once instead of twice.
 The blocker on it is judgement, not code — machine-translated copy in a
 scene-facing app reads as an outsider immediately, and MadGigz's whole pitch is
 being local. Budget for a fluent pass over the strings.
+
+**#96 sits above going live for a reason.** Right now anyone who signs up can
+put a photo or a video on a public feed with nothing between them and it, and
+the only way to take it down is a developer with database access. That is fine
+while the users are people Vir knows. It stops being fine on the day the app is
+promoted, and the gap between those two days is where a platform gets a
+reputation it can't undo. The Report button and a moderation queue are the
+minimum; an automated classifier is a nice second pass, not a substitute for
+being able to pull something quickly.
 
 **#95 is a subdomain, not a migration.** `madgigz.aurasonic.es` points at the
 existing Vercel deployment: one DNS record at whoever hosts `aurasonic.es`, one
@@ -118,6 +130,22 @@ under GDPR, so they fall under the retention and erasure rules `addendum_019`
 set up — the purge in `src/lib/account-deletion.ts` would have to scrub whatever
 this adds. Decide what it's *for* before building it: "useful someday" is a poor
 reason to start retaining people's locations.
+
+**#97 and #98 are both "when there is money to justify it".**
+
+Tax (#97) is the one that arrives on its own schedule: the moment real euros
+move, somebody has to account for IVA on the MadGigz fee and artists start
+needing invoices for their accountant. Stage 6 explicitly parked VAT as "an
+accountant's question, not a guess in code" and that is still the right call -
+this item is a reminder that the question is waiting, not an invitation to
+guess at it.
+
+In-house payments (#98) is the furthest thing on this list and should probably
+stay there. Taking payments directly means becoming a payment facilitator:
+PSD2/SCA compliance, PCI scope, holding other people's money, and in Spain a
+licence to do it. Stripe's cut buys all of that plus the fraud handling and the
+Connect payouts. It only becomes arguable at volumes where a percentage point
+is real money, and MadGigz is a long way from there.
 
 ## Nothing is currently waiting on you
 
