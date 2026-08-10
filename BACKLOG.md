@@ -17,7 +17,8 @@ the same thing across old conversations. Gaps are shipped items.
 | 6 | 91 | **Sign in with a username** | Supabase Auth only authenticates on email, so this needs a server-side username→email lookup that signs the person in without ever returning the email to the browser. Build it with #89, not apart from it — a changeable username that is also a login credential is one feature, not two. | Nothing. | M |
 | 7 | 90 | **"City centric"** | Vir to explain — noted 9 Aug 2026 so it isn't lost. | Vir. | ? |
 | 8 | 88 | **Promoter & venue flows** | Account types alongside fan/artist, probably web rather than the app. Groundwork exists: admin-created shows already model a show with no `artist_id` managed by its creator, `venues` rows carry a `verified` flag an account could claim, and the artist claim-and-evidence flow is the precedent for verifying someone represents a venue. | Later, your call. Decide ownership first. | L |
-| 9 | 58 | **Admin activity tracking** | Login frequency, geolocation, attendance history. A new events table and a write path, not just a query. | Nothing technical. Needs a purpose first. | L |
+| 9 | 92 | **Band profiles made of member accounts** | Members keep their own artist accounts but appear under one band profile. Explicitly **not MVP** — parked. `event_artists` (`addendum_012`) is the precedent for profile↔event tagging, but a band is profile↔profile, which is a new table and a new answer to "who owns this". The sharp edge is money, not tagging — see below. | Not now, by Vir's call. | L |
+| 10 | 58 | **Admin activity tracking** | Login frequency, geolocation, attendance history. A new events table and a write path, not just a query. | Nothing technical. Needs a purpose first. | L |
 
 ## Why this order
 
@@ -64,6 +65,22 @@ everything else, so settle it before any UI gets designed. The other two
 questions are commercial rather than technical, and yours: who gets paid when a
 promoter books an artist and whether the 5% splits three ways, and whether a
 venue sees sales for shows at their venue they didn't book.
+
+**#92's hard problem is payouts, not profiles.** Linking accounts together is
+a `band_members` table and an afternoon. But a Stripe destination charge pays
+exactly **one** connected account — so the moment a band sells a ticket, the
+money has to land somewhere specific. That forces a product decision before any
+code: either the band nominates one member's payout account and splits offline
+(simple, and how most small acts already operate), or MadGigz splits at
+checkout, which means Stripe Connect transfers per member, per sale, and a
+share-percentage UI that every member has to agree to. The second is a
+meaningfully bigger product with tax implications for each member — worth
+choosing deliberately rather than discovering halfway in.
+
+Two smaller questions ride along: whether a band show appears on each member's
+own profile as well as the band's, and whether the artist verification flow runs
+on the band or on each member (a band anyone can join is an impersonation route
+into an established name). Neither is hard, but both shape the schema.
 
 **#58 collects personal data.** Geolocation and login history are personal data
 under GDPR, so they fall under the retention and erasure rules `addendum_019`
