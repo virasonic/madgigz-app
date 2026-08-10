@@ -31,6 +31,20 @@ export const en = {
     profile: "Profile",
   },
 
+  feed: {
+    forYou: "For You",
+    thisWeek: "This Week",
+    emptyForYou: "No content yet - check Explore for upcoming shows.",
+    emptyThisWeek: "Nothing happening in the next 7 days.",
+    fromMadgigz: "From MadGigz",
+    announcementsSubtitle: "Tips and updates for getting around.",
+    postUpdate: "Post an update",
+    unmute: "Unmute",
+    mute: "Mute",
+    artistContent: "Artist Content",
+    getTickets: "Get Tickets",
+  },
+
   landing: {
     tagline: "Local Gigs & Concerts",
     fanTitle: "I'm a Fan",

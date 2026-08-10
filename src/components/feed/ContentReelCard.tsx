@@ -7,6 +7,7 @@ import { ContentPost, EventItem } from "@/lib/types";
 import ShareEventButton from "./ShareEventButton";
 import LikeButton from "./LikeButton";
 import ReportButton from "./ReportButton";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 function NoteIcon() {
   return (
@@ -64,6 +65,7 @@ export default function ContentReelCard({
   liked,
   onToggleLike,
 }: ContentReelCardProps) {
+  const { t } = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const showVideo = post.mediaType === "video" && post.videoUrl;
@@ -132,7 +134,7 @@ export default function ContentReelCard({
         {showVideo && (
           <button
             onClick={onToggleMute}
-            aria-label={muted ? "Unmute" : "Mute"}
+            aria-label={muted ? t("feed.unmute") : t("feed.mute")}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-foreground backdrop-blur-md"
           >
             <SpeakerIcon muted={muted} />
@@ -160,7 +162,7 @@ export default function ContentReelCard({
           className="w-fit rounded-full px-3 py-1 text-xs font-heading uppercase tracking-wide text-foreground"
           style={{ backgroundColor: `${event.accentColor}CC` }}
         >
-          Artist Content
+          {t("feed.artistContent")}
         </span>
 
         <div>
@@ -178,7 +180,7 @@ export default function ContentReelCard({
           className="flex items-center justify-between rounded-2xl px-5 py-3.5"
           style={{ backgroundColor: event.accentColor }}
         >
-          <span className="font-display text-foreground">Get Tickets</span>
+          <span className="font-display text-foreground">{t("feed.getTickets")}</span>
           <span className="font-heading text-foreground">€{event.price}</span>
         </button>
       </div>

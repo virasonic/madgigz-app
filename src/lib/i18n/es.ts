@@ -31,6 +31,20 @@ export const es: Messages = {
     profile: "Perfil",
   },
 
+  feed: {
+    forYou: "Para ti",
+    thisWeek: "Esta semana",
+    emptyForYou: "Aún no hay contenido: mira Explorar para ver próximos bolos.",
+    emptyThisWeek: "No hay nada en los próximos 7 días.",
+    fromMadgigz: "De MadGigz",
+    announcementsSubtitle: "Consejos y novedades para moverte por la app.",
+    postUpdate: "Publicar una novedad",
+    unmute: "Activar sonido",
+    mute: "Silenciar",
+    artistContent: "Contenido de artista",
+    getTickets: "Comprar entradas",
+  },
+
   landing: {
     tagline: "Conciertos y Bolos",
     fanTitle: "Soy fan",

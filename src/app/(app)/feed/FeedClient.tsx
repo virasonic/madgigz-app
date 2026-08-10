@@ -12,6 +12,7 @@ import { AppUser, ContentPost, EventItem } from "@/lib/types";
 import { canActAsArtist } from "@/lib/roles";
 import { getSeenAnnouncements, markAnnouncementSeen } from "@/lib/seen-announcements";
 import { useUrlModal } from "@/lib/useUrlModal";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 type Pane = "forYou" | "thisWeek";
 
@@ -118,6 +119,7 @@ export default function FeedClient({
   initialSavedIds,
   followedEventIds,
 }: FeedClientProps) {
+  const { t } = useT();
   const [pane, setPane] = useState<Pane>("forYou");
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
   // #102: the open ticket and the announcements sheet live in the URL now, so
@@ -213,7 +215,7 @@ export default function FeedClient({
           <button
             type="button"
             onClick={() => announcementsModal.open("announcements")}
-            aria-label="From MadGigz"
+            aria-label={t("feed.fromMadgigz")}
             className="absolute left-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface text-muted"
           >
             <MegaphoneIcon />
@@ -223,7 +225,7 @@ export default function FeedClient({
           <button
             type="button"
             onClick={() => setAddContentOpen(true)}
-            aria-label="Post an update"
+            aria-label={t("feed.postUpdate")}
             className="absolute right-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-lg text-foreground"
           >
             +
@@ -231,8 +233,8 @@ export default function FeedClient({
         )}
         {(
           [
-            ["forYou", "For You"],
-            ["thisWeek", "This Week"],
+            ["forYou", t("feed.forYou")],
+            ["thisWeek", t("feed.thisWeek")],
           ] as [Pane, string][]
         ).map(([value, label]) => (
           <button
@@ -250,9 +252,7 @@ export default function FeedClient({
       <div className="min-h-0 flex-1">
         {pane === "forYou" ? (
           forYouFeed.length === 0 ? (
-            <p className="mt-6 px-4 text-center text-sm text-muted">
-              No content yet - check Explore for upcoming shows.
-            </p>
+            <p className="mt-6 px-4 text-center text-sm text-muted">{t("feed.emptyForYou")}</p>
           ) : (
             <div className="h-full snap-y snap-mandatory overflow-y-scroll">
               {forYouFeed.map((entry) => (
@@ -282,9 +282,7 @@ export default function FeedClient({
         ) : (
           <div className="h-full overflow-y-auto px-4 pb-6">
             {weeklyGroups.length === 0 ? (
-              <p className="mt-6 text-center text-sm text-muted">
-                Nothing happening in the next 7 days.
-              </p>
+              <p className="mt-6 text-center text-sm text-muted">{t("feed.emptyThisWeek")}</p>
             ) : (
               weeklyGroups.map(([day, dayEvents]) => (
                 <div key={day} className="mb-6">
@@ -390,6 +388,7 @@ function AnnouncementsSheet({
   announcements: ContentPost[];
   onClose: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/60" onClick={onClose}>
       <div
@@ -397,8 +396,8 @@ function AnnouncementsSheet({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
-        <h2 className="font-display text-xl text-foreground">From MadGigz</h2>
-        <p className="mt-1 text-sm text-muted">Tips and updates for getting around.</p>
+        <h2 className="font-display text-xl text-foreground">{t("feed.fromMadgigz")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("feed.announcementsSubtitle")}</p>
 
         <div className="mt-5 flex flex-col gap-3">
           {announcements.map((post) => {

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { ContentPost } from "@/lib/types";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 // A post from MadGigz itself rather than from an artist about a show.
 //
@@ -23,6 +24,7 @@ export default function AnnouncementCard({
   /** Fires once the card has actually been on screen, not merely rendered. */
   onSeen?: (id: string) => void;
 }) {
+  const { t } = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const showVideo = post.mediaType === "video" && post.videoUrl;
@@ -104,7 +106,7 @@ export default function AnnouncementCard({
             className="w-fit rounded-full px-3 py-1 text-xs font-heading uppercase tracking-wide text-foreground"
             style={{ backgroundColor: accent }}
           >
-            From MadGigz
+            {t("feed.fromMadgigz")}
           </span>
           {post.headline && (
             <h2 className="font-display text-3xl leading-tight text-foreground">{post.headline}</h2>
@@ -146,7 +148,7 @@ export default function AnnouncementCard({
       {post.caption && (
         <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-3 p-5 pb-8">
           <span className="w-fit rounded-full bg-primary/90 px-3 py-1 text-xs font-heading uppercase tracking-wide text-foreground">
-            From MadGigz
+            {t("feed.fromMadgigz")}
           </span>
           <p className="text-sm text-foreground">{post.caption}</p>
         </div>
