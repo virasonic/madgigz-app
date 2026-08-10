@@ -4,6 +4,38 @@ _Written 10 Aug 2026. Backlog #103. Every secret the app holds, what breaks if
 it leaks, and how to swap it **without taking the app down**. Grounded in the
 actual env the code reads (`grep process.env`), not a generic template._
 
+## How often to rotate
+
+Blind calendar rotation of every key mostly just manufactures outage risk. The
+better rule is **rotate on events, plus a light cadence scaled to blast
+radius.**
+
+**Rotate immediately, whatever the calendar says, when:**
+- A key appears somewhere it shouldn't — a screenshot, chat, email, commit, log,
+  or support ticket.
+- Someone with dashboard access leaves, or a device that had access is lost.
+- The Stripe or Supabase activity logs show anything you didn't do.
+- You switch an environment from **test → live** (a mode change is a rotation
+  anyway — new live keys, new webhook secret).
+
+**On a calendar, scaled to damage-if-leaked:**
+
+| Cadence | Keys | Why |
+|---|---|---|
+| **~6 months** | `STRIPE_SECRET_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Highest blast radius — money and full DB. Stripe rolls with a 24h grace window; the Supabase one signs everyone out, so pair it with a quiet maintenance moment. |
+| **~12 months** | Stripe webhook secrets, `RESEND_API_KEY`, Google OAuth client secret | Real but narrower blast radius. |
+| **Event-only** | `CRON_SECRET`, Turnstile keys, all `NEXT_PUBLIC_*` | Low value or already public. Routine churn isn't worth the risk. |
+
+**The practical answer for a solo operator:** twice a year, rotate the two crown
+jewels (`SUPABASE_SERVICE_ROLE_KEY` + `STRIPE_SECRET_KEY`) as a 20-minute chore
+using the runbook below; rotate everything else **only when an event forces it**.
+That's proportionate — it caps how long a *silently* leaked key stays useful
+without inventing outage risk on healthy keys.
+
+Modern guidance (NIST SP 800-63B) explicitly dropped forced periodic rotation of
+credentials that show no sign of compromise, for exactly this reason: the
+event-driven half of the table above is what actually protects you.
+
 ## The one rule that matters: rotate in this order
 
 A secret the app reads has a live copy in three possible places — the
