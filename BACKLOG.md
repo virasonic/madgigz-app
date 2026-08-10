@@ -67,6 +67,9 @@ move with it, because **each one fails silently rather than loudly**:
   the new URL with its own signing secret. Test-mode webhooks do not carry over,
   and a missing endpoint means money is taken and no ticket is issued.
 - Email needs nothing: Resend already sends as `@aurasonic.es`.
+- **Unset `ALLOW_ADMIN_IMPERSONATION`** before launch — it's the admin "act as
+  any user" testing tool (`docs/impersonation.md`). Off by default, but if it was
+  turned on for testing, launch is when it must go back off.
 
 Worth doing before this: the subdomain is also what a native shell would point
 at, so picking it now means the URL doesn't change again when MadGigz becomes a
