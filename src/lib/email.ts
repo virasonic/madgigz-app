@@ -21,3 +21,40 @@ export async function sendArtistStatusEmail(email: string, status: "approved" | 
     console.error("Failed to send artist status email:", error);
   }
 }
+
+const SUPPORT_INBOX = process.env.SUPPORT_EMAIL ?? "support@aurasonic.es";
+
+// Nudges someone to actually look at /admin/feedback. Best-effort for the same
+// reason as above: the submission is already saved by the time this runs, and
+// a Resend outage must not turn "thanks, got it" into an error for the person
+// who took the trouble to write in.
+export async function sendFeedbackAlert(input: {
+  type: string;
+  message: string;
+  from: string;
+  route: string | null;
+}) {
+  if (!resend) return;
+
+  try {
+    await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: SUPPORT_INBOX,
+      // replyTo, so hitting reply in the inbox reaches the person rather than
+      // the no-reply sender.
+      replyTo: input.from.includes("@") ? input.from : undefined,
+      subject: `MadGigz ${input.type}: ${input.message.slice(0, 60)}`,
+      text: [
+        `From: ${input.from}`,
+        `Type: ${input.type}`,
+        `Screen: ${input.route ?? "unknown"}`,
+        "",
+        input.message,
+        "",
+        "Triage at /admin/feedback",
+      ].join("\n"),
+    });
+  } catch (error) {
+    console.error("Failed to send feedback alert:", error);
+  }
+}

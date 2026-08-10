@@ -448,6 +448,83 @@ export function adminClient() {
   return createAdminClient();
 }
 
+export interface AdminFeedbackRow {
+  id: string;
+  type: string;
+  message: string;
+  route: string | null;
+  status: string;
+  adminNote: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  contactEmail: string | null;
+  roleAtSubmission: string | null;
+  /** Null once the account has been deleted - the message deliberately stays. */
+  userId: string | null;
+  username: string | null;
+}
+
+export async function fetchAllFeedback(admin: SupabaseClient): Promise<AdminFeedbackRow[]> {
+  const { data, error } = await admin
+    .from("feedback")
+    .select(
+      // The FK must be named explicitly: feedback references profiles twice
+      // (user_id and resolved_by), so a bare profiles(username) is ambiguous
+      // and PostgREST refuses it. Same fix as the notifications actor join.
+      "id, type, message, route, status, admin_note, created_at, resolved_at, contact_email, role_at_submission, user_id, author:profiles!feedback_user_id_fkey(username)"
+    )
+    .order("created_at", { ascending: false });
+
+  // 42P01 = addendum_027 hasn't been run yet. An empty tab is a better failure
+  // than the whole admin panel throwing.
+  if (error) {
+    if (error.code !== "42P01") console.error("fetchAllFeedback failed:", error);
+    return [];
+  }
+
+  type Row = {
+    id: string;
+    type: string;
+    message: string;
+    route: string | null;
+    status: string;
+    admin_note: string | null;
+    created_at: string;
+    resolved_at: string | null;
+    contact_email: string | null;
+    role_at_submission: string | null;
+    user_id: string | null;
+    author: { username: string } | null;
+  };
+
+  return ((data ?? []) as unknown as Row[]).map((r) => ({
+    id: r.id,
+    type: r.type,
+    message: r.message,
+    route: r.route,
+    status: r.status,
+    adminNote: r.admin_note,
+    createdAt: r.created_at,
+    resolvedAt: r.resolved_at,
+    contactEmail: r.contact_email,
+    roleAtSubmission: r.role_at_submission,
+    userId: r.user_id,
+    username: r.author?.username ?? null,
+  }));
+}
+
+// Just the number for the dashboard box. Counts what is still ACTIONABLE
+// rather than everything ever sent - a total nobody can act on is decoration.
+export async function fetchOpenFeedbackCount(admin: SupabaseClient): Promise<number> {
+  const { count, error } = await admin
+    .from("feedback")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["new", "open"]);
+
+  if (error) return 0;
+  return count ?? 0;
+}
+
 export interface AdminUserDetail {
   id: string;
   email: string;

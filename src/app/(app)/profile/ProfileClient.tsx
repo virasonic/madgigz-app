@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { AppUser, EventItem } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
 import DeleteAccountDialog from "@/components/account/DeleteAccountDialog";
+import FeedbackDialog from "@/components/account/FeedbackDialog";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -58,11 +59,13 @@ function PayoutReturnDetector({ onReturn }: { onReturn: () => void }) {
 
 function SettingsSheet({
   onClose,
+  onSendFeedback,
   payoutConnected,
   payoutReady,
   isArtist,
 }: {
   onClose: () => void;
+  onSendFeedback: () => void;
   payoutConnected: boolean;
   payoutReady: boolean;
   isArtist: boolean;
@@ -98,6 +101,18 @@ function SettingsSheet({
                 <span className="text-xs uppercase text-muted">Soon</span>
               </div>
             ))}
+
+          {/* Below the real settings, above nothing - it is a thing you reach
+              for when something has gone wrong, so it should be findable
+              without competing with what people came here to do. */}
+          <button
+            type="button"
+            onClick={onSendFeedback}
+            className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5 text-left"
+          >
+            <span className="text-sm text-foreground">Send feedback</span>
+            <span className="text-xs text-muted">Bug, help or an idea</span>
+          </button>
         </div>
       </div>
     </div>
@@ -151,6 +166,7 @@ export default function ProfileClient({
   // the artist's own show is managed, a show they are only tagged on is not.
   const [activeTaggedShow, setActiveTaggedShow] = useState<EventItem | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [hiddenOpen, setHiddenOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -454,11 +470,19 @@ export default function ProfileClient({
       {settingsOpen && (
         <SettingsSheet
           onClose={() => setSettingsOpen(false)}
+          // Closes Settings on the way, so the feedback sheet isn't stacked on
+          // top of another one and closing it doesn't reveal a sheet nobody
+          // asked to still be there.
+          onSendFeedback={() => {
+            setSettingsOpen(false);
+            setFeedbackOpen(true);
+          }}
           payoutConnected={user.stripeAccountConnected}
           payoutReady={user.stripePayoutsReady}
           isArtist={artistTools}
         />
       )}
+      {feedbackOpen && <FeedbackDialog onClose={() => setFeedbackOpen(false)} />}
     </div>
   );
 }

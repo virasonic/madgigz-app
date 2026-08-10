@@ -51,6 +51,20 @@
           </tr>
         </table>
 
+        <!-- The honest caveat. Mail providers scan links before the recipient
+             sees them - measured on real signups, accounts were confirmed
+             13-15 seconds after creation, which is a scanner, not a person.
+             That fetch spends the single-use token, so the human's tap is the
+             second attempt and fails, on an account that is already verified.
+             The app already handles this gracefully (see auth/confirm), but
+             saying so here means nobody has to be surprised first. -->
+        <p style="margin:0 0 16px;font-size:12px;line-height:1.6;color:#a89f8c;">
+          If tapping it says the link has already been used, your email is
+          <strong style="color:#54c3bd;font-weight:600;">already verified</strong> — some inboxes
+          open links automatically to check them, which finishes this step for you. Just sign in
+          as normal.
+        </p>
+
         <p style="margin:0;font-size:12px;line-height:1.6;color:#7a7266;">
           Didn&#39;t sign up for MadGigz? You can safely ignore this email.
         </p>

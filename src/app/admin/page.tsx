@@ -1,18 +1,38 @@
-import { adminClient, fetchAllUsers, fetchDashboardStats, requireAdmin } from "@/lib/supabase/admin-queries";
+import Link from "next/link";
+import {
+  adminClient,
+  fetchAllUsers,
+  fetchDashboardStats,
+  fetchOpenFeedbackCount,
+  requireAdmin,
+} from "@/lib/supabase/admin-queries";
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-surface p-5">
+function StatCard({ label, value, href }: { label: string; value: string; href?: string }) {
+  const body = (
+    <>
       <p className="text-xs uppercase tracking-wide text-muted">{label}</p>
       <p className="mt-2 font-display text-3xl text-foreground">{value}</p>
-    </div>
+    </>
+  );
+
+  // A count you can act on should take you to the thing you'd act on.
+  return href ? (
+    <Link href={href} className="rounded-2xl bg-surface p-5 transition-colors hover:bg-surface-raised">
+      {body}
+    </Link>
+  ) : (
+    <div className="rounded-2xl bg-surface p-5">{body}</div>
   );
 }
 
 export default async function AdminDashboardPage() {
   await requireAdmin();
   const admin = adminClient();
-  const [stats, users] = await Promise.all([fetchDashboardStats(admin), fetchAllUsers(admin)]);
+  const [stats, users, openFeedback] = await Promise.all([
+    fetchDashboardStats(admin),
+    fetchAllUsers(admin),
+    fetchOpenFeedbackCount(admin),
+  ]);
 
   const recentUsers = [...users]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -25,12 +45,19 @@ export default async function AdminDashboardPage() {
         <p className="text-sm text-muted">Overview of MadGigz activity.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <StatCard label="Users" value={String(stats.userCount)} />
-        <StatCard label="Events" value={String(stats.eventCount)} />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+        <StatCard label="Users" value={String(stats.userCount)} href="/admin/users" />
+        <StatCard label="Events" value={String(stats.eventCount)} href="/admin/events" />
         <StatCard label="Tickets sold" value={String(stats.ticketsSold)} />
-        <StatCard label="Revenue" value={`€${stats.revenue.toFixed(2)}`} />
-        <StatCard label="Pending artists" value={String(stats.pendingArtistCount)} />
+        <StatCard label="Revenue" value={`€${stats.revenue.toFixed(2)}`} href="/admin/billing" />
+        <StatCard
+          label="Pending artists"
+          value={String(stats.pendingArtistCount)}
+          href="/admin/artists"
+        />
+        {/* Open, not total: this box exists to say whether anything needs
+            doing, and a lifetime count never changes that answer. */}
+        <StatCard label="Open feedback" value={String(openFeedback)} href="/admin/feedback" />
       </div>
 
       <div className="rounded-2xl bg-surface p-5">
