@@ -6,7 +6,11 @@
 // The cost of it being wrong in production is a broken OG image, not an outage.
 export function siteOrigin(): string {
   const configured = process.env.NEXT_PUBLIC_APP_URL;
-  if (configured) return configured.replace(/\/+$/, "");
+  // .trim() guards against a value pasted into the dashboard with a trailing
+  // newline or space - otherwise it lands mid-URL ("https://host\n/e/123") and
+  // quietly breaks every share link and Stripe redirect. Then drop any trailing
+  // slash so paths don't double up.
+  if (configured) return configured.trim().replace(/\/+$/, "");
 
   // Set by Vercel on every deployment; the production alias, not the per-deploy
   // hash, so a shared link keeps working after the next push.
