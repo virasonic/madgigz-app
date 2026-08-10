@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/site";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 type Role = "fan" | "artist";
 
@@ -29,19 +30,17 @@ function calculateAge(dob: string): number | null {
   return age;
 }
 
-// What complete_onboarding() can say, in words that mean something to the
-// person reading them. Anything unrecognised falls through to a generic line
-// rather than rendering a status code at someone.
-const RPC_ERRORS: Record<string, { field: "username" | "dob" | "form"; message: string }> = {
-  username_taken: { field: "username", message: "That username is taken" },
-  username_invalid: {
-    field: "username",
-    message: "Use 3-30 letters, numbers, dots, dashes or underscores",
-  },
-  too_young: { field: "dob", message: `You must be at least ${MIN_AGE} to join MadGigz` },
-  dob_required: { field: "dob", message: "Enter your date of birth" },
-  already_complete: { field: "form", message: "This profile is already set up - try signing in." },
-  not_signed_in: { field: "form", message: "Your session expired. Sign in again to continue." },
+// Which field each complete_onboarding() status belongs under. The wording is
+// resolved through the translation catalog at render time (see rpcMessage in the
+// component), so this map only has to know where the message goes, not what it
+// says. Anything unrecognised falls through to a generic line.
+const RPC_ERROR_FIELDS: Record<string, "username" | "dob" | "form"> = {
+  username_taken: "username",
+  username_invalid: "username",
+  too_young: "dob",
+  dob_required: "dob",
+  already_complete: "form",
+  not_signed_in: "form",
 };
 
 // Google gives us a display name, not a handle. Turn "Vir Subberwal" into
@@ -53,9 +52,31 @@ function suggestUsername(source: string | undefined): string {
 }
 
 function CompleteProfileForm() {
+  const { t } = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get("next"));
+
+  // The words for each complete_onboarding() status, resolved through the
+  // catalog so they follow the person's language. Mirrors RPC_ERROR_FIELDS.
+  function rpcMessage(code: string): string {
+    switch (code) {
+      case "username_taken":
+        return t("signup.usernameTaken");
+      case "username_invalid":
+        return t("signup.errorUsernameFormat");
+      case "too_young":
+        return t("signup.errorTooYoung", { age: MIN_AGE });
+      case "dob_required":
+        return t("signup.errorDob");
+      case "already_complete":
+        return t("completeProfile.errorAlreadyComplete");
+      case "not_signed_in":
+        return t("completeProfile.errorNotSignedIn");
+      default:
+        return t("completeProfile.errorGeneric");
+    }
+  }
 
   const [role, setRole] = useState<Role>(searchParams.get("role") === "artist" ? "artist" : "fan");
   const [username, setUsername] = useState("");
@@ -121,20 +142,20 @@ function CompleteProfileForm() {
     const nextErrors: Record<string, string> = {};
 
     if (!username.trim()) {
-      nextErrors.username = "Pick a username";
+      nextErrors.username = t("completeProfile.errorUsernameRequired");
     } else if (/\s/.test(username)) {
-      nextErrors.username = "Usernames can't contain spaces";
+      nextErrors.username = t("signup.errorUsernameSpaces");
     } else if (!usernameFormatValid) {
-      nextErrors.username = "Use 3-30 letters, numbers, dots, dashes or underscores";
+      nextErrors.username = t("signup.errorUsernameFormat");
     } else if (usernameStatus === "taken") {
-      nextErrors.username = "That username is taken";
+      nextErrors.username = t("signup.usernameTaken");
     }
 
     const age = calculateAge(dob);
     if (age === null) {
-      nextErrors.dob = "Enter your date of birth";
+      nextErrors.dob = t("signup.errorDob");
     } else if (age < MIN_AGE) {
-      nextErrors.dob = `You must be at least ${MIN_AGE} to join MadGigz`;
+      nextErrors.dob = t("signup.errorTooYoung", { age: MIN_AGE });
     }
 
     setErrors(nextErrors);
@@ -151,18 +172,18 @@ function CompleteProfileForm() {
 
     if (error) {
       console.error("complete_onboarding failed:", error.message);
-      setErrors({ form: "Something went wrong saving that. Try again?" });
+      setErrors({ form: t("completeProfile.errorGeneric") });
       return;
     }
 
     if (data !== "ok") {
-      const mapped = RPC_ERRORS[data as string];
-      if (mapped) {
-        setErrors({ [mapped.field]: mapped.message });
-        if (mapped.field === "username") setCheckedName({ name: username, available: false });
+      const field = RPC_ERROR_FIELDS[data as string];
+      if (field) {
+        setErrors({ [field]: rpcMessage(data as string) });
+        if (field === "username") setCheckedName({ name: username, available: false });
       } else {
         console.error("complete_onboarding returned:", data);
-        setErrors({ form: "Something went wrong saving that. Try again?" });
+        setErrors({ form: t("completeProfile.errorGeneric") });
       }
       return;
     }
@@ -177,14 +198,12 @@ function CompleteProfileForm() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <h1 className="font-display mt-8 text-3xl text-foreground">Nearly there</h1>
-      <p className="mt-1 text-sm text-muted">
-        Google doesn&apos;t tell us these bits, so we need to ask.
-      </p>
+      <h1 className="font-display mt-8 text-3xl text-foreground">{t("completeProfile.title")}</h1>
+      <p className="mt-1 text-sm text-muted">{t("completeProfile.subtitle")}</p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <div className="flex flex-col gap-2">
-          <span className="font-heading text-sm text-muted">I&apos;m here as a</span>
+          <span className="font-heading text-sm text-muted">{t("completeProfile.roleLabel")}</span>
           <div className="flex gap-3">
             {(["fan", "artist"] as const).map((option) => (
               <button
@@ -200,39 +219,34 @@ function CompleteProfileForm() {
                     : "bg-surface text-muted"
                 }`}
               >
-                {option}
+                {option === "artist" ? t("completeProfile.roleArtist") : t("completeProfile.roleFan")}
               </button>
             ))}
           </div>
           {role === "artist" && (
-            <p className="text-xs text-muted">
-              You&apos;ll be asked to claim your artist profile next. Shows stay hidden until
-              we&apos;ve checked it over.
-            </p>
+            <p className="text-xs text-muted">{t("completeProfile.artistNote")}</p>
           )}
         </div>
 
         <Input
-          label="Username"
+          label={t("signup.usernameLabel")}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           error={errors.username}
           autoComplete="username"
-          placeholder="hardfuse"
+          placeholder={t("signup.usernamePlaceholder")}
         />
         {!errors.username &&
           (usernameStatus === "taken" ? (
-            <p className="-mt-3 text-xs text-danger">That username is taken</p>
+            <p className="-mt-3 text-xs text-danger">{t("signup.usernameTaken")}</p>
           ) : usernameStatus === "available" ? (
-            <p className="-mt-3 text-xs text-accent">Username available</p>
+            <p className="-mt-3 text-xs text-accent">{t("signup.usernameAvailable")}</p>
           ) : (
-            <p className="-mt-3 text-xs text-muted">
-              No spaces. Letters, numbers, dots, dashes and underscores.
-            </p>
+            <p className="-mt-3 text-xs text-muted">{t("signup.usernameHint")}</p>
           ))}
 
         <Input
-          label="Date of birth"
+          label={t("signup.dobLabel")}
           type="date"
           value={dob}
           onChange={(e) => setDob(e.target.value)}
@@ -243,7 +257,7 @@ function CompleteProfileForm() {
         {errors.form && <p className="text-sm text-danger">{errors.form}</p>}
 
         <Button type="submit" className="mt-2" disabled={submitting}>
-          {submitting ? "Saving..." : "Finish"}
+          {submitting ? t("common.saving") : t("completeProfile.submit")}
         </Button>
       </form>
     </div>

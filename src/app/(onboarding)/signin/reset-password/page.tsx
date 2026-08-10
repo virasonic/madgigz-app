@@ -5,8 +5,10 @@ import { FormEvent, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 export default function ResetPasswordPage() {
+  const { t } = useT();
   const router = useRouter();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -17,8 +19,8 @@ export default function ResetPasswordPage() {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
 
-    if (newPassword.length < 8) nextErrors.newPassword = "Use at least 8 characters";
-    if (confirmPassword !== newPassword) nextErrors.confirmPassword = "Passwords don't match";
+    if (newPassword.length < 8) nextErrors.newPassword = t("signup.errorPassword");
+    if (confirmPassword !== newPassword) nextErrors.confirmPassword = t("signup.errorConfirm");
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -38,12 +40,12 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <h1 className="font-display mt-8 text-3xl text-foreground">Set a new password</h1>
-      <p className="mt-1 text-sm text-muted">You&apos;re verified — choose a new password.</p>
+      <h1 className="font-display mt-8 text-3xl text-foreground">{t("resetPassword.title")}</h1>
+      <p className="mt-1 text-sm text-muted">{t("resetPassword.subtitle")}</p>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <Input
-          label="New password"
+          label={t("resetPassword.newPasswordLabel")}
           isPassword
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
@@ -51,7 +53,7 @@ export default function ResetPasswordPage() {
           autoComplete="new-password"
         />
         <Input
-          label="Confirm new password"
+          label={t("resetPassword.confirmNewPasswordLabel")}
           isPassword
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
@@ -60,7 +62,7 @@ export default function ResetPasswordPage() {
         />
 
         <Button type="submit" className="mt-2" disabled={submitting}>
-          {submitting ? "Saving..." : "Save password"}
+          {submitting ? t("common.saving") : t("resetPassword.submit")}
         </Button>
       </form>
     </div>

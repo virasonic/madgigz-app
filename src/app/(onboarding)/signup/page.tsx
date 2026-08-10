@@ -10,6 +10,7 @@ import GoogleButton from "@/components/auth/GoogleButton";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/site";
 import { verifyTurnstileToken } from "./turnstile-actions";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -61,6 +62,7 @@ function calculateAge(dob: string): number | null {
 }
 
 function SignUpForm() {
+  const { t } = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const role: Role = isRole(searchParams.get("role"))
@@ -120,27 +122,27 @@ function SignUpForm() {
     const nextErrors: Record<string, string> = {};
 
     if (!username.trim()) {
-      nextErrors.username = "Username is required";
+      nextErrors.username = t("signup.errorUsernameRequired");
     } else if (/\s/.test(username)) {
-      nextErrors.username = "Usernames can't contain spaces";
+      nextErrors.username = t("signup.errorUsernameSpaces");
     } else if (!USERNAME_PATTERN.test(username)) {
-      nextErrors.username = "Use 3-30 letters, numbers, dots, dashes or underscores";
+      nextErrors.username = t("signup.errorUsernameFormat");
     } else if (usernameStatus === "taken") {
-      nextErrors.username = "That username is taken";
+      nextErrors.username = t("signup.usernameTaken");
     }
-    if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = "Enter a valid email";
-    if (password.length < 8) nextErrors.password = "Use at least 8 characters";
-    if (confirmPassword !== password) nextErrors.confirmPassword = "Passwords don't match";
+    if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = t("signup.errorEmail");
+    if (password.length < 8) nextErrors.password = t("signup.errorPassword");
+    if (confirmPassword !== password) nextErrors.confirmPassword = t("signup.errorConfirm");
 
     const age = calculateAge(dob);
     if (age === null) {
-      nextErrors.dob = "Enter your date of birth";
+      nextErrors.dob = t("signup.errorDob");
     } else if (age < MIN_AGE) {
-      nextErrors.dob = `You must be at least ${MIN_AGE} to join MadGigz`;
+      nextErrors.dob = t("signup.errorTooYoung", { age: MIN_AGE });
     }
 
     if (TURNSTILE_SITE_KEY && !turnstileToken) {
-      nextErrors.captcha = "Complete the verification below";
+      nextErrors.captcha = t("signup.errorCaptcha");
     }
 
     setErrors(nextErrors);
@@ -154,7 +156,7 @@ function SignUpForm() {
       const { success } = await verifyTurnstileToken(turnstileToken);
       if (!success) {
         setSubmitting(false);
-        setErrors({ captcha: "Verification failed - please try again" });
+        setErrors({ captcha: t("signup.errorCaptchaFailed") });
         turnstileRef.current?.reset();
         setTurnstileToken(null);
         return;
@@ -169,7 +171,7 @@ function SignUpForm() {
     if (stillAvailable === false) {
       setSubmitting(false);
       setCheckedName({ name: username, available: false });
-      setErrors({ username: "That username is taken" });
+      setErrors({ username: t("signup.usernameTaken") });
       return;
     }
 
@@ -194,7 +196,7 @@ function SignUpForm() {
       const availableNow = await isUsernameAvailable(supabase, username);
       if (availableNow === false) {
         setCheckedName({ name: username, available: false });
-        setErrors({ username: "That username was just taken - try another" });
+        setErrors({ username: t("signup.usernameJustTaken") });
       } else {
         setErrors({ email: error.message });
       }
@@ -215,49 +217,45 @@ function SignUpForm() {
           role === "artist" ? "bg-accent-dark text-foreground" : "bg-primary text-foreground"
         }`}
       >
-        {role === "artist" ? "Artist" : "Fan"}
+        {role === "artist" ? t("signup.artistBadge") : t("signup.fanBadge")}
       </span>
 
-      <h1 className="font-display mt-6 text-3xl text-foreground">Create your account</h1>
-      <p className="mt-1 text-sm text-muted">
-        Let&apos;s get you set up in a minute.
-      </p>
+      <h1 className="font-display mt-6 text-3xl text-foreground">{t("signup.title")}</h1>
+      <p className="mt-1 text-sm text-muted">{t("signup.subtitle")}</p>
 
       {/* Above the form deliberately: it is three taps against seven fields,
           and burying the quicker route under the slower one helps nobody. The
           role picked on the landing page rides along so the completion screen
           can default to it. */}
       <div className="mt-6">
-        <GoogleButton role={role} next={next} label="Sign up with Google" />
+        <GoogleButton role={role} next={next} label={t("signup.withGoogle")} />
       </div>
 
       <div className="mt-6 flex items-center gap-3">
         <span className="h-px flex-1 bg-muted/20" />
-        <span className="text-xs uppercase tracking-wide text-muted">or with email</span>
+        <span className="text-xs uppercase tracking-wide text-muted">{t("signup.orWithEmail")}</span>
         <span className="h-px flex-1 bg-muted/20" />
       </div>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <Input
-          label="Username"
+          label={t("signup.usernameLabel")}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           error={errors.username}
           autoComplete="username"
-          placeholder="hardfuse"
+          placeholder={t("signup.usernamePlaceholder")}
         />
         {!errors.username &&
           (usernameStatus === "taken" ? (
-            <p className="-mt-3 text-xs text-danger">That username is taken</p>
+            <p className="-mt-3 text-xs text-danger">{t("signup.usernameTaken")}</p>
           ) : usernameStatus === "available" ? (
-            <p className="-mt-3 text-xs text-accent">Username available</p>
+            <p className="-mt-3 text-xs text-accent">{t("signup.usernameAvailable")}</p>
           ) : (
-            <p className="-mt-3 text-xs text-muted">
-              No spaces. Letters, numbers, dots, dashes and underscores.
-            </p>
+            <p className="-mt-3 text-xs text-muted">{t("signup.usernameHint")}</p>
           ))}
         <Input
-          label="Email"
+          label={t("signup.emailLabel")}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -265,7 +263,7 @@ function SignUpForm() {
           autoComplete="email"
         />
         <Input
-          label="Date of birth"
+          label={t("signup.dobLabel")}
           type="date"
           value={dob}
           onChange={(e) => setDob(e.target.value)}
@@ -273,7 +271,7 @@ function SignUpForm() {
           max={TODAY.toISOString().slice(0, 10)}
         />
         <Input
-          label="Password"
+          label={t("signup.passwordLabel")}
           isPassword
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -281,7 +279,7 @@ function SignUpForm() {
           autoComplete="new-password"
         />
         <Input
-          label="Confirm password"
+          label={t("signup.confirmPasswordLabel")}
           isPassword
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
@@ -305,14 +303,14 @@ function SignUpForm() {
         )}
 
         <Button type="submit" className="mt-2" disabled={submitting}>
-          {submitting ? "Creating account..." : "Continue"}
+          {submitting ? t("signup.submitting") : t("signup.submit")}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">
-        Already have an account?{" "}
+        {t("signup.haveAccount")}{" "}
         <Link href="/signin" className="font-heading text-foreground">
-          Sign in
+          {t("common.signIn")}
         </Link>
       </p>
     </div>

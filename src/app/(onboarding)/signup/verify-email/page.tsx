@@ -5,8 +5,10 @@ import { Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/site";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 function VerifyEmailContent() {
+  const { t } = useT();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
   // Kept on the resend so a second link lands the person on the same event the
@@ -30,15 +32,15 @@ function VerifyEmailContent() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center text-center">
-      <h1 className="font-display text-3xl text-foreground">Check your inbox</h1>
+      <h1 className="font-display text-3xl text-foreground">{t("common.checkInbox")}</h1>
       <p className="mt-2 text-sm text-muted">
-        We sent a confirmation link to <span className="text-foreground">{email}</span>.
-        Click it to finish setting up your account.
+        {t("verifyEmail.sentTo")} <span className="text-foreground">{email}</span>.{" "}
+        {t("verifyEmail.clickToFinish")}
       </p>
 
       <div className="mt-8 w-full max-w-xs">
         <Button variant="ghost" onClick={handleResend}>
-          {resent ? "Link resent" : "Resend link"}
+          {resent ? t("verifyEmail.resent") : t("verifyEmail.resend")}
         </Button>
       </div>
     </div>

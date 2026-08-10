@@ -14,6 +14,9 @@ export const en = {
     continue: "Continue",
     loading: "Loading...",
     retry: "Try again",
+    checkInbox: "Check your inbox",
+    optional: "(optional)",
+    close: "Close",
   },
 
   language: {
@@ -82,6 +85,8 @@ export const en = {
     errorDob: "Enter your date of birth",
     errorTooYoung: "You must be at least {age} to join MadGigz",
     errorCaptcha: "Complete the verification below",
+    errorCaptchaFailed: "Verification failed - please try again",
+    usernameJustTaken: "That username was just taken - try another",
   },
 
   settings: {
@@ -99,5 +104,76 @@ export const en = {
     saved: "Saved",
     logOut: "Log Out",
     deleteAccount: "Delete my account",
+  },
+
+  verifyEmail: {
+    // title reuses common.checkInbox
+    sentTo: "We sent a confirmation link to",
+    clickToFinish: "Click it to finish setting up your account.",
+    resend: "Resend link",
+    resent: "Link resent",
+  },
+
+  forgotPassword: {
+    title: "Reset your password",
+    subtitle: "We'll send a link to your email.",
+    submit: "Send reset link",
+    submitting: "Sending...",
+    backToSignIn: "Back to sign in",
+    sentTo: "We sent a password reset link to",
+    resend: "Resend link",
+  },
+
+  resetPassword: {
+    title: "Set a new password",
+    subtitle: "You're verified — choose a new password.",
+    newPasswordLabel: "New password",
+    confirmNewPasswordLabel: "Confirm new password",
+    submit: "Save password",
+  },
+
+  completeProfile: {
+    title: "Nearly there",
+    subtitle: "Google doesn't tell us these bits, so we need to ask.",
+    roleLabel: "I'm here as a",
+    roleFan: "fan",
+    roleArtist: "artist",
+    artistNote:
+      "You'll be asked to claim your artist profile next. Shows stay hidden until we've checked it over.",
+    submit: "Finish",
+    errorUsernameRequired: "Pick a username",
+    errorGeneric: "Something went wrong saving that. Try again?",
+    errorAlreadyComplete: "This profile is already set up - try signing in.",
+    errorNotSignedIn: "Your session expired. Sign in again to continue.",
+  },
+
+  artistClaim: {
+    badge: "Artist",
+    title: "Claim your profile",
+    subtitle: "Help us verify you're really you.",
+    artistNameLabel: "Artist name",
+    bioLabel: "Bio",
+    bioPlaceholder: "A line or two for fans browsing your shows",
+    socialHeading: "Social links",
+    socialHint: "One is enough. Add more if you want them on your profile.",
+    socialPlaceholder: "@yourname",
+    twitterLabel: "Twitter / X",
+    streamingHeading: "Streaming & YouTube",
+    spotifyPlaceholder: "Artist profile link",
+    youtubePlaceholder: "Channel link",
+    evidenceHeading: "Prove the profile is yours",
+    evidenceIntro: "Any one of these works:",
+    evidenceItem1: "A screenshot of your Spotify for Artists dashboard — the clearest one",
+    evidenceItem2: "Song credits on Spotify showing your artist name",
+    evidenceItem3: "A screenshot showing you logged in to the social account you listed above",
+    evidencePrivate: "Only we see this, and it's never shown on your profile.",
+    evidencePicked: "{name} — tap to replace",
+    evidenceEmpty: "Tap to upload a screenshot or document",
+    submit: "Submit for review",
+    submitting: "Submitting...",
+    errorArtistName: "Artist name is required",
+    errorSocial: "Add at least one social link",
+    errorEvidence: "Upload evidence to verify your profile",
+    errorEvidenceSave: "Couldn't save that file. Please try again.",
   },
 };

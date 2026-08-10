@@ -14,6 +14,9 @@ export const es: Messages = {
     continue: "Continuar",
     loading: "Cargando...",
     retry: "Reintentar",
+    checkInbox: "Revisa tu correo",
+    optional: "(opcional)",
+    close: "Cerrar",
   },
 
   language: {
@@ -82,6 +85,8 @@ export const es: Messages = {
     errorDob: "Introduce tu fecha de nacimiento",
     errorTooYoung: "Debes tener al menos {age} años para unirte a MadGigz",
     errorCaptcha: "Completa la verificación de abajo",
+    errorCaptchaFailed: "La verificación falló; inténtalo de nuevo",
+    usernameJustTaken: "Ese usuario acaba de cogerse; prueba con otro",
   },
 
   settings: {
@@ -99,5 +104,75 @@ export const es: Messages = {
     saved: "Guardados",
     logOut: "Cerrar sesión",
     deleteAccount: "Eliminar mi cuenta",
+  },
+
+  verifyEmail: {
+    sentTo: "Te enviamos un enlace de confirmación a",
+    clickToFinish: "Haz clic para terminar de configurar tu cuenta.",
+    resend: "Reenviar enlace",
+    resent: "Enlace reenviado",
+  },
+
+  forgotPassword: {
+    title: "Restablece tu contraseña",
+    subtitle: "Te enviaremos un enlace a tu email.",
+    submit: "Enviar enlace",
+    submitting: "Enviando...",
+    backToSignIn: "Volver a iniciar sesión",
+    sentTo: "Te enviamos un enlace para restablecer la contraseña a",
+    resend: "Reenviar enlace",
+  },
+
+  resetPassword: {
+    title: "Crea una contraseña nueva",
+    subtitle: "Estás verificado: elige una contraseña nueva.",
+    newPasswordLabel: "Contraseña nueva",
+    confirmNewPasswordLabel: "Confirmar contraseña nueva",
+    submit: "Guardar contraseña",
+  },
+
+  completeProfile: {
+    title: "Ya casi está",
+    subtitle: "Google no nos da estos datos, así que tenemos que pedirlos.",
+    roleLabel: "Estoy aquí como",
+    roleFan: "fan",
+    roleArtist: "artista",
+    artistNote:
+      "A continuación te pediremos que reclames tu perfil de artista. Tus bolos quedan ocultos hasta que lo revisemos.",
+    submit: "Terminar",
+    errorUsernameRequired: "Elige un usuario",
+    errorGeneric: "Algo salió mal al guardar. ¿Lo intentamos de nuevo?",
+    errorAlreadyComplete: "Este perfil ya está configurado; prueba a iniciar sesión.",
+    errorNotSignedIn: "Tu sesión expiró. Inicia sesión de nuevo para continuar.",
+  },
+
+  artistClaim: {
+    badge: "Artista",
+    title: "Reclama tu perfil",
+    subtitle: "Ayúdanos a verificar que eres tú de verdad.",
+    artistNameLabel: "Nombre artístico",
+    bioLabel: "Bio",
+    bioPlaceholder: "Una línea o dos para los fans que ven tus bolos",
+    socialHeading: "Redes sociales",
+    socialHint: "Con una basta. Añade más si quieres que salgan en tu perfil.",
+    socialPlaceholder: "@tunombre",
+    twitterLabel: "Twitter / X",
+    streamingHeading: "Streaming y YouTube",
+    spotifyPlaceholder: "Enlace a tu perfil de artista",
+    youtubePlaceholder: "Enlace a tu canal",
+    evidenceHeading: "Demuestra que el perfil es tuyo",
+    evidenceIntro: "Vale cualquiera de estos:",
+    evidenceItem1: "Una captura de tu panel de Spotify for Artists — la más clara",
+    evidenceItem2: "Créditos de canciones en Spotify con tu nombre artístico",
+    evidenceItem3: "Una captura con la sesión iniciada en la red social que indicaste arriba",
+    evidencePrivate: "Solo lo vemos nosotros y nunca se muestra en tu perfil.",
+    evidencePicked: "{name} — toca para reemplazar",
+    evidenceEmpty: "Toca para subir una captura o documento",
+    submit: "Enviar a revisión",
+    submitting: "Enviando...",
+    errorArtistName: "El nombre artístico es obligatorio",
+    errorSocial: "Añade al menos un enlace social",
+    errorEvidence: "Sube una prueba para verificar tu perfil",
+    errorEvidenceSave: "No se pudo guardar el archivo. Inténtalo de nuevo.",
   },
 };
