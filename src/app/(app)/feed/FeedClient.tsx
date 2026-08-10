@@ -20,13 +20,11 @@ interface FeedEntry {
   event: EventItem | null;
 }
 
-// One announcement every this-many reels. Frequent enough that a new signup
-// meets one early, rare enough that the feed still belongs to the artists.
-const ANNOUNCEMENT_EVERY = 4;
-
-// ...but never fewer than this, or a feed with almost no artist content yet
-// would say nothing at all to a brand-new account.
-const MIN_ANNOUNCEMENTS = 2;
+// How many unseen announcements sit above the gigs. A few, so a new signup
+// meets "what this is" straight away, but not so many that they scroll past a
+// wall of the app before reaching any actual music. The rest are NOT hidden -
+// they follow the reels, so the whole set is always reachable.
+const TOP_UNSEEN = 3;
 
 // For You is content-only (no bare event posters) - each entry is a content
 // post paired with the show it's actually about. A post whose event isn't in
@@ -59,25 +57,17 @@ function buildForYouFeed(
 
   const unseen = announcements.filter((post) => !seenAnnouncements.has(post.id));
   const seen = announcements.filter((post) => seenAnnouncements.has(post.id));
+  const asEntry = (post: ContentPost): FeedEntry => ({ post, event: null });
 
-  // How many of the set to show at all. Capped against the amount of real
-  // content, because an account with two artist reels was getting ten
-  // explainers in a row - a feed that is mostly the app talking about itself.
-  // The rest surface on their own as artists post more.
-  const budget = Math.min(
-    unseen.length,
-    Math.max(MIN_ANNOUNCEMENTS, Math.floor(sorted.length / ANNOUNCEMENT_EVERY))
-  );
-
+  // Nothing is dropped: a few unseen cards lead, the gigs come next, then any
+  // remaining unseen cards, then the ones already read. As artist content
+  // grows the reels naturally push the trailing block further down, and read
+  // cards drift to the very bottom on their own.
   return [
-    // Unseen first. Someone new should meet "what this is" before scrolling
-    // past three gigs and giving up on working it out.
-    ...unseen.slice(0, budget).map((post) => ({ post, event: null })),
-    // Then the gigs, which are the actual point of the app.
+    ...unseen.slice(0, TOP_UNSEEN).map(asEntry),
     ...sorted,
-    // Already-read cards fall to the bottom rather than disappearing: still
-    // reachable if someone wants to check how tickets work, never in the way.
-    ...seen.map((post) => ({ post, event: null })),
+    ...unseen.slice(TOP_UNSEEN).map(asEntry),
+    ...seen.map(asEntry),
   ];
 }
 
