@@ -93,34 +93,40 @@ export default function ExploreClient({
   }
 
   return (
-    <div className="p-4">
-      <h1 className="font-display mb-4 text-2xl text-foreground">{t("explore.title")}</h1>
+    <div>
+      {/* #106: the title, search and genre chips are pinned so they stay
+          reachable while the grid scrolls beneath. bg-background is opaque, so
+          it covers the event cards passing under it; z-20 keeps it on top. */}
+      <div className="sticky top-0 z-20 bg-background px-4 pt-4 pb-2">
+        <h1 className="font-display mb-4 text-2xl text-foreground">{t("explore.title")}</h1>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={t("explore.searchPlaceholder")}
-        className="mb-4 w-full rounded-2xl border border-muted/20 bg-surface px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
-      />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("explore.searchPlaceholder")}
+          className="mb-4 w-full rounded-2xl border border-muted/20 bg-surface px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
+        />
 
-      {availableGenres.length > 0 && (
-        <div className="mb-4 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {availableGenres.map((genre) => (
-            <button
-              key={genre}
-              onClick={() => setActiveGenre((current) => (current === genre ? null : genre))}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-heading transition-colors ${
-                activeGenre === genre
-                  ? "bg-primary text-foreground"
-                  : "bg-surface text-muted"
-              }`}
-            >
-              {genre}
-            </button>
-          ))}
-        </div>
-      )}
+        {availableGenres.length > 0 && (
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+            {availableGenres.map((genre) => (
+              <button
+                key={genre}
+                onClick={() => setActiveGenre((current) => (current === genre ? null : genre))}
+                className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-heading transition-colors ${
+                  activeGenre === genre
+                    ? "bg-primary text-foreground"
+                    : "bg-surface text-muted"
+                }`}
+              >
+                {genre}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
+      <div className="px-4 pb-4">
       {filteredArtists.length > 0 && (
         <div className="mb-6">
           <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">{t("explore.artistsHeading")}</h2>
@@ -170,6 +176,7 @@ export default function ExploreClient({
           {trimmedQuery ? t("explore.noResults") : t("explore.noEvents")}
         </p>
       )}
+      </div>
 
       {activeEvent && (
         <TicketModal
