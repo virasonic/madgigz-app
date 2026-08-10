@@ -205,6 +205,12 @@ export const es: Messages = {
     sendFeedback: "Enviar comentarios",
     sendFeedbackHint: "Fallo, ayuda o una idea",
     comingSoon: "Pronto",
+    switchToArtist: "Cambiar a cuenta de artista",
+    switchToArtistHint: "Vende entradas, publica",
+    switchConfirmTitle: "¿Hacerte artista?",
+    switchConfirmBody:
+      "Configurarás tu perfil de artista y lo verificaremos antes de que puedas vender entradas. Tus entradas y los artistas que sigues se quedan igual.",
+    switching: "Cambiando...",
   },
 
   profile: {

@@ -204,6 +204,12 @@ export const en = {
     sendFeedback: "Send feedback",
     sendFeedbackHint: "Bug, help or an idea",
     comingSoon: "Soon",
+    switchToArtist: "Switch to artist account",
+    switchToArtistHint: "Sell tickets, post updates",
+    switchConfirmTitle: "Become an artist?",
+    switchConfirmBody:
+      "You'll set up your artist profile and we'll verify it before you can sell tickets. Your tickets and the artists you follow stay exactly as they are.",
+    switching: "Switching...",
   },
 
   profile: {

@@ -14,6 +14,7 @@ import { AppUser, EventItem } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
 import DeleteAccountDialog from "@/components/account/DeleteAccountDialog";
 import FeedbackDialog from "@/components/account/FeedbackDialog";
+import SwitchToArtistRow from "./SwitchToArtistRow";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { LOCALES, LOCALE_LABELS } from "@/lib/i18n/config";
 import { useUrlModal } from "@/lib/useUrlModal";
@@ -127,6 +128,10 @@ function SettingsSheet({
                 <span className="text-xs uppercase text-muted">{t("settings.comingSoon")}</span>
               </div>
             ))}
+
+          {/* Fans can opt into becoming an artist here; it drops them on the
+              same claim form and admin review a new artist goes through. */}
+          {!isArtist && <SwitchToArtistRow />}
 
           {/* Below the real settings, above nothing - it is a thing you reach
               for when something has gone wrong, so it should be findable
