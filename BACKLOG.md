@@ -14,7 +14,7 @@ the same thing across old conversations. Gaps are shipped items.
 | 7 | 105 | **Full web / desktop version** | The app is mobile-first — built and tested at 375px, every screen a single phone-width column. A proper wide-screen experience (multi-column feed/explore, a desktop layout rather than a centred phone) suits fans browsing on a laptop, and is likely what a promoter/venue back-office (#88) wants anyway. **Vir to confirm the intent** — this could instead mean a marketing site on the apex `aurasonic.es`, which is a separate job from restyling the app for wide screens. | Vir to clarify scope. | M–L |
 | 3 | 95 | **Go live on `madgigz.aurasonic.es`** | Decided 10 Aug 2026: the webapp gets a subdomain of the domain Vir already owns, with `aurasonic.es` itself left for the main AuraSonic site. Vercel stays the host. A DNS record and a Vercel domain, then the settings that must move with it — Stripe live keys, a new webhook endpoint, `NEXT_PUBLIC_APP_URL`, and Supabase's redirect allow-list. See below for what breaks quietly if one is missed. | Nothing. Vir's call on when. | M |
 | 4 | 108 | **Pre-production / staging environment** | A second, hosted copy of the app to test big changes against a realistic stack *before* they touch live — because once #95 ships, "test it locally" stops being safe enough. A `staging` (or `preview`) Vercel deployment on its own subdomain, pointed at a **separate Supabase project** (its own DB, its own migrations run first) and **Stripe test mode**, driven by a `.env.staging`. Then the flow becomes: change → deploy to staging → exercise it (the `simulate-users` skill and the probes already take `--env=.env.staging`) → promote to prod. Ties into #103 (staging holds its own set of the same secrets) and gives the user-simulation harness the throwaway project it always wanted. | Nothing. Some one-time setup. | M |
-| 4 | 90 | **"City centric"** | Vir to explain — noted 9 Aug 2026 so it isn't lost. | Vir. | ? |
+| 4 | 90 | **City-centric — the app's core identity** | MadGigz is *local*: a fan sees shows in **their city only**, framed as "You're in Madrid — here's what's on". Launch is **Madrid only**, then cities are switched on **one at a time**. Groundwork is already there — `events.city` and `venues.city` both exist (default `'Madrid'`). The work: a "current city" the app knows (a launched-cities list + how the user's city is set — see note), feed/Explore/This-Week filtered to it, and the city named in the UI. **Later:** a fan can switch cities (travelling), and a touring artist can post shows in another city (venue picker not locked to one city). | Vir has explained it (11 Aug 2026); ready to scope. | L |
 | 5 | 101 | **Live updates (Supabase realtime)** | Nothing on the app is live — the notifications bell, the sold count, and new announcements only change on reload. Principle 3 of the Rauch "rich web apps" piece: push data changes to clients rather than making them ask. Supabase ships realtime subscriptions and we use none. Scope it to the two places a stale number actually *misleads* someone: the unread bell and a show's sold/sold-out state. | Nothing. | M |
 | 7 | 88 | **Promoter & venue flows** | Account types alongside fan/artist, probably web rather than the app. Groundwork exists: admin-created shows already model a show with no `artist_id` managed by its creator, `venues` rows carry a `verified` flag an account could claim, and the artist claim-and-evidence flow is the precedent for verifying someone represents a venue. | Later, your call. Decide ownership first. | L |
 | 8 | 92 | **Band infrastructure (artists ⇄ bands)** | **Artists are people, bands are groups**, and the link is **many-to-many**: an artist plays in several bands, a band has several artist members. So a band is its own profile-like entity (name, photo, socials, its own shows), joined to artist profiles through a `band_members` table (band_id, profile_id, role, share) — not a flag on a profile. Members keep their own artist accounts and appear under each band they're in; a band's shows can also surface on each member's profile. `event_artists` (`addendum_012`) is the precedent for profile↔event tagging, but this is profile↔band↔profile, a new entity and a new answer to "who owns this". Big feature, genuinely useful. The sharp edge is money, not the graph — see below. | Not now, by Vir's call. Design the payout model first. | XL |
@@ -124,6 +124,37 @@ Two smaller questions ride along: whether a band show appears on each member's
 own profile as well as the band's, and whether the artist verification flow runs
 on the band or on each member (a band anyone can join is an impersonation route
 into an established name). Neither is hard, but both shape the schema.
+
+**#90 is the app's whole premise, so build the frame now even though Madrid is
+the only city.** Explained by Vir on 11 Aug 2026: MadGigz is local — a fan opens
+it and sees *their* city's shows, told plainly ("You're in Madrid"). Launch is
+Madrid-only and new cities are turned on one at a time. The data is ready
+(`events.city`, `venues.city`, both default `'Madrid'`), so this is three
+decisions, not a schema problem:
+
+1. **What "cities exist" means.** A small `cities` table (or an allow-list) with
+   a launched flag, so switching on Barcelona later is a data change, not a
+   deploy. Everything already says Madrid, so seeding it is trivial.
+2. **How a fan's current city is chosen.** Options, cheapest first: a manual
+   picker that defaults to Madrid and is remembered (a cookie, like locale);
+   browser geolocation → nearest launched city as a *suggestion* only (needs a
+   permission prompt and a reverse-geocode, and must fall back gracefully);
+   or IP-based (rough, no prompt). MVP is the picker — with one city it's just a
+   label, but it puts the plumbing in. Geolocation is a later nicety, and it's
+   personal data, so it lives under the same GDPR rules as #58.
+3. **Where the filter goes.** Feed, Explore and This-Week query by the current
+   city instead of all events; the city is named in the header. One filter added
+   in one place, because the column already exists.
+
+**The two "later" halves the frame has to leave room for:** a fan *switching*
+city while travelling (the picker becomes a real control, and "your city" vs
+"the city you're browsing" become two different things — saved/tickets stay
+yours, the feed follows the browsed city), and a touring artist *posting into
+another city* (the Add-Show venue picker can't stay locked to one city, and a
+venue may need creating in a city the artist doesn't live in). Neither is MVP,
+but choosing the "current city" representation now (a value the whole app reads,
+not a hardcoded `'Madrid'`) is what keeps both from being a rewrite. Size is L
+because of these, not the launch cut, which is closer to M.
 
 **#58 collects personal data.** Geolocation and login history are personal data
 under GDPR, so they fall under the retention and erasure rules `addendum_019`
