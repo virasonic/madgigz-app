@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { getLocale } from "@/lib/i18n/server";
+import { StripeModeProvider } from "@/lib/stripe-mode";
 
 const galdernExtraBold = localFont({
   src: "./fonts/Galdern-ExtraBold.otf",
@@ -52,13 +53,18 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const locale = await getLocale();
+  // Server-only env, read here so the whole app can show a soft-launch payment
+  // notice. Falls to false (live) if the key is anything but sk_test.
+  const stripeTestMode = process.env.STRIPE_SECRET_KEY?.startsWith("sk_test") ?? false;
   return (
     <html
       lang={locale}
       className={`${galdernExtraBold.variable} ${galdernMedium.variable} ${dmSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <LocaleProvider locale={locale}>{children}</LocaleProvider>
+        <LocaleProvider locale={locale}>
+          <StripeModeProvider testMode={stripeTestMode}>{children}</StripeModeProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

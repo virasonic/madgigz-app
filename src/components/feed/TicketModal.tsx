@@ -10,6 +10,7 @@ import ShareEventButton from "./ShareEventButton";
 import LikeButton from "./LikeButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
+import { useStripeTestMode } from "@/lib/stripe-mode";
 
 type Tab = "tickets" | "info";
 
@@ -44,8 +45,9 @@ export default function TicketModal({
   const { t, locale } = useT();
   const dl = dateLocale(locale);
   // A test-mode Stripe key can't charge a real card, so this is a heads-up, not
-  // a guard. Reads the publishable key's prefix, so it turns itself off on live.
-  const isTestMode = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith("pk_test") ?? false;
+  // a guard. Sourced server-side from STRIPE_SECRET_KEY, so it turns itself off
+  // the moment live keys are set.
+  const isTestMode = useStripeTestMode();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [quantity, setQuantity] = useState(1);
   const [purchased, setPurchased] = useState(false);
