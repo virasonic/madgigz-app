@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchCurrentUser } from "@/lib/supabase/queries";
 import { EventItem, EventRow, mapEvent, mapTicket, Ticket, TicketRow } from "@/lib/types";
 import { canActAsArtist } from "@/lib/roles";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 type ScanResult =
   | { status: "valid"; ticket: Ticket; event: EventItem }
@@ -17,6 +18,7 @@ type ScanResult =
   | { status: "invalid" };
 
 export default function ScanTicketsPage() {
+  const { t } = useT();
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -61,9 +63,7 @@ export default function ScanTicketsPage() {
         scanLoop();
       } catch {
         if (!cancelled) {
-          setCameraError(
-            "Camera access is needed to scan tickets. Check your browser's permissions and try again."
-          );
+          setCameraError(t("scan.cameraError"));
         }
       }
     }
@@ -133,6 +133,9 @@ export default function ScanTicketsPage() {
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
+    // t only supplies the permission-error copy; excluded so a language change
+    // mid-scan doesn't tear down and restart the camera.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authorized]);
 
   function handleScanNext() {
@@ -156,9 +159,9 @@ export default function ScanTicketsPage() {
   return (
     <div className="flex h-full flex-col p-4">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="font-display text-2xl text-foreground">Scan Tickets</h1>
+        <h1 className="font-display text-2xl text-foreground">{t("scan.title")}</h1>
         <Link href="/profile" className="text-sm text-accent">
-          Done
+          {t("common.done")}
         </Link>
       </div>
 
@@ -177,17 +180,13 @@ export default function ScanTicketsPage() {
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80 p-6 text-center">
               {result.status === "invalid" ? (
                 <>
-                  <p className="font-display text-2xl text-danger">Invalid code</p>
-                  <p className="text-sm text-muted">
-                    This QR code doesn&apos;t match a MadGigz ticket.
-                  </p>
+                  <p className="font-display text-2xl text-danger">{t("scan.invalidTitle")}</p>
+                  <p className="text-sm text-muted">{t("scan.invalidBody")}</p>
                 </>
               ) : result.status === "cancelled" ? (
                 <>
-                  <p className="font-display text-2xl text-danger">Ticket refunded</p>
-                  <p className="text-sm text-muted">
-                    This ticket was refunded and is no longer valid - do not admit.
-                  </p>
+                  <p className="font-display text-2xl text-danger">{t("scan.refundedTitle")}</p>
+                  <p className="text-sm text-muted">{t("scan.refundedBody")}</p>
                   <p className="text-foreground">{result.event.title}</p>
                 </>
               ) : (
@@ -199,22 +198,22 @@ export default function ScanTicketsPage() {
                   >
                     {result.status === "duplicate"
                       ? checkedInJustNow
-                        ? "Checked in"
-                        : "Already checked in"
-                      : "Valid ticket"}
+                        ? t("scan.checkedIn")
+                        : t("scan.alreadyCheckedIn")
+                      : t("scan.validTicket")}
                   </p>
                   <p className="text-foreground">{result.event.title}</p>
                   <p className="text-sm text-muted">
                     {result.event.venue} · {result.ticket.quantity}{" "}
-                    {result.ticket.quantity === 1 ? "ticket" : "tickets"}
+                    {result.ticket.quantity === 1 ? t("ticket.one") : t("ticket.many")}
                   </p>
                   {result.status === "valid" && !checkedInJustNow && (
-                    <Button onClick={handleCheckIn}>Check In</Button>
+                    <Button onClick={handleCheckIn}>{t("scan.checkIn")}</Button>
                   )}
                 </>
               )}
               <Button variant="ghost" onClick={handleScanNext}>
-                Scan Next
+                {t("scan.scanNext")}
               </Button>
             </div>
           )}

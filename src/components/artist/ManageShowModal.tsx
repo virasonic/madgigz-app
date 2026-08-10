@@ -27,6 +27,7 @@ import {
   fetchVenues,
 } from "@/lib/supabase/queries";
 import { Genre, PublicArtistProfile, Venue } from "@/lib/types";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 // <input type="time"> wants HH:MM; Postgres hands back HH:MM:SS.
 function toTimeInput(value: string) {
@@ -63,6 +64,7 @@ export default function ManageShowModal({
   onChanged,
   canManage = true,
 }: ManageShowModalProps) {
+  const { t } = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [posts, setPosts] = useState<ContentPost[]>([]);
@@ -140,11 +142,11 @@ export default function ManageShowModal({
     if (!selected) return;
 
     if (!mediaTypeForFile(selected)) {
-      setError("Choose a photo or video");
+      setError(t("addContent.errorChooseMedia"));
       return;
     }
     if (selected.size > MAX_CONTENT_FILE_BYTES) {
-      setError("Choose a smaller file (under 50MB)");
+      setError(t("addContent.errorTooLarge"));
       return;
     }
 
@@ -156,7 +158,7 @@ export default function ManageShowModal({
 
   async function handlePost() {
     if (!file) {
-      setError("Add a photo or video to post");
+      setError(t("addContent.errorAddMedia"));
       return;
     }
     const mediaType = mediaTypeForFile(file);
@@ -170,7 +172,7 @@ export default function ManageShowModal({
 
     if (!user) {
       setPosting(false);
-      setError("You need to be signed in to post");
+      setError(t("addContent.errorSignedIn"));
       return;
     }
 
@@ -201,7 +203,7 @@ export default function ManageShowModal({
   }
 
   async function handleDeletePost(post: ContentPost) {
-    if (!window.confirm("Delete this post? This can't be undone.")) return;
+    if (!window.confirm(t("manageShow.deletePostConfirm"))) return;
 
     setDeletingPostId(post.id);
     const supabase = createClient();
@@ -230,7 +232,7 @@ export default function ManageShowModal({
     setTogglingVisibility(false);
 
     if (error || !data || data.length === 0) {
-      setVisibilityError("Couldn't change visibility. Please try again.");
+      setVisibilityError(t("manageShow.visibilityError"));
       return;
     }
 
@@ -308,9 +310,7 @@ export default function ManageShowModal({
 
     if (deleteError || !data || data.length === 0) {
       setRemoving(false);
-      setRemoveError(
-        "This show couldn't be deleted - it has ticket records attached. Hide it instead, or email support@aurasonic.es."
-      );
+      setRemoveError(t("manageShow.deleteError"));
       // The counts are the thing that decides which options are offered, so
       // re-read them: they are what was out of date if we got here.
       setTicketCounts(await fetchShowTicketCounts(supabase, show.id));
@@ -351,8 +351,8 @@ export default function ManageShowModal({
         {!canManage && (show.cancelled || !show.active) && (
           <p className="mt-2 rounded-xl bg-primary/10 px-3 py-2 text-xs text-primary">
             {show.cancelled
-              ? "This show has been cancelled."
-              : "This show is currently hidden from fans."}
+              ? t("manageShow.cancelledNotice")
+              : t("manageShow.hiddenNotice")}
           </p>
         )}
 
@@ -363,7 +363,7 @@ export default function ManageShowModal({
               tab === "overview" ? "bg-primary text-foreground" : "text-muted"
             }`}
           >
-            Overview
+            {t("manageShow.tabOverview")}
           </button>
           <button
             onClick={() => setTab("content")}
@@ -371,7 +371,7 @@ export default function ManageShowModal({
               tab === "content" ? "bg-primary text-foreground" : "text-muted"
             }`}
           >
-            Content
+            {t("manageShow.tabContent")}
           </button>
           {canManage && (
             <button
@@ -380,7 +380,7 @@ export default function ManageShowModal({
                 tab === "buyers" ? "bg-primary text-foreground" : "text-muted"
               }`}
             >
-              Buyers
+              {t("manageShow.tabBuyers")}
             </button>
           )}
         </div>
@@ -389,11 +389,11 @@ export default function ManageShowModal({
           <div className="mt-6 flex flex-col gap-5">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-muted">Location</p>
+                <p className="text-muted">{t("manageShow.location")}</p>
                 <p className="text-foreground">{details.venue}</p>
               </div>
               <div>
-                <p className="text-muted">Date &amp; time</p>
+                <p className="text-muted">{t("manageShow.dateTime")}</p>
                 <p className="text-foreground">
                   {formatDate(details.date)}, {toTimeInput(details.time)}
                 </p>
@@ -402,7 +402,7 @@ export default function ManageShowModal({
 
             <div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted">Capacity</span>
+                <span className="text-muted">{t("manageShow.capacity")}</span>
                 <span className="text-foreground">
                   {show.sold} / {show.capacity}
                 </span>
@@ -417,28 +417,28 @@ export default function ManageShowModal({
 
             {canManage && show.ticketing?.mode !== "external" && (
               <div className="flex flex-col gap-2">
-                <p className="text-sm text-muted">Ticket price</p>
+                <p className="text-sm text-muted">{t("manageShow.ticketPrice")}</p>
                 <FeeBreakdown priceEuros={show.price} />
               </div>
             )}
 
             <div>
-              <p className="text-sm text-muted">Lineup</p>
+              <p className="text-sm text-muted">{t("manageShow.lineup")}</p>
               <p className="mt-1 text-sm text-foreground/90">{details.lineup.join(" · ")}</p>
             </div>
 
             <div>
-              <p className="text-sm text-muted">Description</p>
+              <p className="text-sm text-muted">{t("manageShow.description")}</p>
               <p className="mt-1 text-sm text-foreground/90">{details.description}</p>
             </div>
 
             {editing ? (
               <div className="flex flex-col gap-4 rounded-2xl bg-background p-4">
-                <p className="font-heading text-sm text-foreground">Edit details</p>
+                <p className="font-heading text-sm text-foreground">{t("manageShow.editDetails")}</p>
 
                 <div className="flex gap-2">
                   <label className="flex flex-1 flex-col gap-1.5">
-                    <span className="text-xs text-muted">Date</span>
+                    <span className="text-xs text-muted">{t("manageShow.date")}</span>
                     <input
                       type="date"
                       value={draft.date}
@@ -447,7 +447,7 @@ export default function ManageShowModal({
                     />
                   </label>
                   <label className="flex flex-1 flex-col gap-1.5">
-                    <span className="text-xs text-muted">Time</span>
+                    <span className="text-xs text-muted">{t("manageShow.time")}</span>
                     <input
                       type="time"
                       value={toTimeInput(draft.time)}
@@ -459,13 +459,18 @@ export default function ManageShowModal({
 
                 {show.sold > 0 && (
                   <p className="text-xs text-muted">
-                    {show.sold} {show.sold === 1 ? "person has" : "people have"} already bought
-                    tickets - let them know yourself if you move the date or time.
+                    {t("manageShow.soldWarning", {
+                      count: show.sold,
+                      people:
+                        show.sold === 1
+                          ? t("manageShow.soldWarningOne")
+                          : t("manageShow.soldWarningMany"),
+                    })}
                   </p>
                 )}
 
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-xs text-muted">Venue</span>
+                  <span className="text-xs text-muted">{t("manageShow.venue")}</span>
                   <VenuePicker
                     value={venueDraft}
                     onChange={setVenueDraft}
@@ -475,7 +480,7 @@ export default function ManageShowModal({
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <span className="text-xs text-muted">Genres</span>
+                  <span className="text-xs text-muted">{t("manageShow.genres")}</span>
                   <GenrePicker
                     genres={allGenres}
                     selectedIds={genreIds}
@@ -484,7 +489,7 @@ export default function ManageShowModal({
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <span className="text-xs text-muted">Lineup</span>
+                  <span className="text-xs text-muted">{t("manageShow.lineup")}</span>
                   <LineupEditor
                     entries={lineupEntries}
                     onChange={setLineupEntries}
@@ -492,14 +497,11 @@ export default function ManageShowModal({
                     excludeProfileId={show.artistId ?? undefined}
                     compact
                   />
-                  <p className="text-xs text-muted">
-                    Tagged acts get this show on their profile and can post about it. Managing it
-                    stays with you.
-                  </p>
+                  <p className="text-xs text-muted">{t("manageShow.lineupHint")}</p>
                 </div>
 
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-xs text-muted">Description</span>
+                  <span className="text-xs text-muted">{t("manageShow.description")}</span>
                   <textarea
                     value={draft.description}
                     onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
@@ -511,12 +513,11 @@ export default function ManageShowModal({
                 {/* Said out loud rather than just leaving the field out, so it
                     doesn't read as something we forgot to build. */}
                 <p className="text-xs text-muted">
-                  Ticket price can&apos;t be changed after publishing - fans who already bought
-                  paid the listed price, and their receipts and refunds are tied to it. Email{" "}
+                  {t("manageShow.priceLockedLead")}{" "}
                   <a href="mailto:support@aurasonic.es" className="text-accent underline">
                     support@aurasonic.es
                   </a>{" "}
-                  if the price is wrong.
+                  {t("manageShow.priceLockedTail")}
                 </p>
 
                 {editError && <p className="text-sm text-danger">{editError}</p>}
@@ -528,10 +529,10 @@ export default function ManageShowModal({
                     onClick={() => setEditing(false)}
                     disabled={savingEdits}
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button className="flex-1" onClick={handleSaveEdits} disabled={savingEdits}>
-                    {savingEdits ? "Saving..." : "Save changes"}
+                    {savingEdits ? t("common.saving") : t("manageShow.saveChanges")}
                   </Button>
                 </div>
               </div>
@@ -539,11 +540,11 @@ export default function ManageShowModal({
               <div className="flex gap-3">
                 {canManage && (
                   <Button variant="ghost" className="flex-1" onClick={startEditing}>
-                    Edit details
+                    {t("manageShow.editDetails")}
                   </Button>
                 )}
                 <Button className="flex-1" onClick={() => setTab("content")}>
-                  Add Content
+                  {t("manageShow.addContentBtn")}
                 </Button>
               </div>
             )}
@@ -565,13 +566,9 @@ export default function ManageShowModal({
                   disabled={removingTag}
                   className="text-sm font-heading text-danger disabled:opacity-50"
                 >
-                  {removingTag ? "Removing..." : "Remove from my profile"}
+                  {removingTag ? t("manageShow.removing") : t("manageShow.removeFromProfile")}
                 </button>
-                <p className="mt-1 text-xs text-muted">
-                  Takes you off this bill. The show itself is unaffected — it just
-                  stops showing on your profile, and you won&apos;t be able to post
-                  about it.
-                </p>
+                <p className="mt-1 text-xs text-muted">{t("manageShow.removeFromProfileHint")}</p>
               </div>
             )}
 
@@ -581,12 +578,10 @@ export default function ManageShowModal({
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="font-heading text-sm text-foreground">
-                      {active ? "Visible to fans" : "Hidden from fans"}
+                      {active ? t("manageShow.visibleToFans") : t("manageShow.hiddenFromFans")}
                     </p>
                     <p className="mt-0.5 text-xs text-muted">
-                      {active
-                        ? "Showing in the feed and Explore, and on sale."
-                        : "Off the feed and off sale. Tickets already bought still work."}
+                      {active ? t("manageShow.visibleDesc") : t("manageShow.hiddenDesc")}
                     </p>
                   </div>
                   {/* Deliberately not the Button component: its base class sets
@@ -599,7 +594,7 @@ export default function ManageShowModal({
                     disabled={togglingVisibility}
                     className="font-display shrink-0 rounded-full border border-muted/40 px-5 py-2.5 text-sm tracking-wide text-foreground transition-colors duration-150 hover:border-foreground disabled:border-muted/20 disabled:text-muted"
                   >
-                    {togglingVisibility ? "Saving..." : active ? "Hide" : "Unhide"}
+                    {togglingVisibility ? t("common.saving") : active ? t("manageShow.hide") : t("manageShow.unhide")}
                   </button>
                 </div>
                 {visibilityError && <p className="text-sm text-danger">{visibilityError}</p>}
@@ -608,7 +603,7 @@ export default function ManageShowModal({
               {confirmingRemove ? (
                 <div className="flex flex-col gap-3">
                   {ticketCounts === null ? (
-                    <p className="text-sm text-muted">Checking ticket records...</p>
+                    <p className="text-sm text-muted">{t("manageShow.checkingRecords")}</p>
                   ) : ticketCounts.live > 0 ? (
                     // Real money has moved for these tickets, so calling the
                     // show off means a real refund - only the admin's
@@ -616,28 +611,25 @@ export default function ManageShowModal({
                     // here would either strand fans holding a valid ticket, or
                     // fake a refund we cannot actually issue.
                     <p className="text-sm text-muted">
-                      {ticketCounts.live} {ticketCounts.live === 1 ? "ticket has" : "tickets have"}{" "}
-                      been sold for this show, so it can&apos;t be deleted here. Email{" "}
+                      {t("manageShow.soldCantDeleteLead", {
+                        count: ticketCounts.live,
+                        tickets:
+                          ticketCounts.live === 1
+                            ? t("manageShow.soldTicketHas")
+                            : t("manageShow.soldTicketsHave"),
+                      })}{" "}
                       <a href="mailto:support@aurasonic.es" className="text-accent underline">
                         support@aurasonic.es
                       </a>{" "}
-                      and we&apos;ll refund those fans and take the show down for you. You can hide
-                      it in the meantime to stop further sales.
+                      {t("manageShow.soldCantDeleteTail")}
                     </p>
                   ) : ticketCounts.total > 0 ? (
                     // Every ticket was refunded, so nobody is left to strand -
                     // but the rows are the record of money that moved, and they
                     // have to outlive the show. Hiding is the answer here.
-                    <p className="text-sm text-muted">
-                      This show has refunded ticket records attached, which we have to keep for
-                      accounting. It can&apos;t be deleted, but hiding it takes it off the app for
-                      good.
-                    </p>
+                    <p className="text-sm text-muted">{t("manageShow.refundedCantDelete")}</p>
                   ) : (
-                    <p className="text-sm text-danger">
-                      This removes the show and its content permanently. This can&apos;t be
-                      undone.
-                    </p>
+                    <p className="text-sm text-danger">{t("manageShow.deletePermanent")}</p>
                   )}
                   {removeError && <p className="text-sm text-danger">{removeError}</p>}
                   <div className="flex gap-3">
@@ -647,11 +639,11 @@ export default function ManageShowModal({
                       onClick={() => setConfirmingRemove(false)}
                       disabled={removing}
                     >
-                      {ticketCounts && ticketCounts.total === 0 ? "Cancel" : "Close"}
+                      {ticketCounts && ticketCounts.total === 0 ? t("common.cancel") : t("common.close")}
                     </Button>
                     {ticketCounts?.total === 0 && (
                       <Button className="flex-1" onClick={handleDeleteShow} disabled={removing}>
-                        {removing ? "Working..." : "Delete show"}
+                        {removing ? t("manageShow.working") : t("manageShow.deleteShow")}
                       </Button>
                     )}
                   </div>
@@ -661,7 +653,7 @@ export default function ManageShowModal({
                   onClick={() => setConfirmingRemove(true)}
                   className="self-start text-sm font-heading text-danger"
                 >
-                  Remove show
+                  {t("manageShow.removeShow")}
                 </button>
               )}
             </div>
@@ -670,17 +662,23 @@ export default function ManageShowModal({
         ) : tab === "buyers" ? (
           <div className="mt-6 flex flex-col gap-3">
             {buyers === null ? (
-              <p className="text-sm text-muted">Loading buyers...</p>
+              <p className="text-sm text-muted">{t("manageShow.loadingBuyers")}</p>
             ) : buyers.length === 0 ? (
-              <p className="text-sm text-muted">No tickets sold for this show yet.</p>
+              <p className="text-sm text-muted">{t("manageShow.noBuyers")}</p>
             ) : (
               <>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted">
-                    {buyers.length} {buyers.length === 1 ? "order" : "orders"}
+                    {t("manageShow.orders", {
+                      count: buyers.length,
+                      orderWord:
+                        buyers.length === 1 ? t("manageShow.orderOne") : t("manageShow.orderMany"),
+                    })}
                   </span>
                   <span className="text-muted">
-                    {buyers.reduce((sum, b) => sum + b.quantity, 0)} tickets
+                    {t("manageShow.ticketsCount", {
+                      count: buyers.reduce((sum, b) => sum + b.quantity, 0),
+                    })}
                   </span>
                 </div>
                 {buyers.map((buyer) => (
@@ -697,7 +695,7 @@ export default function ManageShowModal({
                           day: "numeric",
                           month: "short",
                         })}{" "}
-                        · {buyer.quantity} {buyer.quantity === 1 ? "ticket" : "tickets"} · €
+                        · {buyer.quantity} {buyer.quantity === 1 ? t("ticket.one") : t("ticket.many")} · €
                         {buyer.pricePaid.toFixed(2)}
                       </p>
                     </div>
@@ -710,7 +708,7 @@ export default function ManageShowModal({
                             : "bg-muted/15 text-muted"
                       }`}
                     >
-                      {buyer.refunded ? "Refunded" : buyer.checkedInAt ? "Checked in" : "Going"}
+                      {buyer.refunded ? t("savedPage.statusRefunded") : buyer.checkedInAt ? t("savedPage.statusCheckedIn") : t("manageShow.statusGoing")}
                     </span>
                   </div>
                 ))}
@@ -730,10 +728,10 @@ export default function ManageShowModal({
                     <video src={previewUrl} className="h-40 w-full object-cover" muted />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element -- local blob preview only
-                    <img src={previewUrl} alt="Post preview" className="h-40 w-full object-cover" />
+                    <img src={previewUrl} alt={t("addContent.previewAlt")} className="h-40 w-full object-cover" />
                   )
                 ) : (
-                  <span className="block px-4 py-6">Tap to add a photo or video</span>
+                  <span className="block px-4 py-6">{t("addContent.tapToAdd")}</span>
                 )}
               </button>
               <input
@@ -747,19 +745,19 @@ export default function ManageShowModal({
               <textarea
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
-                placeholder="Add a caption (optional)..."
+                placeholder={t("addContent.captionPlaceholder")}
                 rows={2}
                 className="w-full rounded-2xl border border-muted/20 bg-background px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {error && <p className="text-sm text-danger">{error}</p>}
               <Button onClick={handlePost} disabled={posting}>
-                {posting ? "Posting..." : "Post"}
+                {posting ? t("addContent.posting") : t("addContent.post")}
               </Button>
             </div>
 
             <div className="flex flex-col gap-3">
               {posts.length === 0 ? (
-                <p className="text-sm text-muted">No posts for this show yet.</p>
+                <p className="text-sm text-muted">{t("manageShow.noPosts")}</p>
               ) : (
                 [...posts].reverse().map((post) => (
                   <div key={post.id} className="flex items-center gap-3 rounded-2xl bg-background p-3">
@@ -781,7 +779,7 @@ export default function ManageShowModal({
                       disabled={deletingPostId === post.id}
                       className="ml-auto shrink-0 text-xs font-heading text-danger disabled:opacity-50"
                     >
-                      {deletingPostId === post.id ? "Deleting..." : "Delete"}
+                      {deletingPostId === post.id ? t("manageShow.deletingPost") : t("manageShow.deletePost")}
                     </button>
                   </div>
                 ))

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Avatar from "@/components/ui/Avatar";
 import { PublicArtistProfile } from "@/lib/types";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 export interface LineupEntry {
   name: string;
@@ -37,6 +38,7 @@ export default function LineupEditor({
   excludeProfileId?: string;
   compact?: boolean;
 }) {
+  const { t } = useT();
   const [openRow, setOpenRow] = useState<number | null>(null);
 
   const taggableArtists = useMemo(
@@ -75,7 +77,7 @@ export default function LineupEditor({
                   value={entry.name}
                   onChange={(e) => update(i, { name: e.target.value, profileId: null })}
                   onFocus={() => setOpenRow(i)}
-                  placeholder={i === 0 ? "Headliner" : "Support act"}
+                  placeholder={i === 0 ? t("pickers.headliner") : t("pickers.supportAct")}
                   className={inputClass}
                 />
                 {suggestions.length > 0 && (
@@ -98,7 +100,7 @@ export default function LineupEditor({
                         <span className="min-w-0 flex-1 truncate text-sm text-foreground">
                           {artist.artistName}
                         </span>
-                        <span className="shrink-0 text-xs text-accent">Tag</span>
+                        <span className="shrink-0 text-xs text-accent">{t("pickers.tag")}</span>
                       </button>
                     ))}
                   </div>
@@ -108,7 +110,7 @@ export default function LineupEditor({
                 <button
                   type="button"
                   onClick={() => onChange(entries.filter((_, j) => j !== i))}
-                  aria-label="Remove from lineup"
+                  aria-label={t("pickers.removeFromLineup")}
                   className={`shrink-0 rounded-${compact ? "xl" : "2xl"} border border-muted/20 px-3 text-muted`}
                 >
                   ×
@@ -118,14 +120,14 @@ export default function LineupEditor({
             {entry.profileId && (
               <div className="flex items-center gap-2 text-xs">
                 <span className="rounded-full bg-accent/15 px-2 py-0.5 font-heading text-accent">
-                  Tagged on MadGigz
+                  {t("pickers.taggedOnMadgigz")}
                 </span>
                 <button
                   type="button"
                   onClick={() => update(i, { name: entry.name, profileId: null })}
                   className="text-muted underline"
                 >
-                  Untag
+                  {t("pickers.untag")}
                 </button>
               </div>
             )}
@@ -137,7 +139,7 @@ export default function LineupEditor({
         onClick={() => onChange([...entries, { name: "", profileId: null }])}
         className="self-start text-sm font-heading text-accent"
       >
-        + Add artist
+        {t("pickers.addArtist")}
       </button>
     </div>
   );

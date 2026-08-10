@@ -20,17 +20,19 @@ import { uploadEventMedia } from "@/lib/supabase/storage";
 import { AppUser, Genre, PublicArtistProfile, Venue } from "@/lib/types";
 import { finaliseNewShow } from "../show-actions";
 import { canActAsArtist } from "@/lib/roles";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 const ACCENT_SWATCHES = [
-  { name: "Orange", value: "#d76616" },
-  { name: "Maroon", value: "#73241d" },
-  { name: "Teal", value: "#54c3bd" },
-  { name: "Dark teal", value: "#0d5c6d" },
+  { nameKey: "addShow.swatchOrange", value: "#d76616" },
+  { nameKey: "addShow.swatchMaroon", value: "#73241d" },
+  { nameKey: "addShow.swatchTeal", value: "#54c3bd" },
+  { nameKey: "addShow.swatchDarkTeal", value: "#0d5c6d" },
 ];
 
 type TicketingMode = "internal" | "external";
 
 export default function AddShowPage() {
+  const { t } = useT();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -85,45 +87,45 @@ export default function AddShowPage() {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
 
-    if (!name.trim()) nextErrors.name = "Show name is required";
-    if (!venue.name.trim()) nextErrors.location = "Venue is required";
-    if (!date) nextErrors.date = "Date is required";
-    if (!time) nextErrors.time = "Time is required";
-    if (!description.trim()) nextErrors.description = "Description is required";
+    if (!name.trim()) nextErrors.name = t("addShow.errName");
+    if (!venue.name.trim()) nextErrors.location = t("addShow.errVenue");
+    if (!date) nextErrors.date = t("addShow.errDate");
+    if (!time) nextErrors.time = t("addShow.errTime");
+    if (!description.trim()) nextErrors.description = t("addShow.errDescription");
 
     const cleanedEntries = lineup
       .map((entry) => ({ ...entry, name: entry.name.trim() }))
       .filter((entry) => entry.name);
     const cleanedLineup = cleanedEntries.map((entry) => entry.name);
-    if (cleanedLineup.length === 0) nextErrors.lineup = "Add at least one artist to the lineup";
+    if (cleanedLineup.length === 0) nextErrors.lineup = t("addShow.errLineup");
 
     // price.trim() rather than !price, so "0" (a free event) is accepted.
     const priceNum = Number(price);
     if (!price.trim() || Number.isNaN(priceNum) || priceNum < 0) {
-      nextErrors.price = "Enter a valid price (0 for a free event)";
+      nextErrors.price = t("addShow.errPrice");
     }
 
     const capacityNum = Number(capacity);
     if (!capacity || Number.isNaN(capacityNum) || capacityNum < 1) {
-      nextErrors.capacity = "Enter a valid capacity";
+      nextErrors.capacity = t("addShow.errCapacity");
     }
 
     const maxPerOrderNum = Number(maxPerOrder);
     if (!maxPerOrder || Number.isNaN(maxPerOrderNum) || maxPerOrderNum < 1 || maxPerOrderNum > 50) {
-      nextErrors.maxPerOrder = "Enter a limit between 1 and 50";
+      nextErrors.maxPerOrder = t("addShow.errMaxPerOrder");
     }
 
     // Paid internal ticketing needs somewhere to send the money; free events
     // don't, so they're allowed through without a connected payout account.
     if (ticketingMode === "internal" && priceNum > 0 && !user?.stripePayoutsReady) {
-      nextErrors.price = "Connect a payout account to sell paid tickets, or set the price to 0";
+      nextErrors.price = t("addShow.errPayout");
     }
 
     if (ticketingMode === "external") {
       try {
         void new URL(externalUrl);
       } catch {
-        nextErrors.externalUrl = "Enter a valid ticketing link";
+        nextErrors.externalUrl = t("addShow.errExternalUrl");
       }
     }
 
@@ -168,7 +170,7 @@ export default function AddShowPage() {
 
     if (error || !created) {
       setSubmitting(false);
-      setErrors({ name: error?.message ?? "Couldn't create the show" });
+      setErrors({ name: error?.message ?? t("addShow.errCreate") });
       return;
     }
 
@@ -187,7 +189,7 @@ export default function AddShowPage() {
     });
     if (finaliseError) {
       setSubmitting(false);
-      setErrors({ lineup: `Show created, but: ${finaliseError}` });
+      setErrors({ lineup: t("addShow.errCreatedBut", { error: finaliseError }) });
       return;
     }
 
@@ -201,7 +203,7 @@ export default function AddShowPage() {
 
   return (
     <div className="p-4">
-      <h1 className="font-display mb-6 text-2xl text-foreground">Add a show</h1>
+      <h1 className="font-display mb-6 text-2xl text-foreground">{t("addShow.title")}</h1>
 
       {/* Up here rather than beside the ticketing toggle, which is most of the
           way down. A tester filled in the name, venue, date, poster and
@@ -209,13 +211,8 @@ export default function AddShowPage() {
           constraint was accurate, it just arrived after the work. */}
       {!payoutsReady && (
         <div className="mb-6 rounded-2xl bg-surface p-4">
-          <p className="font-heading text-sm text-foreground">
-            Before you start: you can&apos;t sell paid tickets yet
-          </p>
-          <p className="mt-1 text-xs text-muted">
-            Free shows and external ticket links work right away. To charge through
-            MadGigz you need a payout account — it takes a few minutes.
-          </p>
+          <p className="font-heading text-sm text-foreground">{t("addShow.cantSellTitle")}</p>
+          <p className="mt-1 text-xs text-muted">{t("addShow.cantSellBody")}</p>
           <Link
             href="/profile?payout=refresh"
             className="mt-3 inline-block font-heading text-xs text-accent"
@@ -223,15 +220,15 @@ export default function AddShowPage() {
             {/* payout=refresh, not payout=return: "return" also fires a live
                 Stripe capability lookup, which is for coming back from
                 onboarding. Both open the Settings sheet. */}
-            Set up payouts
+            {t("addShow.setUpPayouts")}
           </Link>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-        <Input label="Show name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
+        <Input label={t("addShow.showName")} value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
         <div className="flex flex-col gap-1.5">
-          <span className="font-heading text-sm text-muted">Venue</span>
+          <span className="font-heading text-sm text-muted">{t("addShow.venue")}</span>
           <VenuePicker
             value={venue}
             onChange={setVenue}
@@ -241,18 +238,18 @@ export default function AddShowPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="font-heading text-sm text-muted">Genres</span>
+          <span className="font-heading text-sm text-muted">{t("addShow.genres")}</span>
           <GenrePicker genres={allGenres} selectedIds={genreIds} onChange={setGenreIds} />
         </div>
         <Input
-          label="Date"
+          label={t("addShow.date")}
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
           error={errors.date}
         />
         <Input
-          label="Time"
+          label={t("addShow.time")}
           type="time"
           value={time}
           onChange={(e) => setTime(e.target.value)}
@@ -260,7 +257,7 @@ export default function AddShowPage() {
         />
         <div className="flex flex-col gap-2">
           <Input
-            label="Price (EUR)"
+            label={t("addShow.price")}
             type="number"
             min={0}
             value={price}
@@ -270,7 +267,7 @@ export default function AddShowPage() {
           {ticketingMode === "internal" && <FeeBreakdown priceEuros={Number(price)} />}
         </div>
         <Input
-          label="Capacity"
+          label={t("addShow.capacity")}
           type="number"
           min={1}
           value={capacity}
@@ -279,7 +276,7 @@ export default function AddShowPage() {
         />
         <div className="flex flex-col gap-1.5">
           <Input
-            label="Max tickets per order"
+            label={t("addShow.maxPerOrder")}
             type="number"
             min={1}
             max={50}
@@ -287,13 +284,11 @@ export default function AddShowPage() {
             onChange={(e) => setMaxPerOrder(e.target.value)}
             error={errors.maxPerOrder}
           />
-          <p className="text-xs text-muted">
-            Stops one fan buying up the room. Applies per order.
-          </p>
+          <p className="text-xs text-muted">{t("addShow.maxPerOrderHint")}</p>
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <span className="font-heading text-sm text-muted">Poster</span>
+          <span className="font-heading text-sm text-muted">{t("addShow.poster")}</span>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -301,9 +296,9 @@ export default function AddShowPage() {
           >
             {posterPreview ? (
               // eslint-disable-next-line @next/next/no-img-element -- local blob preview only
-              <img src={posterPreview} alt="Poster preview" className="h-40 w-full object-cover" />
+              <img src={posterPreview} alt={t("addShow.posterAlt")} className="h-40 w-full object-cover" />
             ) : (
-              <span className="block px-4 py-6">Tap to upload a poster</span>
+              <span className="block px-4 py-6">{t("addShow.tapPoster")}</span>
             )}
           </button>
           <input
@@ -316,14 +311,14 @@ export default function AddShowPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="font-heading text-sm text-muted">Accent color</span>
+          <span className="font-heading text-sm text-muted">{t("addShow.accentColor")}</span>
           <div className="flex gap-3">
             {ACCENT_SWATCHES.map((swatch) => (
               <button
                 key={swatch.value}
                 type="button"
                 onClick={() => setAccentColor(swatch.value)}
-                aria-label={swatch.name}
+                aria-label={t(swatch.nameKey)}
                 className={`h-9 w-9 rounded-full ${
                   accentColor === swatch.value ? "ring-2 ring-foreground ring-offset-2 ring-offset-background" : ""
                 }`}
@@ -334,23 +329,20 @@ export default function AddShowPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="font-heading text-sm text-muted">Lineup</span>
+          <span className="font-heading text-sm text-muted">{t("addShow.lineup")}</span>
           <LineupEditor
             entries={lineup}
             onChange={setLineup}
             artists={artists}
             excludeProfileId={user.id}
           />
-          <p className="text-xs text-muted">
-            Acts already on MadGigz can be tagged - the show appears on their profile and they
-            can post about it. You stay the only one who manages it.
-          </p>
+          <p className="text-xs text-muted">{t("addShow.lineupHint")}</p>
           {errors.lineup && <p className="text-sm text-danger">{errors.lineup}</p>}
         </div>
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="description" className="font-heading text-sm text-muted">
-            Description
+            {t("addShow.description")}
           </label>
           <textarea
             id="description"
@@ -365,7 +357,7 @@ export default function AddShowPage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <span className="font-heading text-sm text-muted">Ticketing</span>
+          <span className="font-heading text-sm text-muted">{t("addShow.ticketing")}</span>
           <div className="flex gap-2 rounded-full bg-surface p-1">
             <button
               type="button"
@@ -374,7 +366,7 @@ export default function AddShowPage() {
                 ticketingMode === "internal" ? "bg-primary text-foreground" : "text-muted"
               }`}
             >
-              Sell through MadGigz
+              {t("addShow.sellThrough")}
             </button>
             <button
               type="button"
@@ -383,20 +375,16 @@ export default function AddShowPage() {
                 ticketingMode === "external" ? "bg-primary text-foreground" : "text-muted"
               }`}
             >
-              External link
+              {t("addShow.externalLink")}
             </button>
           </div>
           {!payoutsReady && ticketingMode === "internal" && (
-            <p className="text-xs text-muted">
-              You can host <strong className="text-foreground">free</strong> events through
-              MadGigz right away. To charge for tickets, connect a payout account on your
-              profile — or link an external ticketing service instead.
-            </p>
+            <p className="text-xs text-muted">{t("addShow.freeNote")}</p>
           )}
           {ticketingMode === "external" && (
             <Input
-              label="Ticketing link"
-              placeholder="https://madgigz.com/your-show"
+              label={t("addShow.ticketingLink")}
+              placeholder={t("addShow.ticketingLinkPlaceholder")}
               value={externalUrl}
               onChange={(e) => setExternalUrl(e.target.value)}
               error={errors.externalUrl}
@@ -405,7 +393,7 @@ export default function AddShowPage() {
         </div>
 
         <Button type="submit" className="mt-2" disabled={submitting}>
-          {submitting ? "Adding show..." : "Add show"}
+          {submitting ? t("addShow.submitting") : t("addShow.submit")}
         </Button>
       </form>
     </div>

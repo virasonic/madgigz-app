@@ -1,6 +1,7 @@
 "use client";
 
 import { InputHTMLAttributes, forwardRef, useId, useState } from "react";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
@@ -10,6 +11,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, isPassword = false, id, type, className = "", ...props }, ref) => {
+    const { t } = useT();
     const generatedId = useId();
     const inputId = id ?? generatedId;
     const [revealed, setRevealed] = useState(false);
@@ -53,7 +55,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               onClick={() => setRevealed((v) => !v)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted hover:text-foreground"
             >
-              {revealed ? "Hide" : "Show"}
+              {revealed ? t("common.hide") : t("common.show")}
             </button>
           )}
         </div>

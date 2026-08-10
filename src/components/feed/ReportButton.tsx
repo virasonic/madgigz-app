@@ -2,19 +2,21 @@
 
 import { useState } from "react";
 import { reportContent } from "@/app/(app)/feed/report-actions";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 const REASONS = [
-  { value: "inappropriate", label: "Inappropriate or explicit" },
-  { value: "hate", label: "Hate or harassment" },
-  { value: "violence", label: "Violence or danger" },
-  { value: "spam", label: "Spam or a scam" },
-  { value: "other", label: "Something else" },
+  { value: "inappropriate", labelKey: "report.reasonInappropriate" },
+  { value: "hate", labelKey: "report.reasonHate" },
+  { value: "violence", labelKey: "report.reasonViolence" },
+  { value: "spam", labelKey: "report.reasonSpam" },
+  { value: "other", labelKey: "report.reasonOther" },
 ] as const;
 
 // Small flag on a reel. Opens a sheet to pick a reason; on submit the post is
 // flagged for the admin queue. Deliberately understated - reporting should be
 // available, not shouted about, and it sits in the same rail as Like/Share.
 export default function ReportButton({ contentPostId }: { contentPostId: string }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>("inappropriate");
   const [detail, setDetail] = useState("");
@@ -33,7 +35,7 @@ export default function ReportButton({ contentPostId }: { contentPostId: string 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Report this post"
+        aria-label={t("report.aria")}
         className="flex h-11 w-11 items-center justify-center rounded-full bg-black/30 text-foreground backdrop-blur-md"
       >
         <FlagIcon />
@@ -52,21 +54,19 @@ export default function ReportButton({ contentPostId }: { contentPostId: string 
 
             {done ? (
               <div className="flex flex-col gap-4 text-center">
-                <h2 className="font-display text-xl text-foreground">Thanks for flagging it</h2>
-                <p className="text-sm text-muted">
-                  Our team will take a look. You won&apos;t see a change straight away.
-                </p>
+                <h2 className="font-display text-xl text-foreground">{t("report.doneTitle")}</h2>
+                <p className="text-sm text-muted">{t("report.doneBody")}</p>
                 <button
                   onClick={() => setOpen(false)}
                   className="rounded-full bg-primary px-6 py-3.5 font-display text-foreground"
                 >
-                  Done
+                  {t("common.done")}
                 </button>
               </div>
             ) : (
               <>
-                <h2 className="font-display text-xl text-foreground">Report this post</h2>
-                <p className="mt-1 text-sm text-muted">What&apos;s wrong with it?</p>
+                <h2 className="font-display text-xl text-foreground">{t("report.title")}</h2>
+                <p className="mt-1 text-sm text-muted">{t("report.prompt")}</p>
 
                 <div className="mt-4 flex flex-col gap-2">
                   {REASONS.map((r) => (
@@ -79,7 +79,7 @@ export default function ReportButton({ contentPostId }: { contentPostId: string 
                         reason === r.value ? "bg-primary text-foreground" : "bg-background text-muted"
                       }`}
                     >
-                      {r.label}
+                      {t(r.labelKey)}
                     </button>
                   ))}
                 </div>
@@ -89,7 +89,7 @@ export default function ReportButton({ contentPostId }: { contentPostId: string 
                   onChange={(e) => setDetail(e.target.value)}
                   rows={2}
                   maxLength={1000}
-                  placeholder="Anything to add? (optional)"
+                  placeholder={t("report.detailPlaceholder")}
                   className="mt-4 w-full rounded-2xl border border-muted/20 bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
 
@@ -98,7 +98,7 @@ export default function ReportButton({ contentPostId }: { contentPostId: string 
                   disabled={submitting}
                   className="mt-4 w-full rounded-full bg-primary px-6 py-3.5 font-display text-foreground disabled:opacity-50"
                 >
-                  {submitting ? "Sending…" : "Report"}
+                  {submitting ? t("report.sending") : t("report.submit")}
                 </button>
               </>
             )}

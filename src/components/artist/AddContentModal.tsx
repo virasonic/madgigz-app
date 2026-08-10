@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
 import { EventItem } from "@/lib/types";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 interface AddContentModalProps {
   shows: EventItem[];
@@ -20,6 +21,7 @@ export default function AddContentModal({
   onClose,
   onPosted,
 }: AddContentModalProps) {
+  const { t } = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showId, setShowId] = useState(shows[0]?.id ?? "");
   const [caption, setCaption] = useState("");
@@ -39,11 +41,11 @@ export default function AddContentModal({
     if (!selected) return;
 
     if (!mediaTypeForFile(selected)) {
-      setError("Choose a photo or video");
+      setError(t("addContent.errorChooseMedia"));
       return;
     }
     if (selected.size > MAX_CONTENT_FILE_BYTES) {
-      setError("Choose a smaller file (under 50MB)");
+      setError(t("addContent.errorTooLarge"));
       return;
     }
 
@@ -55,11 +57,11 @@ export default function AddContentModal({
 
   async function handlePost() {
     if (!showId) {
-      setError("Add a show first");
+      setError(t("addContent.errorAddShow"));
       return;
     }
     if (!file) {
-      setError("Add a photo or video to post");
+      setError(t("addContent.errorAddMedia"));
       return;
     }
     const show = shows.find((s) => s.id === showId);
@@ -76,7 +78,7 @@ export default function AddContentModal({
 
     if (!user) {
       setPosting(false);
-      setError("You need to be signed in to post");
+      setError(t("addContent.errorSignedIn"));
       return;
     }
 
@@ -113,17 +115,15 @@ export default function AddContentModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
-        <h2 className="font-display text-xl text-foreground">Post an update</h2>
+        <h2 className="font-display text-xl text-foreground">{t("addContent.title")}</h2>
 
         {shows.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">
-            Add a show first, then you can post updates about it here.
-          </p>
+          <p className="mt-4 text-sm text-muted">{t("addContent.noShows")}</p>
         ) : (
           <div className="mt-5 flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="show-select" className="font-heading text-sm text-muted">
-                Show
+                {t("addContent.showLabel")}
               </label>
               <select
                 id="show-select"
@@ -140,7 +140,7 @@ export default function AddContentModal({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="font-heading text-sm text-muted">Photo or video</span>
+              <span className="font-heading text-sm text-muted">{t("addContent.photoOrVideo")}</span>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -151,10 +151,10 @@ export default function AddContentModal({
                     <video src={previewUrl} className="h-40 w-full object-cover" muted />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element -- local blob preview only
-                    <img src={previewUrl} alt="Post preview" className="h-40 w-full object-cover" />
+                    <img src={previewUrl} alt={t("addContent.previewAlt")} className="h-40 w-full object-cover" />
                   )
                 ) : (
-                  <span className="block px-4 py-6">Tap to add a photo or video</span>
+                  <span className="block px-4 py-6">{t("addContent.tapToAdd")}</span>
                 )}
               </button>
               <input
@@ -169,14 +169,14 @@ export default function AddContentModal({
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              placeholder="Add a caption (optional)..."
+              placeholder={t("addContent.captionPlaceholder")}
               rows={2}
               className="w-full rounded-2xl border border-muted/20 bg-background px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {error && <p className="text-sm text-danger">{error}</p>}
 
             <Button onClick={handlePost} disabled={posting}>
-              {posting ? "Posting..." : "Post"}
+              {posting ? t("addContent.posting") : t("addContent.post")}
             </Button>
           </div>
         )}

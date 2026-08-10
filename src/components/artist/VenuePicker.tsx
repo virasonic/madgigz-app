@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Venue } from "@/lib/types";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 export interface VenueSelection {
   name: string;
@@ -24,6 +25,7 @@ export default function VenuePicker({
   error?: string;
   compact?: boolean;
 }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
 
   const query = value.name.trim().toLowerCase();
@@ -50,7 +52,7 @@ export default function VenuePicker({
           value={value.name}
           onChange={(e) => onChange({ name: e.target.value, venueId: null })}
           onFocus={() => setOpen(true)}
-          placeholder="Start typing a venue..."
+          placeholder={t("pickers.venuePlaceholder")}
           className={inputClass}
         />
         {suggestions.length > 0 && (
@@ -80,9 +82,7 @@ export default function VenuePicker({
       {/* Only once they've typed something that isn't a known venue - saying it
           earlier would read as a warning about every keystroke. */}
       {!value.venueId && query.length > 2 && !matchesExisting && (
-        <p className="text-xs text-muted">
-          Not a venue we know yet - we&apos;ll add it and fill in the address.
-        </p>
+        <p className="text-xs text-muted">{t("pickers.venueUnknown")}</p>
       )}
 
       {error && <p className="text-sm text-danger">{error}</p>}
