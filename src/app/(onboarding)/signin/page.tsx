@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import GoogleButton from "@/components/auth/GoogleButton";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/site";
 import { cancelDeletionOnSignIn } from "@/app/(app)/profile/account-actions";
@@ -42,6 +43,18 @@ const LINK_NOTICES: Record<
   link_invalid: {
     title: "That link didn't come through properly",
     detail: "Try opening it again, or request a new one.",
+    tone: "warn",
+  },
+  // Backing out of Google's consent screen is a choice, not a failure - say so
+  // plainly and leave the form right there to use instead.
+  oauth_cancelled: {
+    title: "No problem - Google sign-in cancelled",
+    detail: "Use your email and password below, or try Google again.",
+    tone: "info",
+  },
+  oauth_failed: {
+    title: "Google sign-in didn't complete",
+    detail: "Try again, or sign in with your email and password.",
     tone: "warn",
   },
 };
@@ -165,10 +178,17 @@ function SignInContent() {
         </Button>
       </form>
 
-      {/* Apple and Google buttons lived here, rendered disabled. A greyed-out
-          button reads as "this is broken" rather than "this isn't built yet",
-          and it was the first thing on the page for anyone who signs in with
-          Google everywhere else. They come back with [[82]], wired up. */}
+      <div className="mt-6 flex items-center gap-3">
+        <span className="h-px flex-1 bg-muted/20" />
+        <span className="text-xs uppercase tracking-wide text-muted">or</span>
+        <span className="h-px flex-1 bg-muted/20" />
+      </div>
+
+      {/* Apple's button belongs alongside this one and is [[82b]] - it needs
+          Apple to approve the developer verification first. */}
+      <div className="mt-6">
+        <GoogleButton next={next} label="Sign in with Google" />
+      </div>
 
       <p className="mt-8 text-center text-sm text-muted">
         Don&apos;t have an account?{" "}

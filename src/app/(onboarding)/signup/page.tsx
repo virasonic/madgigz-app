@@ -6,6 +6,7 @@ import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Turnstile, { TurnstileHandle } from "@/components/ui/Turnstile";
+import GoogleButton from "@/components/auth/GoogleButton";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/site";
 import { verifyTurnstileToken } from "./turnstile-actions";
@@ -221,6 +222,20 @@ function SignUpForm() {
       <p className="mt-1 text-sm text-muted">
         Let&apos;s get you set up in a minute.
       </p>
+
+      {/* Above the form deliberately: it is three taps against seven fields,
+          and burying the quicker route under the slower one helps nobody. The
+          role picked on the landing page rides along so the completion screen
+          can default to it. */}
+      <div className="mt-6">
+        <GoogleButton role={role} next={next} label="Sign up with Google" />
+      </div>
+
+      <div className="mt-6 flex items-center gap-3">
+        <span className="h-px flex-1 bg-muted/20" />
+        <span className="text-xs uppercase tracking-wide text-muted">or with email</span>
+        <span className="h-px flex-1 bg-muted/20" />
+      </div>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <Input

@@ -14,9 +14,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const [{ data: profile }, unreadCount] = await Promise.all([
-    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase.from("profiles").select("role, onboarding_complete").eq("id", user.id).single(),
     fetchUnreadCount(supabase, user.id),
   ]);
+
+  // A Google account that never finished the completion screen has a
+  // placeholder username and no date of birth on file, so it must not reach a
+  // checkout. Enforced here rather than only in the callback, because the
+  // callback is one route and this is every screen behind the nav - closing a
+  // tab mid-signup and reopening /feed shouldn't be a way in.
+  if (profile && !profile.onboarding_complete) {
+    redirect("/signup/complete-profile");
+  }
 
   return (
     // pt-safe sits on the shell rather than inside the scroll area, so content
