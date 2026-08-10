@@ -9,15 +9,17 @@ import { fetchCurrentUser } from "@/lib/supabase/queries";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { AppUser } from "@/lib/types";
 import { canActAsArtist, isArtistRole } from "@/lib/roles";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 // Same set the signup claim collects, so an artist can correct a typo or add
-// a link they skipped without going through support.
+// a link they skipped without going through support. Labels are brand names
+// (kept as-is); placeholders resolve through the catalog at render.
 const SOCIAL_FIELDS = [
-  { key: "instagram", column: "instagram", label: "Instagram", placeholder: "@yourname" },
-  { key: "tiktok", column: "tiktok", label: "TikTok", placeholder: "@yourname" },
-  { key: "twitter", column: "twitter", label: "Twitter / X", placeholder: "@yourname" },
-  { key: "spotify", column: "spotify", label: "Spotify", placeholder: "Artist profile link" },
-  { key: "youtube", column: "youtube", label: "YouTube", placeholder: "Channel link" },
+  { key: "instagram", column: "instagram", label: "Instagram", placeholderKey: "artistClaim.socialPlaceholder" },
+  { key: "tiktok", column: "tiktok", label: "TikTok", placeholderKey: "artistClaim.socialPlaceholder" },
+  { key: "twitter", column: "twitter", labelKey: "artistClaim.twitterLabel", placeholderKey: "artistClaim.socialPlaceholder" },
+  { key: "spotify", column: "spotify", label: "Spotify", placeholderKey: "artistClaim.spotifyPlaceholder" },
+  { key: "youtube", column: "youtube", label: "YouTube", placeholderKey: "artistClaim.youtubePlaceholder" },
 ] as const;
 
 type SocialKey = (typeof SOCIAL_FIELDS)[number]["key"];
@@ -30,15 +32,18 @@ const REQUIRED_SOCIALS: SocialKey[] = ["instagram", "tiktok", "twitter"];
 // Same rule as signup and addendum_010's check constraint.
 const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,30}$/;
 
-// What change_username() (addendum_030) can return, in words for the field.
-const RENAME_ERRORS: Record<string, string> = {
-  invalid: "Use 3-30 letters, numbers, dots, dashes or underscores",
-  taken: "That username is taken",
-  not_signed_in: "Your session expired. Sign in again to continue.",
-  no_profile: "Couldn't find your profile.",
+// Which change_username() (addendum_030) codes map to catalog keys - the wording
+// is resolved through the translator in the component so it follows the reader's
+// language.
+const RENAME_ERROR_KEYS: Record<string, string> = {
+  invalid: "signup.errorUsernameFormat",
+  taken: "signup.usernameTaken",
+  not_signed_in: "completeProfile.errorNotSignedIn",
+  no_profile: "editProfile.renameNoProfile",
 };
 
 export default function EditProfilePage() {
+  const { t } = useT();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -131,7 +136,7 @@ export default function EditProfilePage() {
       isArtistRole(user.role) &&
       !REQUIRED_SOCIALS.some((key) => socials[key].trim())
     ) {
-      setSocialError("Keep at least one of Instagram, TikTok or Twitter / X");
+      setSocialError(t("editProfile.keepOneSocial"));
       return;
     }
 
@@ -153,9 +158,8 @@ export default function EditProfilePage() {
       if (renameErr || (renameResult !== "ok" && renameResult !== "unchanged")) {
         setSubmitting(false);
         if (renameResult === "taken") setCheckedName({ name: trimmedName, available: false });
-        setUsernameError(
-          RENAME_ERRORS[renameResult as string] ?? "Couldn't change your username. Please try again."
-        );
+        const key = RENAME_ERROR_KEYS[renameResult as string];
+        setUsernameError(key ? t(key) : t("editProfile.renameGeneric"));
         return;
       }
     }
@@ -207,7 +211,7 @@ export default function EditProfilePage() {
 
   return (
     <div className="p-4">
-      <h1 className="font-display mb-6 text-2xl text-foreground">Edit profile</h1>
+      <h1 className="font-display mb-6 text-2xl text-foreground">{t("editProfile.title")}</h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <div className="flex flex-col items-center gap-3">
@@ -218,14 +222,14 @@ export default function EditProfilePage() {
           >
             {photoPreview ? (
               // eslint-disable-next-line @next/next/no-img-element -- local blob preview or remote Storage URL, both fine as a plain img
-              <img src={photoPreview} alt="Profile photo" className="h-full w-full object-cover" />
+              <img src={photoPreview} alt={t("editProfile.photoAlt")} className="h-full w-full object-cover" />
             ) : (
               <span className="font-display text-3xl text-foreground">
                 {(user.artistName ?? user.username).slice(0, 1).toUpperCase()}
               </span>
             )}
             <span className="absolute inset-0 flex items-end justify-center bg-black/40 pb-1.5 text-[10px] font-heading uppercase tracking-wide text-foreground opacity-0 transition-opacity hover:opacity-100">
-              Change
+              {t("editProfile.change")}
             </span>
           </button>
           <button
@@ -233,7 +237,7 @@ export default function EditProfilePage() {
             onClick={() => fileInputRef.current?.click()}
             className="text-sm font-heading text-accent"
           >
-            {photoPreview ? "Change photo" : "Add a photo"}
+            {photoPreview ? t("editProfile.changePhoto") : t("editProfile.addPhoto")}
           </button>
           <input
             ref={fileInputRef}
@@ -246,7 +250,7 @@ export default function EditProfilePage() {
 
         <div className="flex flex-col gap-1.5">
           <Input
-            label="Username"
+            label={t("signup.usernameLabel")}
             value={username}
             onChange={(e) => {
               setUsername(e.target.value);
@@ -254,23 +258,19 @@ export default function EditProfilePage() {
             }}
             error={usernameError}
             autoComplete="username"
-            placeholder="yourhandle"
+            placeholder={t("editProfile.usernamePlaceholder")}
           />
           {!usernameError &&
             (usernameStatus === "taken" ? (
-              <p className="text-xs text-danger">That username is taken</p>
+              <p className="text-xs text-danger">{t("signup.usernameTaken")}</p>
             ) : usernameStatus === "available" ? (
-              <p className="text-xs text-accent">Username available</p>
+              <p className="text-xs text-accent">{t("signup.usernameAvailable")}</p>
             ) : usernameStatus === "invalid" ? (
-              <p className="text-xs text-muted">
-                3-30 letters, numbers, dots, dashes or underscores.
-              </p>
+              <p className="text-xs text-muted">{t("editProfile.usernameInvalid")}</p>
             ) : usernameStatus === "checking" ? (
-              <p className="text-xs text-muted">Checking…</p>
+              <p className="text-xs text-muted">{t("editProfile.checking")}</p>
             ) : (
-              <p className="text-xs text-muted">
-                Your old handle is held for 10 days after you change it.
-              </p>
+              <p className="text-xs text-muted">{t("editProfile.usernameHold")}</p>
             ))}
         </div>
 
@@ -278,37 +278,32 @@ export default function EditProfilePage() {
           <>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="bio" className="font-heading text-sm text-muted">
-            Bio
+            {t("artistClaim.bioLabel")}
           </label>
           <textarea
             id="bio"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={4}
-            placeholder="A line or two for fans browsing your shows"
+            placeholder={t("artistClaim.bioPlaceholder")}
             className="w-full rounded-2xl border border-muted/20 bg-surface px-4 py-3.5 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
           />
-          <p className="text-xs text-muted">
-            Shown on your public profile, next to your upcoming shows.
-          </p>
+          <p className="text-xs text-muted">{t("editProfile.bioHint")}</p>
         </div>
 
         <div className="flex flex-col gap-3">
-          <h2 className="font-heading text-sm text-muted">Social links</h2>
-          {SOCIAL_FIELDS.map(({ key, label, placeholder }) => (
+          <h2 className="font-heading text-sm text-muted">{t("artistClaim.socialHeading")}</h2>
+          {SOCIAL_FIELDS.map((field) => (
             <Input
-              key={key}
-              label={label}
-              placeholder={placeholder}
-              value={socials[key]}
-              onChange={(e) => setSocials((prev) => ({ ...prev, [key]: e.target.value }))}
+              key={field.key}
+              label={"labelKey" in field ? t(field.labelKey) : field.label}
+              placeholder={t(field.placeholderKey)}
+              value={socials[field.key]}
+              onChange={(e) => setSocials((prev) => ({ ...prev, [field.key]: e.target.value }))}
             />
           ))}
           {socialError && <p className="text-sm text-danger">{socialError}</p>}
-          <p className="text-xs text-muted">
-            Fans see these as links on your public profile. Keep at least one of Instagram,
-            TikTok or Twitter / X.
-          </p>
+          <p className="text-xs text-muted">{t("editProfile.socialFooter")}</p>
         </div>
           </>
         )}
@@ -316,7 +311,7 @@ export default function EditProfilePage() {
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <Button type="submit" disabled={submitting}>
-          {submitting ? "Saving..." : "Save"}
+          {submitting ? t("common.saving") : t("common.save")}
         </Button>
       </form>
     </div>

@@ -10,6 +10,7 @@ import {
   requestAccountDeletion,
 } from "@/app/(app)/profile/account-actions";
 import { createClient } from "@/lib/supabase/client";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -20,6 +21,7 @@ function formatDate(iso: string) {
 }
 
 export default function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useT();
   const router = useRouter();
   const [state, setState] = useState<DeletionState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,12 +34,12 @@ export default function DeleteAccountDialog({ onClose }: { onClose: () => void }
         if (!cancelled) setState(s);
       })
       .catch(() => {
-        if (!cancelled) setError("Couldn't load your account status.");
+        if (!cancelled) setError(t("deleteAccount.loadError"));
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   function handleDelete() {
     setError(null);
@@ -85,28 +87,25 @@ export default function DeleteAccountDialog({ onClose }: { onClose: () => void }
         {error && <p className="mb-4 text-sm text-primary">{error}</p>}
 
         {!state ? (
-          <p className="py-6 text-center text-sm text-muted">Checking your account...</p>
+          <p className="py-6 text-center text-sm text-muted">{t("deleteAccount.checking")}</p>
         ) : pending ? (
           <>
             <h2 className="font-display text-xl text-foreground">
-              Your account is scheduled for deletion
+              {t("deleteAccount.scheduledTitle")}
             </h2>
             <p className="mt-2 text-sm text-muted">
-              It will be permanently deleted on{" "}
-              <span className="text-foreground">{formatDate(state.purgeAt!)}</span>. Until
-              then everything still works, and you can change your mind.
+              {t("deleteAccount.scheduledLead")}{" "}
+              <span className="text-foreground">{formatDate(state.purgeAt!)}</span>.{" "}
+              {t("deleteAccount.scheduledTail")}
             </p>
             <Button className="mt-6" onClick={handleKeep} disabled={isPending}>
-              {isPending ? "Cancelling..." : "Keep my account"}
+              {isPending ? t("deleteAccount.cancelling") : t("deleteAccount.keepAccount")}
             </Button>
           </>
         ) : blocked ? (
           <>
-            <h2 className="font-display text-xl text-foreground">Not just yet</h2>
-            <p className="mt-2 text-sm text-muted">
-              Deleting now would leave other people stranded, so we need these sorted
-              first:
-            </p>
+            <h2 className="font-display text-xl text-foreground">{t("deleteAccount.blockedTitle")}</h2>
+            <p className="mt-2 text-sm text-muted">{t("deleteAccount.blockedBody")}</p>
             <ul className="mt-4 flex flex-col gap-3">
               {state.blockers.map((b) => (
                 <li key={b.reason} className="rounded-xl bg-background px-4 py-3">
@@ -116,32 +115,25 @@ export default function DeleteAccountDialog({ onClose }: { onClose: () => void }
               ))}
             </ul>
             <Button variant="ghost" className="mt-6" onClick={onClose}>
-              Close
+              {t("common.close")}
             </Button>
           </>
         ) : (
           <>
-            <h2 className="font-display text-xl text-foreground">Delete your account?</h2>
+            <h2 className="font-display text-xl text-foreground">{t("deleteAccount.confirmTitle")}</h2>
             {/* Said plainly rather than buried in a policy. Promising complete
                 erasure would be a lie: the sale records have to be kept, and
                 Stripe keeps its own copy regardless of what we do. */}
             <div className="mt-3 flex flex-col gap-3 text-sm text-muted">
-              <p>
-                Your profile, photo, saved events and any content you posted are deleted
-                after 30 days. You can sign in during those 30 days to stop it.
-              </p>
-              <p>
-                Records of tickets you bought or sold are kept, without your name attached
-                — we&apos;re legally required to hold them for six years. Payment details
-                sit with Stripe and follow their own rules.
-              </p>
+              <p>{t("deleteAccount.confirmBody1")}</p>
+              <p>{t("deleteAccount.confirmBody2")}</p>
             </div>
             <div className="mt-6 flex flex-col gap-3">
               <Button onClick={handleDelete} disabled={isPending}>
-                {isPending ? "Scheduling..." : "Delete my account"}
+                {isPending ? t("deleteAccount.scheduling") : t("deleteAccount.deleteButton")}
               </Button>
               <Button variant="ghost" onClick={onClose} disabled={isPending}>
-                Keep my account
+                {t("deleteAccount.keepAccount")}
               </Button>
             </div>
           </>

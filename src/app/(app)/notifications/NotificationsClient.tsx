@@ -2,17 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { AppNotification, describeGroup, groupNotifications } from "@/lib/notifications";
+import { AppNotification, describeGroup, groupNotifications, Translate } from "@/lib/notifications";
 import { markNotificationsRead } from "./actions";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
-function timeAgo(iso: string, now: number) {
+function timeAgo(iso: string, now: number, t: Translate) {
   const mins = Math.floor((now - new Date(iso).getTime()) / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("notifications.justNow");
+  if (mins < 60) return t("notifications.minsAgo", { mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("notifications.hoursAgo", { hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
+  if (days < 7) return t("notifications.daysAgo", { days });
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
@@ -32,6 +33,7 @@ export default function NotificationsClient({
   // "5m ago" doesn't tick while the screen sits open, which nobody minds.
   now: number;
 }) {
+  const { t } = useT();
   const router = useRouter();
   const [notifications] = useState(initialNotifications);
   const groups = useMemo(() => groupNotifications(notifications), [notifications]);
@@ -48,11 +50,9 @@ export default function NotificationsClient({
   if (notifications.length === 0) {
     return (
       <div className="p-4">
-        <h1 className="font-display mb-6 text-2xl text-foreground">Notifications</h1>
+        <h1 className="font-display mb-6 text-2xl text-foreground">{t("notifications.title")}</h1>
         <p className="text-sm text-muted">
-          {isArtist
-            ? "Nothing yet. You'll hear when someone follows you, when you're added to a bill, and when a show you've got tickets for is coming up."
-            : "Nothing yet. You'll hear when an artist you follow announces a show, and when a show you've got tickets for is coming up."}
+          {isArtist ? t("notifications.emptyArtist") : t("notifications.emptyFan")}
         </p>
       </div>
     );
@@ -60,11 +60,11 @@ export default function NotificationsClient({
 
   return (
     <div className="p-4">
-      <h1 className="font-display mb-6 text-2xl text-foreground">Notifications</h1>
+      <h1 className="font-display mb-6 text-2xl text-foreground">{t("notifications.title")}</h1>
 
       <div className="flex flex-col gap-2">
         {groups.map((g) => {
-          const { title, detail } = describeGroup(g);
+          const { title, detail } = describeGroup(g, t);
           const n = g.latest;
           const body = (
             <>
@@ -72,14 +72,14 @@ export default function NotificationsClient({
                 <p className="font-heading text-sm text-foreground">{title}</p>
                 {g.unread && (
                   <span
-                    aria-label="Unread"
+                    aria-label={t("notifications.unread")}
                     className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary"
                   />
                 )}
               </div>
               {detail && <p className="mt-0.5 text-xs text-muted">{detail}</p>}
               <p className="mt-1 text-[11px] text-muted">
-                {timeAgo(n.createdAt, now)}
+                {timeAgo(n.createdAt, now, t)}
               </p>
             </>
           );

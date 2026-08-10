@@ -81,26 +81,41 @@ export async function fetchUnreadCount(
 // The sentence a person reads. Kept out of the component so the wording for a
 // type lives in one place, and so the same line can be reused if these ever
 // become emails or push notifications.
-export function describeNotification(n: AppNotification): { title: string; detail?: string } {
-  const who = n.actorName ?? "Someone";
-  const what = n.eventTitle ?? "a show";
+// A translator, shaped like useT()'s `t`. Passed in rather than imported so
+// this file stays free of React and can run on the server too; the notification
+// content still follows the reader's language because the caller hands over the
+// catalog it already has.
+export type Translate = (key: string, vars?: Record<string, string | number>) => string;
+
+export function describeNotification(
+  n: AppNotification,
+  t: Translate
+): { title: string; detail?: string } {
+  const who = n.actorName ?? t("notifications.someone");
+  const what = n.eventTitle ?? t("notifications.aShow");
 
   switch (n.type) {
     case "new_follower":
-      return { title: `${who} started following you` };
+      return { title: t("notifications.newFollower", { who }) };
     case "tagged_in_event":
       return {
-        title: `You're on the bill for ${what}`,
-        detail: "It's on your profile now, and you can post about it.",
+        title: t("notifications.taggedTitle", { what }),
+        detail: t("notifications.taggedDetail"),
       };
     case "followed_artist_show":
-      return { title: `${who} announced ${what}`, detail: "Tickets are on sale." };
+      return {
+        title: t("notifications.announcedTitle", { who, what }),
+        detail: t("notifications.announcedDetail"),
+      };
     case "event_upcoming":
       // Deliberately about the show rather than "your gig" - the recipient is
       // whoever holds a ticket, which is the audience, not the performer.
-      return { title: `${what} is tomorrow`, detail: "Your ticket is in the Tickets tab." };
+      return {
+        title: t("notifications.upcomingTitle", { what }),
+        detail: t("notifications.upcomingDetail"),
+      };
     case "ticket_sold":
-      return { title: `${who} bought a ticket for ${what}` };
+      return { title: t("notifications.ticketSoldTitle", { who, what }) };
   }
 }
 
@@ -170,33 +185,42 @@ export function groupNotifications(list: AppNotification[]): NotificationGroup[]
   return groups.sort((a, b) => b.latest.createdAt.localeCompare(a.latest.createdAt));
 }
 
-function nameList(names: string[], count: number): string {
-  if (names.length === 0) return `${count} people`;
-  if (names.length === 1) return `${names[0]} and ${count - 1} others`;
+function nameList(names: string[], count: number, t: Translate): string {
+  if (names.length === 0) return t("notifications.peopleCount", { count });
+  if (names.length === 1)
+    return t("notifications.nameAndOthers", { name: names[0], count: count - 1 });
   const others = count - 2;
-  if (others <= 0) return `${names[0]} and ${names[1]}`;
-  return `${names[0]}, ${names[1]} and ${others} ${others === 1 ? "other" : "others"}`;
+  if (others <= 0) return t("notifications.twoNames", { name1: names[0], name2: names[1] });
+  return t("notifications.namesAndOthers", {
+    name1: names[0],
+    name2: names[1],
+    others,
+    othersWord: others === 1 ? t("notifications.other") : t("notifications.others"),
+  });
 }
 
-export function describeGroup(g: NotificationGroup): { title: string; detail?: string } {
-  if (g.count === 1) return describeNotification(g.latest);
+export function describeGroup(
+  g: NotificationGroup,
+  t: Translate
+): { title: string; detail?: string } {
+  if (g.count === 1) return describeNotification(g.latest, t);
 
-  const what = g.latest.eventTitle ?? "a show";
+  const what = g.latest.eventTitle ?? t("notifications.aShow");
 
   switch (g.type) {
     case "new_follower":
-      return { title: `${nameList(g.actorNames, g.count)} started following you` };
+      return { title: t("notifications.newFollowersGrouped", { names: nameList(g.actorNames, g.count, t) }) };
     case "ticket_sold":
       return {
-        title: `${g.count} new ticket sales for ${what}`,
-        detail: "See who bought in Manage Show.",
+        title: t("notifications.ticketSalesGrouped", { count: g.count, what }),
+        detail: t("notifications.ticketSalesGroupedDetail"),
       };
     case "followed_artist_show":
-      return { title: `${g.count} new shows from artists you follow` };
+      return { title: t("notifications.newShowsGrouped", { count: g.count }) };
     default:
       // tagged_in_event and event_upcoming don't repeat per show, so they
       // shouldn't reach here - fall back to the single-item wording rather
       // than inventing a plural for something that can't happen.
-      return describeNotification(g.latest);
+      return describeNotification(g.latest, t);
   }
 }

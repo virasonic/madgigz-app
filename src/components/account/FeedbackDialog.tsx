@@ -4,14 +4,17 @@ import { usePathname } from "next/navigation";
 import { FormEvent, useState } from "react";
 import Button from "@/components/ui/Button";
 import { submitFeedback } from "@/app/(app)/profile/feedback-actions";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
+// Label/hint are resolved through the catalog per value inside the component.
 const TYPES = [
-  { value: "bug", label: "Something's broken", hint: "A screen, a button, a payment" },
-  { value: "support", label: "I need help", hint: "Tickets, payouts, your account" },
-  { value: "idea", label: "An idea", hint: "Something you wish it did" },
+  { value: "bug", labelKey: "feedback.typeBugLabel", hintKey: "feedback.typeBugHint" },
+  { value: "support", labelKey: "feedback.typeSupportLabel", hintKey: "feedback.typeSupportHint" },
+  { value: "idea", labelKey: "feedback.typeIdeaLabel", hintKey: "feedback.typeIdeaHint" },
 ] as const;
 
 export default function FeedbackDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useT();
   // Where they were when they opened this. Captured rather than asked for -
   // "which screen were you on?" is a question people answer badly a day later,
   // and the browser already knows.
@@ -26,7 +29,7 @@ export default function FeedbackDialog({ onClose }: { onClose: () => void }) {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!message.trim()) {
-      setError("Write a message first");
+      setError(t("feedback.writeFirst"));
       return;
     }
 
@@ -55,22 +58,17 @@ export default function FeedbackDialog({ onClose }: { onClose: () => void }) {
           // feedback!" with no follow-up is how people learn that writing in
           // is pointless.
           <div className="flex flex-col gap-4 text-center">
-            <h2 className="font-display text-xl text-foreground">Got it — thank you</h2>
-            <p className="text-sm text-muted">
-              We read every one of these. If it needs a reply, it&apos;ll come to the email on
-              your account.
-            </p>
+            <h2 className="font-display text-xl text-foreground">{t("feedback.sentTitle")}</h2>
+            <p className="text-sm text-muted">{t("feedback.sentBody")}</p>
             <Button type="button" onClick={onClose}>
-              Done
+              {t("common.done")}
             </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <h2 className="font-display text-xl text-foreground">Send feedback</h2>
-              <p className="mt-1 text-sm text-muted">
-                Tell us what&apos;s not working, or what you&apos;d like to see.
-              </p>
+              <h2 className="font-display text-xl text-foreground">{t("feedback.title")}</h2>
+              <p className="mt-1 text-sm text-muted">{t("feedback.subtitle")}</p>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -87,11 +85,11 @@ export default function FeedbackDialog({ onClose }: { onClose: () => void }) {
                     type === option.value ? "bg-primary text-foreground" : "bg-background text-muted"
                   }`}
                 >
-                  <span className="text-sm font-heading">{option.label}</span>
+                  <span className="text-sm font-heading">{t(option.labelKey)}</span>
                   <span
                     className={`text-xs ${type === option.value ? "text-foreground/70" : "text-muted/70"}`}
                   >
-                    {option.hint}
+                    {t(option.hintKey)}
                   </span>
                 </button>
               ))}
@@ -102,14 +100,14 @@ export default function FeedbackDialog({ onClose }: { onClose: () => void }) {
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
               maxLength={4000}
-              placeholder="What happened, or what would you change?"
+              placeholder={t("feedback.placeholder")}
               className="w-full rounded-2xl border border-muted/20 bg-background px-4 py-3.5 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
             />
 
             {error && <p className="text-sm text-danger">{error}</p>}
 
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Sending..." : "Send"}
+              {submitting ? t("feedback.sending") : t("feedback.send")}
             </Button>
           </form>
         )}

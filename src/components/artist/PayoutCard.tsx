@@ -9,6 +9,7 @@ import {
 } from "@/app/(app)/profile/payout-actions";
 import { FEE_PERCENT } from "@/lib/pricing";
 import InfoTip from "@/components/ui/InfoTip";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 export default function PayoutCard({
   connected,
@@ -17,6 +18,7 @@ export default function PayoutCard({
   connected: boolean;
   ready: boolean;
 }) {
+  const { t } = useT();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -59,15 +61,15 @@ export default function PayoutCard({
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="font-heading text-sm text-foreground">Payouts</p>
-            <InfoTip text="Ticket money is held in Stripe and paid to your bank once your show has happened, not the moment a ticket sells - this protects fans if a show is ever cancelled." />
+            <p className="font-heading text-sm text-foreground">{t("payout.title")}</p>
+            <InfoTip text={t("payout.tip")} />
           </div>
           <p className="text-xs text-muted">
             {liveReady
-              ? `Connected — you keep ${100 - FEE_PERCENT}% of each ticket`
+              ? t("payout.connectedKeep", { pct: 100 - FEE_PERCENT })
               : connected
-                ? "Stripe still needs a few details before you can sell"
-                : "Connect a payout account to sell tickets through MadGigz"}
+                ? t("payout.pendingDetails")
+                : t("payout.connectPrompt")}
           </p>
         </div>
         <span
@@ -75,7 +77,7 @@ export default function PayoutCard({
             liveReady ? "bg-accent/15 text-accent" : "bg-primary/15 text-primary"
           }`}
         >
-          {liveReady ? "Ready" : connected ? "Pending" : "Not set up"}
+          {liveReady ? t("payout.statusReady") : connected ? t("payout.statusPending") : t("payout.statusNotSetUp")}
         </span>
       </div>
 
@@ -87,12 +89,12 @@ export default function PayoutCard({
         className="mt-3 w-full rounded-full border border-muted/30 py-2 text-sm font-heading text-foreground disabled:opacity-50"
       >
         {isPending
-          ? "Opening Stripe..."
+          ? t("payout.opening")
           : liveReady
-            ? "View payouts on Stripe"
+            ? t("payout.viewOnStripe")
             : connected
-              ? "Finish setup"
-              : "Connect payouts"}
+              ? t("payout.finishSetup")
+              : t("payout.connect")}
       </button>
     </div>
   );

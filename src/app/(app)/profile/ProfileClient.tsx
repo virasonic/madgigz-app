@@ -74,7 +74,7 @@ function SettingsSheet({
   isArtist: boolean;
 }) {
   const { t, locale, setLocale } = useT();
-  const comingSoonRows = ["Promotions", "Analytics"];
+  const comingSoonRows = ["profile.promotions", "profile.analytics"];
   return (
     <div
       className="fixed inset-0 z-30 flex items-end justify-center bg-black/60"
@@ -124,8 +124,8 @@ function SettingsSheet({
                 key={row}
                 className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
               >
-                <span className="text-sm text-foreground">{row}</span>
-                <span className="text-xs uppercase text-muted">Soon</span>
+                <span className="text-sm text-foreground">{t(row)}</span>
+                <span className="text-xs uppercase text-muted">{t("settings.comingSoon")}</span>
               </div>
             ))}
 
@@ -147,6 +147,7 @@ function SettingsSheet({
 }
 
 function ShowRow({ show, onOpen }: { show: EventItem; onOpen: () => void }) {
+  const { t } = useT();
   return (
     <button
       onClick={onOpen}
@@ -157,7 +158,7 @@ function ShowRow({ show, onOpen }: { show: EventItem; onOpen: () => void }) {
           <p className="truncate font-heading text-sm text-foreground">{show.title}</p>
           {!show.active && (
             <span className="shrink-0 rounded-full bg-muted/15 px-2 py-0.5 text-[10px] font-heading uppercase tracking-wide text-muted">
-              Hidden
+              {t("profile.hidden")}
             </span>
           )}
         </div>
@@ -165,7 +166,7 @@ function ShowRow({ show, onOpen }: { show: EventItem; onOpen: () => void }) {
           {formatDate(show.date)} · {show.venue}
         </p>
       </div>
-      <span className="shrink-0 text-xs text-muted">{show.sold} sold</span>
+      <span className="shrink-0 text-xs text-muted">{t("profile.soldCount", { count: show.sold })}</span>
     </button>
   );
 }
@@ -187,6 +188,7 @@ export default function ProfileClient({
   taggedShows,
   unreadCount,
 }: ProfileClientProps) {
+  const { t } = useT();
   const router = useRouter();
   const [activeShow, setActiveShow] = useState<EventItem | null>(null);
   // Kept separate from activeShow so the modal knows which one it is looking at:
@@ -297,30 +299,24 @@ export default function ProfileClient({
         <div className="mb-8 grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-surface p-4 text-center">
             <p className="font-display text-3xl text-foreground">{attendedCount}</p>
-            <p className="text-sm text-muted">Attended</p>
+            <p className="text-sm text-muted">{t("profile.attended")}</p>
           </div>
           <div className="rounded-2xl bg-surface p-4 text-center">
             <p className="font-display text-3xl text-foreground">{savedCount}</p>
-            <p className="text-sm text-muted">Saved</p>
+            <p className="text-sm text-muted">{t("profile.saved")}</p>
           </div>
         </div>
       ) : user.artistStatus !== "approved" ? (
         <div className="mb-8 rounded-2xl bg-surface p-5 text-center">
           {user.artistStatus === "rejected" ? (
             <>
-              <p className="font-heading text-foreground">Application not approved</p>
-              <p className="mt-1 text-sm text-muted">
-                Your artist profile wasn&apos;t approved. Contact us if you&apos;d like to
-                submit more evidence.
-              </p>
+              <p className="font-heading text-foreground">{t("profile.rejectedTitle")}</p>
+              <p className="mt-1 text-sm text-muted">{t("profile.rejectedBody")}</p>
             </>
           ) : claimSubmitted ? (
             <>
-              <p className="font-heading text-foreground">Under review</p>
-              <p className="mt-1 text-sm text-muted">
-                We&apos;re verifying your artist profile against your submitted evidence. Once
-                approved, you&apos;ll be able to add shows and post content.
-              </p>
+              <p className="font-heading text-foreground">{t("profile.underReviewTitle")}</p>
+              <p className="mt-1 text-sm text-muted">{t("profile.underReviewBody")}</p>
             </>
           ) : (
             // The claim form used to be reachable only via the confirmation
@@ -328,13 +324,10 @@ export default function ProfileClient({
             // artist taps it - so they'd sign in, never see the form, and sit
             // here being told we were reviewing evidence they never sent.
             <>
-              <p className="font-heading text-foreground">Finish your artist profile</p>
-              <p className="mt-1 text-sm text-muted">
-                We still need your artist name, a social link and something that shows the
-                profile is yours, before we can approve you.
-              </p>
+              <p className="font-heading text-foreground">{t("profile.finishTitle")}</p>
+              <p className="mt-1 text-sm text-muted">{t("profile.finishBody")}</p>
               <Link href="/signup/artist-profile" className="mt-4 block">
-                <Button>Continue</Button>
+                <Button>{t("common.continue")}</Button>
               </Link>
             </>
           )}
@@ -347,10 +340,10 @@ export default function ProfileClient({
 
           <div className="mb-6 flex gap-3">
             <Link href="/profile/add-show" className="flex-1">
-              <Button>Add Show</Button>
+              <Button>{t("profile.addShow")}</Button>
             </Link>
             <Link href="/profile/scan" className="flex-1">
-              <Button variant="secondary">Scan Tickets</Button>
+              <Button variant="secondary">{t("profile.scanTickets")}</Button>
             </Link>
           </div>
 
@@ -360,31 +353,27 @@ export default function ProfileClient({
           <div className="mb-8 grid grid-cols-3 gap-3">
             <div className="rounded-2xl bg-surface p-4 text-center">
               <p className="font-display text-2xl text-foreground">{user.followerCount}</p>
-              <p className="text-xs text-muted">Followers</p>
+              <p className="text-xs text-muted">{t("profile.followers")}</p>
             </div>
             <div className="rounded-2xl bg-surface p-4 text-center">
               <p className="font-display text-2xl text-foreground">{shows.length}</p>
-              <p className="text-xs text-muted">Shows</p>
+              <p className="text-xs text-muted">{t("profile.shows")}</p>
             </div>
             <div className="rounded-2xl bg-surface p-4 text-center">
               <p className="font-display text-2xl text-foreground">{ticketsSold}</p>
-              <p className="text-xs text-muted">Tickets Sold</p>
+              <p className="text-xs text-muted">{t("profile.ticketsSold")}</p>
             </div>
           </div>
 
           <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">
-            Your Shows
+            {t("profile.yourShows")}
           </h2>
           {shows.length === 0 ? (
-            <p className="mb-8 text-sm text-muted">
-              You haven&apos;t added any shows yet.
-            </p>
+            <p className="mb-8 text-sm text-muted">{t("profile.noShows")}</p>
           ) : (
             <div className="mb-8 flex flex-col gap-3">
               {visibleShows.length === 0 && (
-                <p className="text-sm text-muted">
-                  All your shows are hidden right now.
-                </p>
+                <p className="text-sm text-muted">{t("profile.allHidden")}</p>
               )}
               {visibleShows.map((show) => (
                 <ShowRow key={show.id} show={show} onOpen={() => setActiveShow(show)} />
@@ -416,7 +405,7 @@ export default function ProfileClient({
                         strokeLinejoin="round"
                       />
                     </svg>
-                    Hidden shows ({hiddenShows.length})
+                    {t("profile.hiddenShows")} ({hiddenShows.length})
                   </button>
                   {hiddenOpen &&
                     hiddenShows.map((show) => (
@@ -436,7 +425,7 @@ export default function ProfileClient({
           {taggedShows.length > 0 && (
             <>
               <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">
-                Tagged in
+                {t("profile.taggedIn")}
               </h2>
               <div className="mb-8 flex flex-col gap-3">
                 {taggedShows.map((show) => (
@@ -453,7 +442,7 @@ export default function ProfileClient({
                           month: "short",
                           timeZone: "UTC",
                         })}{" "}
-                        · {show.venue} · by {show.artist}
+                        · {show.venue} · {t("profile.byArtist", { artist: show.artist })}
                       </p>
                     </div>
                   </button>
@@ -465,7 +454,7 @@ export default function ProfileClient({
       )}
 
       <Button variant="ghost" onClick={handleLogOut}>
-        Log Out
+        {t("profile.logOut")}
       </Button>
 
       {/* Quiet, and below Log Out, because it is a rare and irreversible thing -
@@ -475,7 +464,7 @@ export default function ProfileClient({
         onClick={() => setDeleteOpen(true)}
         className="mt-4 w-full text-center text-xs text-muted underline underline-offset-4"
       >
-        Delete my account
+        {t("profile.deleteAccount")}
       </button>
 
       {deleteOpen && <DeleteAccountDialog onClose={() => setDeleteOpen(false)} />}
