@@ -14,7 +14,7 @@ the same thing across old conversations. Gaps are shipped items.
 | 3 | 59 | **Spanish/English localization** | Every UI string into translation files, a language switch, and the Spanish itself. Dates and currency are already `en-GB`/EUR. | Sequencing (see below), plus a fluent Spanish pass on the copy. | L |
 | 4 | 79 | **Verification link is decorative** | Say so in the email, drop the button, or leave it. Scanners open the link within ~15s of sending, so nobody completes verification by tapping it — the sign-in notice *is* the verification step. | Your decision. Can jump the queue any time — it's five minutes. | S |
 | 5 | 94 | **Feedback & support inbox** | A "Send feedback" row in profile Settings, a `feedback` table, a Feedback tab in the admin panel with the same open/closed split as the artist review queue (#72), and an open count on the admin dashboard. Naming: **Feedback**, not tickets — see below. | Nothing. | M |
-| 6 | 95 | **Go live: real domain and production hosting** | Today the app is on `madgigz-app.vercel.app` in Stripe **test mode**. Going live means a real domain, Stripe live keys, the production webhook endpoint, `NEXT_PUBLIC_APP_URL` and the Supabase redirect allow-list all repointed, and a decision about whether Vercel stays the host. **Vir to confirm which he meant** — a custom domain on Vercel, or moving off Vercel to a server. See below. | Vir clarifying. | M |
+| 6 | 95 | **Go live on `madgigz.aurasonic.es`** | Decided 10 Aug 2026: the webapp gets a subdomain of the domain Vir already owns, with `aurasonic.es` itself left for the main AuraSonic site. Vercel stays the host. A DNS record and a Vercel domain, then the settings that must move with it — Stripe live keys, a new webhook endpoint, `NEXT_PUBLIC_APP_URL`, and Supabase's redirect allow-list. See below for what breaks quietly if one is missed. | Nothing. Vir's call on when. | M |
 | 7 | 89 | **Let people change their username** | A field on Edit Profile. The database side is already built — `addendum_010`'s format check, `addendum_011`'s case-insensitive unique index and `username_available()` RPC — so this is the signup form's availability check, reused. The real work is the rules around it (see below), not the form. Cooldown decided: **10 days**. | Nothing. | S |
 | 8 | 91 | **Sign in with a username** | Supabase Auth only authenticates on email, so this needs a server-side username→email lookup that signs the person in without ever returning the email to the browser. Build it with #89, not apart from it — a changeable username that is also a login credential is one feature, not two. | Nothing. | M |
 | 9 | 90 | **"City centric"** | Vir to explain — noted 9 Aug 2026 so it isn't lost. | Vir. | ? |
@@ -57,28 +57,31 @@ the dashboard box should count **open** items, since a total nobody can act on
 is decoration. Notify support@aurasonic.es through Resend, which is already
 wired up for approval emails.
 
-**#95 needs one word from Vir before it can be sized.** "Pushing this from
-Vercel to the server" has two readings, and they are very different jobs.
+**#95 is a subdomain, not a migration.** `madgigz.aurasonic.es` points at the
+existing Vercel deployment: one DNS record at whoever hosts `aurasonic.es`, one
+domain added in the Vercel project, and Vercel issues the certificate itself.
+The apex is untouched, so the main AuraSonic site can live wherever it likes,
+and Supabase does not move — it was always separate hosting.
 
-The likely one is **going live**: a real domain pointed at the existing Vercel
-deployment. That is mostly a checklist, and the parts that bite are the ones
-that silently keep working while being wrong — Stripe swapped from test to live
-keys, a *new* webhook endpoint registered against the live URL with its own
-signing secret, `NEXT_PUBLIC_APP_URL` updated so shared links and OG images stop
-pointing at the old host, and the Supabase redirect allow-list updated or Google
-sign-in breaks on the new domain. The database does not move: Supabase is
-already a separate hosted service.
+The DNS part takes minutes. The part worth care is the settings that have to
+move with it, because **each one fails silently rather than loudly**:
 
-The other reading is **leaving Vercel** for a VPS. That is a real migration, and
-worth being clear about the cost: the app leans on things Vercel provides for
-free — the cron that runs the nightly purge and gig reminders, image
-optimisation, and zero-config deploys on push. On a VPS those become a systemd
-timer, a self-hosted optimiser, and a deploy pipeline somebody has to maintain.
-There are good reasons to do it eventually (cost at scale, data residency), but
-none of them apply to an app with no live users yet.
+- `NEXT_PUBLIC_APP_URL` — every shared event link and link preview is built from
+  it (`src/lib/site.ts`). Leave it and shares keep pointing at the old
+  `.vercel.app` host, which still works, so nobody notices for weeks.
+- **Supabase → URL Configuration** — the new origin needs adding to Redirect
+  URLs and Site URL, or Google sign-in returns people to the site root with no
+  session. Google Cloud itself needs no change: its redirect URI is Supabase's
+  `/auth/v1/callback`, which doesn't move.
+- **Stripe** — live keys, and a *separate* webhook endpoint registered against
+  the new URL with its own signing secret. Test-mode webhooks do not carry over,
+  and a missing endpoint means money is taken and no ticket is issued.
+- Email needs nothing: Resend already sends as `@aurasonic.es`.
 
-**Recommendation: custom domain on Vercel now, revisit hosting if traffic ever
-makes it a real bill.**
+Worth doing before this: the subdomain is also what a native shell would point
+at, so picking it now means the URL doesn't change again when MadGigz becomes a
+real app. Same reasoning as staying on web for launch — see the note on
+Capacitor from 10 Aug 2026.
 
 **#89 and #91 are one feature, and the risk is in the rules.** The form is an
 afternoon; deciding what happens to the old handle is the part worth thinking
