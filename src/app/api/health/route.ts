@@ -59,6 +59,15 @@ export async function GET() {
     // Safe to echo: this is the public site origin, and getting it wrong sends
     // paying customers to a dead page after checkout, so it's worth surfacing.
     appUrl: process.env.NEXT_PUBLIC_APP_URL ?? null,
+    // Just the mode, never the key. Whether Stripe is test or live isn't secret
+    // (the checkout page and the in-app notice both reveal it), and surfacing it
+    // is the reliable way to confirm a soft launch isn't quietly taking real
+    // money - and, at go-live, that it finally is.
+    stripeMode: process.env.STRIPE_SECRET_KEY?.startsWith("sk_live")
+      ? "live"
+      : process.env.STRIPE_SECRET_KEY?.startsWith("sk_test")
+        ? "test"
+        : "unknown",
     pricing: { feePercent: FEE_PERCENT, vatPercent: VAT_PERCENT, minFeeCents: MIN_FEE_CENTS },
     config,
     missing,
