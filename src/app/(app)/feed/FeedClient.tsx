@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import TicketModal from "@/components/feed/TicketModal";
 import ContentReelCard from "@/components/feed/ContentReelCard";
+import AnnouncementCard from "@/components/feed/AnnouncementCard";
 import AddContentModal from "@/components/artist/AddContentModal";
 import { createClient } from "@/lib/supabase/client";
 import { fetchContentPosts, toggleSavedEvent } from "@/lib/supabase/queries";
@@ -14,8 +15,13 @@ type Pane = "forYou" | "thisWeek";
 
 interface FeedEntry {
   post: ContentPost;
-  event: EventItem;
+  /** Null for a MadGigz announcement - see addendum_028. */
+  event: EventItem | null;
 }
+
+// One announcement every this-many reels. Frequent enough that a new signup
+// meets one early, rare enough that the feed still belongs to the artists.
+const ANNOUNCEMENT_EVERY = 4;
 
 // For You is content-only (no bare event posters) - each entry is a content
 // post paired with the show it's actually about. A post whose event isn't in
@@ -25,7 +31,10 @@ function buildForYouFeed(
   allPosts: ContentPost[],
   followed: Set<string>
 ): FeedEntry[] {
+  const announcements = allPosts.filter((post) => !post.eventId);
+
   const entries = allPosts.flatMap((post) => {
+    if (!post.eventId) return [];
     const event = allEvents.find((e) => e.id === post.eventId);
     return event ? [{ post, event }] : [];
   });
@@ -33,9 +42,27 @@ function buildForYouFeed(
   // Followed artists first, newest-first within each half. A stable sort keeps
   // the created_at order the query already applied, so this only lifts the
   // followed ones rather than reshuffling everything.
-  return entries.sort(
+  const sorted = entries.sort(
     (a, b) => Number(followed.has(b.event.id)) - Number(followed.has(a.event.id))
   );
+
+  if (announcements.length === 0) return sorted;
+
+  // Interleaved rather than pinned to the top: a stack of explainers before any
+  // actual music is the wrong first impression of a gig app. On a brand-new
+  // account with no artist content at all, this still surfaces them - the loop
+  // runs to whichever list is longer.
+  const woven: FeedEntry[] = [];
+  let next = 0;
+  for (let i = 0; i < sorted.length || next < announcements.length; i += 1) {
+    if (i < sorted.length) woven.push(sorted[i]);
+    const due = (i + 1) % ANNOUNCEMENT_EVERY === 0 || i >= sorted.length - 1;
+    if (due && next < announcements.length) {
+      woven.push({ post: announcements[next], event: null });
+      next += 1;
+    }
+  }
+  return woven;
 }
 
 function groupByDay(items: EventItem[]) {
@@ -176,15 +203,23 @@ export default function FeedClient({
             <div className="h-full snap-y snap-mandatory overflow-y-scroll">
               {forYouFeed.map((entry) => (
                 <div key={entry.post.id} className="h-full w-full snap-start">
-                  <ContentReelCard
-                    post={entry.post}
-                    event={entry.event}
-                    muted={reelsMuted}
-                    onToggleMute={() => setReelsMuted((v) => !v)}
-                    onOpen={() => setActiveEvent(entry.event)}
-                    liked={savedIds.includes(entry.event.id)}
-                    onToggleLike={() => handleToggleLike(entry.event.id)}
-                  />
+                  {entry.event ? (
+                    <ContentReelCard
+                      post={entry.post}
+                      event={entry.event}
+                      muted={reelsMuted}
+                      onToggleMute={() => setReelsMuted((v) => !v)}
+                      onOpen={() => setActiveEvent(entry.event!)}
+                      liked={savedIds.includes(entry.event.id)}
+                      onToggleLike={() => handleToggleLike(entry.event!.id)}
+                    />
+                  ) : (
+                    <AnnouncementCard
+                      post={entry.post}
+                      muted={reelsMuted}
+                      onToggleMute={() => setReelsMuted((v) => !v)}
+                    />
+                  )}
                 </div>
               ))}
             </div>

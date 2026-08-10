@@ -339,10 +339,14 @@ export default function TicketModal({
                     <p className="text-muted">Age</p>
                     <p className="text-foreground">{event.ageRestriction}</p>
                   </div>
-                  <div>
-                    <p className="text-muted">Rating</p>
-                    <p className="text-foreground">{event.rating.toFixed(1)} / 5</p>
-                  </div>
+                  {/* "Rating" was here, rendering event.rating as "0.0 / 5".
+                      Nothing in the app has ever written a rating - both places
+                      that create an event hard-code 0 - so every show was
+                      advertising itself as nought out of five to anyone who
+                      opened More Info. The column survives from the original
+                      prototype spec; it stays in the database untouched, but it
+                      has no business on screen until something can actually
+                      produce a number. */}
                 </div>
 
                 <Button onClick={() => setTab("tickets")}>Get Tickets</Button>

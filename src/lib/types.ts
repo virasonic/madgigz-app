@@ -79,7 +79,12 @@ export interface EventItem {
 
 export interface ContentPost {
   id: string;
-  eventId: string;
+  /**
+   * Null for a MadGigz announcement - a post that belongs to the platform
+   * rather than to a show. See addendum_028: the absence of an event IS the
+   * distinction, which is why there is no separate flag to keep in step.
+   */
+  eventId: string | null;
   artistId: string | null;
   artist: string;
   showTitle: string;
@@ -223,7 +228,7 @@ export function mapEvent(row: EventRow): EventItem {
 
 export interface ContentPostRow {
   id: string;
-  event_id: string;
+  event_id: string | null;
   artist_id: string | null;
   artist_name: string;
   show_title: string;
