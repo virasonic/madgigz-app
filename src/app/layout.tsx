@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
+import { getLocale } from "@/lib/i18n/server";
 
 const galdernExtraBold = localFont({
   src: "./fonts/Galdern-ExtraBold.otf",
@@ -48,14 +50,15 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getLocale();
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${galdernExtraBold.variable} ${galdernMedium.variable} ${dmSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        {children}
+        <LocaleProvider locale={locale}>{children}</LocaleProvider>
       </body>
     </html>
   );

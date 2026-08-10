@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Role } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 interface NavItem {
   href: string;
@@ -126,14 +127,15 @@ export default function BottomNav({
   unreadCount?: number;
 }) {
   const pathname = usePathname();
+  const { t } = useT();
 
   const items: NavItem[] = [
-    { href: "/feed", label: "Feed", icon: FeedIcon },
-    { href: "/explore", label: "Explore", icon: ExploreIcon },
-    { href: "/saved", label: "Tickets", icon: TicketIcon },
+    { href: "/feed", label: t("nav.feed"), icon: FeedIcon },
+    { href: "/explore", label: t("nav.explore"), icon: ExploreIcon },
+    { href: "/saved", label: t("nav.tickets"), icon: TicketIcon },
     {
       href: "/profile",
-      label: "Profile",
+      label: t("nav.profile"),
       icon: isArtistRole(role) ? NoteIcon : PersonIcon,
     },
   ];

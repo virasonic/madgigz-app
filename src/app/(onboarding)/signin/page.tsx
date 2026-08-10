@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input";
 import GoogleButton from "@/components/auth/GoogleButton";
 import { safeNext } from "@/lib/site";
 import { signInWithIdentifier } from "./actions";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 // The route that sends people here only ever passes a safe code, never
 // Supabase's own error text (see src/app/auth/confirm/route.ts) - this maps
@@ -84,6 +85,7 @@ function SignInContent() {
   // Email OR username now - the field takes either, and the server sorts out
   // which (see signInWithIdentifier). The redirect logic that used to live here
   // moved into that action so both paths share it.
+  const { t } = useT();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -93,8 +95,8 @@ function SignInContent() {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
 
-    if (!identifier.trim()) nextErrors.identifier = "Enter your email or username";
-    if (!password) nextErrors.password = "Enter your password";
+    if (!identifier.trim()) nextErrors.identifier = t("signin.errorIdentifier");
+    if (!password) nextErrors.password = t("signin.errorPassword");
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -104,7 +106,7 @@ function SignInContent() {
     setSubmitting(false);
 
     if (result.error || !result.destination) {
-      setErrors({ password: result.error ?? "Incorrect email or password" });
+      setErrors({ password: result.error ?? t("signin.errorWrong") });
       return;
     }
 
@@ -114,21 +116,21 @@ function SignInContent() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <h1 className="font-display mt-8 text-3xl text-foreground">Welcome back</h1>
-      <p className="mt-1 text-sm text-muted">Sign in to keep the vibe going.</p>
+      <h1 className="font-display mt-8 text-3xl text-foreground">{t("signin.title")}</h1>
+      <p className="mt-1 text-sm text-muted">{t("signin.subtitle")}</p>
 
       <LinkNotice code={searchParams.get("notice")} />
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <Input
-          label="Email or username"
+          label={t("signin.identifierLabel")}
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
           error={errors.identifier}
           autoComplete="username"
         />
         <Input
-          label="Password"
+          label={t("signin.passwordLabel")}
           isPassword
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -140,33 +142,33 @@ function SignInContent() {
           href="/signin/forgot-password"
           className="-mt-2 self-end text-sm text-accent"
         >
-          Forgot password?
+          {t("signin.forgotPassword")}
         </Link>
 
         <Button type="submit" className="mt-2" disabled={submitting}>
-          {submitting ? "Signing in..." : "Sign in"}
+          {submitting ? t("signin.submitting") : t("signin.submit")}
         </Button>
       </form>
 
       <div className="mt-6 flex items-center gap-3">
         <span className="h-px flex-1 bg-muted/20" />
-        <span className="text-xs uppercase tracking-wide text-muted">or</span>
+        <span className="text-xs uppercase tracking-wide text-muted">{t("signin.orDivider")}</span>
         <span className="h-px flex-1 bg-muted/20" />
       </div>
 
       {/* Apple's button belongs alongside this one and is [[82b]] - it needs
           Apple to approve the developer verification first. */}
       <div className="mt-6">
-        <GoogleButton next={next} label="Sign in with Google" />
+        <GoogleButton next={next} label={t("signin.withGoogle")} />
       </div>
 
       <p className="mt-8 text-center text-sm text-muted">
-        Don&apos;t have an account?{" "}
+        {t("signin.noAccount")}{" "}
         <Link
           href={next ? `/?next=${encodeURIComponent(next)}` : "/"}
           className="font-heading text-foreground"
         >
-          Sign up
+          {t("common.signUp")}
         </Link>
       </p>
     </div>

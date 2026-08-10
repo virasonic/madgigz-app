@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import RoleCard from "@/components/ui/RoleCard";
 import { safeNext } from "@/lib/site";
+import { getServerT } from "@/lib/i18n/server";
 
 function HeartIcon() {
   return (
@@ -38,6 +39,8 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
   const withNext = (path: string) =>
     next ? `${path}${path.includes("?") ? "&" : "?"}next=${encodeURIComponent(next)}` : path;
 
+  const { t } = await getServerT();
+
   // justify-center balances the whole group in the middle of the screen. The
   // wordmark block deliberately has no flex-1: giving it one made it absorb
   // all the spare height, pinning the logo to the top and the cards to the
@@ -54,7 +57,7 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
           className="w-56"
         />
         <p className="mt-3 font-heading text-sm uppercase tracking-[0.2em] text-muted">
-          Local Gigs &amp; Concerts
+          {t("landing.tagline")}
         </p>
       </div>
 
@@ -63,23 +66,23 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
           role="fan"
           href={withNext("/signup?role=fan")}
           icon={<span className="text-foreground"><HeartIcon /></span>}
-          title="I'm a Fan"
-          description="Discover events, buy tickets, vibe out"
+          title={t("landing.fanTitle")}
+          description={t("landing.fanDescription")}
         />
         <RoleCard
           role="artist"
           href={withNext("/signup?role=artist")}
           icon={<span className="text-accent"><NoteIcon /></span>}
-          title="I'm an Artist"
-          description="Claim your profile, sell your shows"
-          badge="Artist"
+          title={t("landing.artistTitle")}
+          description={t("landing.artistDescription")}
+          badge={t("landing.artistBadge")}
         />
       </div>
 
       <p className="mt-8 text-center text-sm text-muted">
-        Already have an account?{" "}
+        {t("landing.haveAccount")}{" "}
         <Link href={withNext("/signin")} className="font-heading text-foreground">
-          Sign in
+          {t("common.signIn")}
         </Link>
       </p>
     </div>

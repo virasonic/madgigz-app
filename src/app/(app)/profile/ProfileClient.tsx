@@ -14,6 +14,8 @@ import { AppUser, EventItem } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
 import DeleteAccountDialog from "@/components/account/DeleteAccountDialog";
 import FeedbackDialog from "@/components/account/FeedbackDialog";
+import { useT } from "@/lib/i18n/LocaleProvider";
+import { LOCALES, LOCALE_LABELS } from "@/lib/i18n/config";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -70,6 +72,7 @@ function SettingsSheet({
   payoutReady: boolean;
   isArtist: boolean;
 }) {
+  const { t, locale, setLocale } = useT();
   const comingSoonRows = ["Promotions", "Analytics"];
   return (
     <div
@@ -81,15 +84,38 @@ function SettingsSheet({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
-        <h2 className="font-display text-xl text-foreground">Settings</h2>
+        <h2 className="font-display text-xl text-foreground">{t("settings.title")}</h2>
         <div className="mt-4 flex flex-col gap-2">
           <Link
             href="/profile/edit"
             className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
           >
-            <span className="text-sm text-foreground">Edit Profile</span>
-            <span className="text-xs text-muted">{isArtist ? "Bio & photo" : "Photo"}</span>
+            <span className="text-sm text-foreground">{t("settings.editProfile")}</span>
+            <span className="text-xs text-muted">
+              {isArtist ? t("settings.editProfileBioPhoto") : t("settings.editProfilePhoto")}
+            </span>
           </Link>
+
+          {/* Detected from the browser on the first visit; this is the manual
+              override, remembered after. */}
+          <div className="flex items-center justify-between rounded-2xl bg-background px-4 py-3">
+            <span className="text-sm text-foreground">{t("language.label")}</span>
+            <div className="flex gap-1 rounded-full bg-surface p-1">
+              {LOCALES.map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => setLocale(code)}
+                  className={`rounded-full px-3 py-1 text-xs font-heading ${
+                    locale === code ? "bg-primary text-foreground" : "text-muted"
+                  }`}
+                >
+                  {LOCALE_LABELS[code]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {isArtist && <PayoutCard connected={payoutConnected} ready={payoutReady} />}
           {isArtist &&
             comingSoonRows.map((row) => (
@@ -110,8 +136,8 @@ function SettingsSheet({
             onClick={onSendFeedback}
             className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5 text-left"
           >
-            <span className="text-sm text-foreground">Send feedback</span>
-            <span className="text-xs text-muted">Bug, help or an idea</span>
+            <span className="text-sm text-foreground">{t("settings.sendFeedback")}</span>
+            <span className="text-xs text-muted">{t("settings.sendFeedbackHint")}</span>
           </button>
         </div>
       </div>
