@@ -10,7 +10,6 @@ the same thing across old conversations. Gaps are shipped items.
 | Order | # | Item | What the work actually is | Blocked on | Size |
 |---|---|---|---|---|---|
 | 1 | 82b | **Apple sign-in** | Enable the provider, add the button next to Google's. Small, because 82a already built the post-callback screen and it is provider-agnostic. | **Apple**, approving your developer verification. | S |
-| 2 | 103 | **Security: key-rotation checklist** | One documented, repeatable list of every secret the app holds, what breaks if it leaks, and how to rotate it without downtime — Supabase `anon` + `service_role`, Stripe secret + webhook signing secret, `CRON_SECRET`, Turnstile secret, Resend key, Google OAuth client secret, plus `NEXT_PUBLIC_*` public values. Encodes the two-phase order (rotate at provider → update Vercel env → redeploy → revoke old) so a rotation never takes the app down. Ties into #95: going live already rotates the Stripe set. See the note below. | Nothing. Worth doing alongside #95. | S |
 | 6 | 104 | **Claude skills for code organisation** | Package the repo's own conventions as `.claude/skills/` so they're applied the same way every time instead of living in CLAUDE.md prose and my head: the migration two-phase + column-GRANT rules, the i18n "add a string" workflow (en.ts → es.ts → `export-i18n-json.mjs` → regenerate the review PDF), the adversarial-probe pattern (read the stored value back), and the "read `node_modules/next/dist/docs` before writing Next code" rule. Turns tribal knowledge into invokable checklists. | Nothing. | S |
 | 7 | 105 | **Full web / desktop version** | The app is mobile-first — built and tested at 375px, every screen a single phone-width column. A proper wide-screen experience (multi-column feed/explore, a desktop layout rather than a centred phone) suits fans browsing on a laptop, and is likely what a promoter/venue back-office (#88) wants anyway. **Vir to confirm the intent** — this could instead mean a marketing site on the apex `aurasonic.es`, which is a separate job from restyling the app for wide screens. | Vir to clarify scope. | M–L |
 | 3 | 95 | **Go live on `madgigz.aurasonic.es`** | Decided 10 Aug 2026: the webapp gets a subdomain of the domain Vir already owns, with `aurasonic.es` itself left for the main AuraSonic site. Vercel stays the host. A DNS record and a Vercel domain, then the settings that must move with it — Stripe live keys, a new webhook endpoint, `NEXT_PUBLIC_APP_URL`, and Supabase's redirect allow-list. See below for what breaks quietly if one is missed. | Nothing. Vir's call on when. | M |
@@ -144,15 +143,16 @@ licence to do it. Stripe's cut buys all of that plus the fraud handling and the
 Connect payouts. It only becomes arguable at volumes where a percentage point
 is real money, and MadGigz is a long way from there.
 
-**#103 is a checklist, not a build — but do it beside #95.** Every secret the
-app holds, what breaks if it leaks, and how to swap it without downtime. The
-non-obvious part is *order*: rotate at the provider, add the new value to
-Vercel's env, redeploy, and only then revoke the old one — the reverse takes the
-app down between steps (this is the same two-phase discipline the migrations
-use). Going live already forces the Stripe half (new live keys + a fresh webhook
-signing secret); #103 is writing the whole thing down once so a future rotation
-is a 20-minute chore, not an outage. See also `docs/load-and-capacity.md`, which
-leans on the same env-vars.
+**#103 shipped (10 Aug 2026): `docs/key-rotation.md`.** Every secret the app
+holds, its blast radius if leaked, and a five-step per-secret runbook, all
+grounded in the actual env the code reads. The non-obvious part is *order*:
+create at the provider → update Vercel env → redeploy → verify `/api/health` →
+only then revoke the old value (the reverse takes the app down between steps —
+the same two-phase discipline the migrations use). It flags the two traps: the
+Supabase JWT-secret rotation is the one heavy case that signs everyone out, and
+the Google OAuth client secret lives in the Supabase dashboard, not Vercel env.
+Going live (#95) already forces the Stripe half, so the doc's Stripe rows and the
+go-live checklist are the same work — do them together.
 
 **#104 pays for itself the moment a convention is applied wrong once.** The rules
 that already bit us live in CLAUDE.md prose — column GRANTs, the two-phase
