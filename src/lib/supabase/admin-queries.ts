@@ -42,13 +42,16 @@ export interface AdminUserRow {
   ticketCount: number;
   deletionRequestedAt: string | null;
   deletedAt: string | null;
+  artistPhotoUrl: string | null;
 }
 
 export async function fetchAllUsers(admin: SupabaseClient): Promise<AdminUserRow[]> {
   const { data: authData } = await admin.auth.admin.listUsers();
   const { data: profileRows } = await admin
     .from("profiles")
-    .select("id, username, role, created_at, deletion_requested_at, deleted_at");
+    .select(
+      "id, username, role, created_at, deletion_requested_at, deleted_at, artist_photo_url"
+    );
   const { data: ticketRows } = await admin.from("tickets").select("user_id");
 
   const ticketCounts = new Map<string, number>();
@@ -70,6 +73,7 @@ export async function fetchAllUsers(admin: SupabaseClient): Promise<AdminUserRow
       ticketCount: ticketCounts.get(u.id) ?? 0,
       deletionRequestedAt: (profile?.deletion_requested_at as string | null) ?? null,
       deletedAt: (profile?.deleted_at as string | null) ?? null,
+      artistPhotoUrl: (profile?.artist_photo_url as string | null) ?? null,
     };
   });
 }
@@ -442,4 +446,154 @@ export async function fetchEventDetail(
 
 export function adminClient() {
   return createAdminClient();
+}
+
+export interface AdminUserDetail {
+  id: string;
+  email: string;
+  username: string;
+  role: string;
+  createdAt: string;
+  lastSignInAt: string | null;
+  emailConfirmedAt: string | null;
+  /** Which sign-in methods are attached - "email", "google", or both. */
+  providers: string[];
+  onboardingComplete: boolean;
+  /**
+   * Age, not the date itself. The admin panel is the only place date_of_birth
+   * is readable at all (addendum_018 took it off the public API), and the
+   * reason it is collected is the 16+ gate - which age answers and a birthday
+   * does not improve on.
+   */
+  age: number | null;
+  artistName: string | null;
+  artistBio: string | null;
+  artistPhotoUrl: string | null;
+  artistStatus: string | null;
+  evidenceSubmitted: boolean;
+  followerCount: number;
+  socials: { label: string; value: string }[];
+  stripeConnected: boolean;
+  stripePayoutsReady: boolean;
+  deletionRequestedAt: string | null;
+  deletedAt: string | null;
+  ticketsBought: number;
+  ticketsAttended: number;
+  totalSpentCents: number;
+  showsCreated: number;
+  followingCount: number;
+  recentTickets: {
+    id: string;
+    eventTitle: string;
+    eventDate: string;
+    quantity: number;
+    pricePaidCents: number;
+    refunded: boolean;
+    checkedIn: boolean;
+    purchasedAt: string;
+  }[];
+}
+
+function ageFrom(dob: string | null): number | null {
+  if (!dob) return null;
+  const birth = new Date(dob);
+  if (Number.isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let age = now.getUTCFullYear() - birth.getUTCFullYear();
+  const m = now.getUTCMonth() - birth.getUTCMonth();
+  if (m < 0 || (m === 0 && now.getUTCDate() < birth.getUTCDate())) age -= 1;
+  return age;
+}
+
+// Everything about one person, on one screen. Reads through the service-role
+// client, so it sees the columns addendum_018 hid from everyone else.
+export async function fetchUserDetail(
+  admin: SupabaseClient,
+  userId: string
+): Promise<AdminUserDetail | null> {
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .single();
+  if (!profile) return null;
+
+  const { data: authUser } = await admin.auth.admin.getUserById(userId);
+
+  const [{ data: tickets }, { count: showsCreated }, { count: followingCount }] = await Promise.all([
+    admin
+      .from("tickets")
+      .select("id, quantity, price_paid, refunded, checked_in_at, purchased_at, events(title, event_date)")
+      .eq("user_id", userId)
+      .order("purchased_at", { ascending: false }),
+    admin.from("events").select("id", { count: "exact", head: true }).eq("artist_id", userId),
+    admin.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
+  ]);
+
+  type Row = {
+    id: string;
+    quantity: number;
+    price_paid: number;
+    refunded: boolean;
+    checked_in_at: string | null;
+    purchased_at: string;
+    events: { title: string; event_date: string } | null;
+  };
+  const rows = (tickets ?? []) as unknown as Row[];
+
+  const socials = (
+    [
+      ["Instagram", profile.instagram],
+      ["TikTok", profile.tiktok],
+      ["Twitter / X", profile.twitter],
+      ["Spotify", profile.spotify],
+      ["YouTube", profile.youtube],
+    ] as const
+  )
+    .filter(([, value]) => Boolean(value))
+    .map(([label, value]) => ({ label, value: value as string }));
+
+  return {
+    id: userId,
+    email: authUser?.user?.email ?? "",
+    username: profile.username,
+    role: profile.role,
+    createdAt: profile.created_at,
+    lastSignInAt: authUser?.user?.last_sign_in_at ?? null,
+    emailConfirmedAt: authUser?.user?.email_confirmed_at ?? null,
+    providers: authUser?.user?.identities?.map((i) => i.provider) ?? [],
+    onboardingComplete: profile.onboarding_complete ?? true,
+    age: ageFrom(profile.date_of_birth),
+    artistName: profile.artist_name,
+    artistBio: profile.artist_bio,
+    artistPhotoUrl: profile.artist_photo_url,
+    artistStatus: profile.artist_status,
+    evidenceSubmitted: Boolean(profile.evidence_submitted),
+    followerCount: profile.follower_count ?? 0,
+    socials,
+    stripeConnected: Boolean(profile.stripe_account_id),
+    stripePayoutsReady: Boolean(profile.stripe_payouts_ready),
+    deletionRequestedAt: profile.deletion_requested_at,
+    deletedAt: profile.deleted_at,
+    // Refunded tickets are excluded from the money and the counts, so the
+    // numbers here match what /admin/billing reports rather than quietly
+    // disagreeing with it.
+    ticketsBought: rows.filter((r) => !r.refunded).reduce((n, r) => n + r.quantity, 0),
+    ticketsAttended: rows.filter((r) => r.checked_in_at && !r.refunded).reduce((n, r) => n + r.quantity, 0),
+    totalSpentCents: rows
+      .filter((r) => !r.refunded)
+      .reduce((n, r) => n + toCents(Number(r.price_paid)), 0),
+    showsCreated: showsCreated ?? 0,
+    followingCount: followingCount ?? 0,
+    recentTickets: rows.slice(0, 20).map((r) => ({
+      id: r.id,
+      eventTitle: r.events?.title ?? "Deleted event",
+      eventDate: r.events?.event_date ?? "",
+      quantity: r.quantity,
+      pricePaidCents: toCents(Number(r.price_paid)),
+      refunded: r.refunded,
+      checkedIn: Boolean(r.checked_in_at),
+      purchasedAt: r.purchased_at,
+    })),
+  };
 }

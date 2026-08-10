@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
   cancelUserDeletion,
@@ -85,7 +86,28 @@ export default function UsersTable({ users }: { users: AdminUserRow[] }) {
             const busy = isPending && pendingId === u.id;
             return (
               <tr key={u.id} className="border-b border-muted/10 last:border-0">
-                <td className="py-2 text-foreground">{u.username}</td>
+                <td className="py-2">
+                  {/* The whole cell is the link, avatar included, so the click
+                      target is the row's identity rather than a word in it. */}
+                  <Link
+                    href={`/admin/users/${u.id}`}
+                    className="flex items-center gap-2.5 text-foreground hover:text-accent"
+                  >
+                    {u.artistPhotoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- arbitrary Storage URL, and the admin panel is a handful of internal page views
+                      <img
+                        src={u.artistPhotoUrl}
+                        alt=""
+                        className="h-7 w-7 shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-raised text-xs text-muted">
+                        {u.username.slice(0, 1).toUpperCase()}
+                      </span>
+                    )}
+                    {u.username}
+                  </Link>
+                </td>
                 <td className="py-2 text-muted">{u.email}</td>
                 <td className="py-2 text-muted capitalize">{u.role}</td>
                 <td className="py-2 text-muted">{u.ticketCount}</td>
