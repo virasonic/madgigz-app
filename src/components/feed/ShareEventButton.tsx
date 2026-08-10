@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { shareEvent } from "@/lib/share";
 import { EventItem } from "@/lib/types";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 function ShareIcon() {
   return (
@@ -42,6 +43,7 @@ export default function ShareEventButton({
   showLabel?: boolean;
   className?: string;
 }) {
+  const { t } = useT();
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
 
   async function handleShare() {
@@ -59,7 +61,7 @@ export default function ShareEventButton({
   return (
     <button
       onClick={handleShare}
-      aria-label={`Share ${event.title}`}
+      aria-label={t("share.aria", { title: event.title })}
       className={`flex flex-col items-center gap-1 text-foreground ${className}`}
     >
       {copied ? <CheckIcon /> : <ShareIcon />}
@@ -67,7 +69,7 @@ export default function ShareEventButton({
           silently does nothing is worse than one that admits it couldn't. */}
       {(showLabel || status === "failed") && (
         <span className="whitespace-nowrap text-xs text-muted">
-          {status === "copied" ? "Link copied" : status === "failed" ? "Couldn't copy" : "Share"}
+          {status === "copied" ? t("share.linkCopied") : status === "failed" ? t("share.couldntCopy") : t("share.share")}
         </span>
       )}
     </button>

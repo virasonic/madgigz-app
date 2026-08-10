@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toggleFollow } from "@/app/(app)/profile/follow-actions";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 // No follower count here on purpose. It's an artist insight - shown to them on
 // their own profile - not a public scoreboard. A new artist with three
@@ -14,6 +15,7 @@ export default function FollowButton({
   artistId: string;
   initialFollowing: boolean;
 }) {
+  const { t } = useT();
   const [following, setFollowing] = useState(initialFollowing);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -43,7 +45,7 @@ export default function FollowButton({
           following ? "border border-muted/40 text-foreground" : "bg-primary text-foreground"
         }`}
       >
-        {following ? "Following" : "Follow"}
+        {following ? t("follow.following") : t("follow.follow")}
       </button>
       {error && <span className="text-xs text-primary">{error}</span>}
     </div>

@@ -34,14 +34,13 @@ function formatDate(iso: string) {
 // boundary, and gating that boundary to just this artist-only sheet is
 // cheaper than wrapping the whole page.
 function RestoredNotice() {
+  const { t } = useT();
   const searchParams = useSearchParams();
   if (searchParams.get("restored") !== "1") return null;
   return (
     <div className="mb-6 rounded-xl bg-surface px-4 py-3">
-      <p className="font-heading text-sm text-foreground">Welcome back - your account is safe</p>
-      <p className="mt-1 text-xs text-muted">
-        Signing in cancelled the deletion you&apos;d scheduled. Nothing was removed.
-      </p>
+      <p className="font-heading text-sm text-foreground">{t("profile.restoredTitle")}</p>
+      <p className="mt-1 text-xs text-muted">{t("profile.restoredBody")}</p>
     </div>
   );
 }
@@ -243,7 +242,7 @@ export default function ProfileClient({
         <div className="flex items-center gap-2">
         <Link
           href="/notifications"
-          aria-label="Notifications"
+          aria-label={t("profile.notificationsAria")}
           className="relative flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -265,7 +264,7 @@ export default function ProfileClient({
         <button
           type="button"
           onClick={() => settingsModal.open("1")}
-          aria-label="Settings"
+          aria-label={t("profile.settingsAria")}
           className="flex h-10 w-10 items-center justify-center rounded-full bg-surface text-foreground"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">

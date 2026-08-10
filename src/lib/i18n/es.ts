@@ -19,6 +19,7 @@ export const es: Messages = {
     close: "Cerrar",
     show: "Mostrar",
     hide: "Ocultar",
+    why: "¿Por qué?",
   },
 
   language: {
@@ -234,6 +235,11 @@ export const es: Messages = {
     hiddenShows: "Bolos ocultos",
     taggedIn: "Etiquetado en",
     byArtist: "por {artist}",
+    notificationsAria: "Notificaciones",
+    settingsAria: "Ajustes",
+    restoredTitle: "Bienvenido de nuevo: tu cuenta está a salvo",
+    restoredBody: "Iniciar sesión canceló la eliminación que habías programado. No se eliminó nada.",
+    noUpcomingShows: "No hay próximos bolos ahora mismo.",
   },
 
   editProfile: {
@@ -573,6 +579,18 @@ export const es: Messages = {
     validTicket: "Entrada válida",
     checkIn: "Validar",
     scanNext: "Escanear siguiente",
+  },
+
+  follow: {
+    follow: "Seguir",
+    following: "Siguiendo",
+  },
+
+  share: {
+    aria: "Compartir {title}",
+    linkCopied: "Enlace copiado",
+    couldntCopy: "No se pudo copiar",
+    share: "Compartir",
   },
 
   pickers: {

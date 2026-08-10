@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 // A small "why" - tap the icon, get one or two sentences, tap anywhere else
 // to dismiss. Deliberately tap-driven rather than hover: this is a mobile app
 // first, and hover states don't reliably exist on a touchscreen.
 export default function InfoTip({ text, className = "" }: { text: string; className?: string }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -30,7 +32,7 @@ export default function InfoTip({ text, className = "" }: { text: string; classN
           e.stopPropagation();
           setOpen((o) => !o);
         }}
-        aria-label="Why?"
+        aria-label={t("common.why")}
         aria-expanded={open}
         className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] leading-none transition-colors ${
           open ? "border-accent text-accent" : "border-muted/40 text-muted"

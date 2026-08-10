@@ -19,6 +19,7 @@ export const en = {
     close: "Close",
     show: "Show",
     hide: "Hide",
+    why: "Why?",
   },
 
   language: {
@@ -237,6 +238,11 @@ export const en = {
     hiddenShows: "Hidden shows",
     taggedIn: "Tagged in",
     byArtist: "by {artist}",
+    notificationsAria: "Notifications",
+    settingsAria: "Settings",
+    restoredTitle: "Welcome back - your account is safe",
+    restoredBody: "Signing in cancelled the deletion you'd scheduled. Nothing was removed.",
+    noUpcomingShows: "No upcoming shows right now.",
   },
 
   editProfile: {
@@ -576,6 +582,18 @@ export const en = {
     validTicket: "Valid ticket",
     checkIn: "Check In",
     scanNext: "Scan Next",
+  },
+
+  follow: {
+    follow: "Follow",
+    following: "Following",
+  },
+
+  share: {
+    aria: "Share {title}",
+    linkCopied: "Link copied",
+    couldntCopy: "Couldn't copy",
+    share: "Share",
   },
 
   pickers: {

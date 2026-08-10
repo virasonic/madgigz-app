@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem } from "@/lib/types";
 import { useUrlModal } from "@/lib/useUrlModal";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 export default function ArtistShowsGrid({
   userId,
@@ -17,6 +18,7 @@ export default function ArtistShowsGrid({
   shows: EventItem[];
   initialSavedIds: string[];
 }) {
+  const { t } = useT();
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   // #102: open ticket sheet is ?ticket=<id>, resolved from this artist's shows.
   const ticketModal = useUrlModal("ticket");
@@ -36,7 +38,7 @@ export default function ArtistShowsGrid({
   }
 
   if (shows.length === 0) {
-    return <p className="text-sm text-muted">No upcoming shows right now.</p>;
+    return <p className="text-sm text-muted">{t("profile.noUpcomingShows")}</p>;
   }
 
   return (
