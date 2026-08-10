@@ -90,8 +90,11 @@ export interface ContentPost {
   showTitle: string;
   caption: string;
   image: string;
-  mediaType: "image" | "video";
+  mediaType: "image" | "video" | "text";
   videoUrl?: string;
+  /** Text announcements only (addendum_029): rendered on the brand template. */
+  headline?: string | null;
+  accentColor?: string | null;
 }
 
 export interface Ticket {
@@ -233,8 +236,10 @@ export interface ContentPostRow {
   artist_name: string;
   show_title: string;
   caption: string;
-  media_url: string;
-  media_type: "image" | "video";
+  media_url: string | null;
+  media_type: "image" | "video" | "text";
+  headline?: string | null;
+  accent_color?: string | null;
 }
 
 export function mapContentPost(row: ContentPostRow): ContentPost {
@@ -245,9 +250,11 @@ export function mapContentPost(row: ContentPostRow): ContentPost {
     artist: row.artist_name,
     showTitle: row.show_title,
     caption: row.caption,
-    image: row.media_type === "image" ? row.media_url : "",
+    image: row.media_type === "image" ? (row.media_url ?? "") : "",
     mediaType: row.media_type,
-    videoUrl: row.media_type === "video" ? row.media_url : undefined,
+    videoUrl: row.media_type === "video" ? (row.media_url ?? undefined) : undefined,
+    headline: row.headline ?? null,
+    accentColor: row.accent_color ?? null,
   };
 }
 

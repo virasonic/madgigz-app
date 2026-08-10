@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import TicketModal from "@/components/feed/TicketModal";
 import ContentReelCard from "@/components/feed/ContentReelCard";
 import AnnouncementCard from "@/components/feed/AnnouncementCard";
@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchContentPosts, toggleSavedEvent } from "@/lib/supabase/queries";
 import { AppUser, ContentPost, EventItem } from "@/lib/types";
 import { canActAsArtist } from "@/lib/roles";
+import { getSeenAnnouncements, markAnnouncementSeen } from "@/lib/seen-announcements";
 
 type Pane = "forYou" | "thisWeek";
 
@@ -23,15 +24,23 @@ interface FeedEntry {
 // meets one early, rare enough that the feed still belongs to the artists.
 const ANNOUNCEMENT_EVERY = 4;
 
+// ...but never fewer than this, or a feed with almost no artist content yet
+// would say nothing at all to a brand-new account.
+const MIN_ANNOUNCEMENTS = 2;
+
 // For You is content-only (no bare event posters) - each entry is a content
 // post paired with the show it's actually about. A post whose event isn't in
 // allEvents (hidden or deleted) is dropped rather than shown with no event.
 function buildForYouFeed(
   allEvents: EventItem[],
   allPosts: ContentPost[],
-  followed: Set<string>
+  followed: Set<string>,
+  seenAnnouncements: Set<string>
 ): FeedEntry[] {
-  const announcements = allPosts.filter((post) => !post.eventId);
+  // Reversed: the query hands everything back newest-first, which is right for
+  // artist reels and exactly wrong for a numbered explainer set - it met people
+  // with "3 of 3" and finished on "Welcome to MadGigz".
+  const announcements = allPosts.filter((post) => !post.eventId).reverse();
 
   const entries = allPosts.flatMap((post) => {
     if (!post.eventId) return [];
@@ -48,21 +57,28 @@ function buildForYouFeed(
 
   if (announcements.length === 0) return sorted;
 
-  // Interleaved rather than pinned to the top: a stack of explainers before any
-  // actual music is the wrong first impression of a gig app. On a brand-new
-  // account with no artist content at all, this still surfaces them - the loop
-  // runs to whichever list is longer.
-  const woven: FeedEntry[] = [];
-  let next = 0;
-  for (let i = 0; i < sorted.length || next < announcements.length; i += 1) {
-    if (i < sorted.length) woven.push(sorted[i]);
-    const due = (i + 1) % ANNOUNCEMENT_EVERY === 0 || i >= sorted.length - 1;
-    if (due && next < announcements.length) {
-      woven.push({ post: announcements[next], event: null });
-      next += 1;
-    }
-  }
-  return woven;
+  const unseen = announcements.filter((post) => !seenAnnouncements.has(post.id));
+  const seen = announcements.filter((post) => seenAnnouncements.has(post.id));
+
+  // How many of the set to show at all. Capped against the amount of real
+  // content, because an account with two artist reels was getting ten
+  // explainers in a row - a feed that is mostly the app talking about itself.
+  // The rest surface on their own as artists post more.
+  const budget = Math.min(
+    unseen.length,
+    Math.max(MIN_ANNOUNCEMENTS, Math.floor(sorted.length / ANNOUNCEMENT_EVERY))
+  );
+
+  return [
+    // Unseen first. Someone new should meet "what this is" before scrolling
+    // past three gigs and giving up on working it out.
+    ...unseen.slice(0, budget).map((post) => ({ post, event: null })),
+    // Then the gigs, which are the actual point of the app.
+    ...sorted,
+    // Already-read cards fall to the bottom rather than disappearing: still
+    // reachable if someone wants to check how tickets work, never in the way.
+    ...seen.map((post) => ({ post, event: null })),
+  ];
 }
 
 function groupByDay(items: EventItem[]) {
@@ -122,9 +138,27 @@ export default function FeedClient({
 
   const followed = useMemo(() => new Set(followedEventIds), [followedEventIds]);
 
+  // Read once, on mount, and never updated while the pane is open. That is
+  // deliberate: marking a card seen must not re-order the list under the
+  // finger of the person currently reading it. The new order applies next time
+  // they open the feed.
+  const [seenAnnouncements, setSeenAnnouncements] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    // localStorage cannot be read during render: the server has no window, so
+    // a lazy useState initialiser would return an empty set on the server and a
+    // populated one on the client, and the feed would hydrate in a different
+    // order than it rendered. Reading after mount is the correct shape here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see above
+    setSeenAnnouncements(new Set(getSeenAnnouncements()));
+  }, []);
+
+  const handleAnnouncementSeen = useCallback((id: string) => {
+    markAnnouncementSeen(id);
+  }, []);
+
   const forYouFeed = useMemo(
-    () => buildForYouFeed(initialEvents, allPosts, followed),
-    [initialEvents, allPosts, followed]
+    () => buildForYouFeed(initialEvents, allPosts, followed, seenAnnouncements),
+    [initialEvents, allPosts, followed, seenAnnouncements]
   );
   // groupByDay re-sorts by date, and Array.sort is stable, so pre-sorting
   // followed-first keeps the days in order while lifting followed artists
@@ -218,6 +252,7 @@ export default function FeedClient({
                       post={entry.post}
                       muted={reelsMuted}
                       onToggleMute={() => setReelsMuted((v) => !v)}
+                      onSeen={handleAnnouncementSeen}
                     />
                   )}
                 </div>

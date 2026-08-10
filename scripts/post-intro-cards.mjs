@@ -9,6 +9,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const env = Object.fromEntries(
@@ -117,7 +118,11 @@ const CARDS = [
   },
 ];
 
-const MARKER = "[mgz-intro]";
+// Lives in show_title, not the caption. show_title is meaningless for an
+// announcement (there is no show) and nothing renders it, whereas the caption
+// is read by every person who scrolls past - the first version of this printed
+// "[mgz-intro]" on the feed.
+const MARKER = "mgz-intro";
 const OUT = fileURLToPath(new URL("../.intro-cards/", import.meta.url));
 mkdirSync(OUT, { recursive: true });
 
@@ -141,7 +146,7 @@ if (apply) {
     .from("content_posts")
     .select("id")
     .is("event_id", null)
-    .like("caption", `%${MARKER}%`);
+    .eq("show_title", MARKER);
   if (old?.length) {
     await admin.from("content_posts").delete().in("id", old.map((o) => o.id));
     console.log(`removed ${old.length} card(s) from a previous run\n`);
@@ -159,7 +164,12 @@ for (const card of CARDS) {
 
   if (!apply) continue;
 
-  const path = `announcements/${card.key}.png`;
+  // Content-hashed. Uploading a redesigned card to the same path with
+  // upsert:true keeps the URL identical, so browsers and the CDN happily serve
+  // the previous artwork forever - which is exactly what happened the first
+  // time these were re-posted. A new URL per revision cannot be cached stale.
+  const digest = createHash("sha256").update(png).digest("hex").slice(0, 10);
+  const path = `announcements/${card.key}-${digest}.png`;
   const { error: upErr } = await admin.storage
     .from("event-media")
     .upload(path, png, { contentType: "image/png", upsert: true });
@@ -175,8 +185,8 @@ for (const card of CARDS) {
     event_id: null,
     artist_id: author.id,
     artist_name: "MadGigz",
-    show_title: "",
-    caption: `${card.caption} ${MARKER}`,
+    show_title: MARKER,
+    caption: card.caption,
     media_url: publicUrl,
     media_type: "image",
   });

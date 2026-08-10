@@ -79,8 +79,11 @@ def build(spec):
     label = spec["eyebrow"].upper()
     if spec.get("step"):
         label = f"{label}  ·  {spec['step']}"
-    draw.text((margin, 150), label, font=eyebrow, fill=accent)
-    draw.line([(margin, 215), (W - margin, 215)], fill=accent, width=4)
+    # Pushed clear of the app's own overlay: the feed paints a MadGigz avatar
+    # and name across the top of every card, and at y=150 the eyebrow rendered
+    # underneath it.
+    draw.text((margin, 330), label, font=eyebrow, fill=accent)
+    draw.line([(margin, 395), (W - margin, 395)], fill=accent, width=4)
 
     # Headline
     size = 116
@@ -107,12 +110,9 @@ def build(spec):
             draw.text((margin, y), line, font=body_font, fill=MUTED)
             y += 62
 
-    # Footer wordmark, small.
-    mark = Path(__file__).resolve().parent.parent / "public" / "logos" / "madgigz-wordmark.png"
-    if mark.exists():
-        logo = Image.open(mark).convert("RGBA")
-        logo.thumbnail((260, 260))
-        img.paste(logo, (margin, H - margin - logo.height), logo)
+    # No wordmark. The feed paints its own MadGigz header over the top of the
+    # card and the caption block over the bottom, so a footer logo lands
+    # underneath the caption text - and the branding is already there twice.
 
     return img
 

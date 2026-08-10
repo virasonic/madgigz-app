@@ -15,13 +15,49 @@ export default function AnnouncementCard({
   post,
   muted,
   onToggleMute,
+  onSeen,
 }: {
   post: ContentPost;
   muted: boolean;
   onToggleMute: () => void;
+  /** Fires once the card has actually been on screen, not merely rendered. */
+  onSeen?: (id: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const showVideo = post.mediaType === "video" && post.videoUrl;
+  // A text announcement carries no media - it is drawn on the brand template in
+  // CSS below, which is how the admin panel composes one without any image
+  // generation. See addendum_029.
+  const isText = post.mediaType === "text" || (!post.image && !showVideo);
+  const accent = post.accentColor || "#d76616";
+
+  // "Seen" means it filled the screen for a moment, not that it existed in the
+  // DOM - the whole list is mounted at once in a snap scroller, so mount-time
+  // marking would retire every announcement the instant the feed loaded.
+  useEffect(() => {
+    const node = cardRef.current;
+    if (!node || !onSeen) return;
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          // A brief dwell, so flicking past at speed doesn't count as reading.
+          timer = setTimeout(() => onSeen(post.id), 1200);
+        } else if (timer) {
+          clearTimeout(timer);
+        }
+      },
+      { threshold: 0.6 }
+    );
+
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      if (timer) clearTimeout(timer);
+    };
+  }, [post.id, onSeen]);
 
   // Same as the reel card: only the one in view plays, or every video in the
   // feed runs at once.
@@ -44,8 +80,43 @@ export default function AnnouncementCard({
     return () => observer.disconnect();
   }, [showVideo]);
 
+  if (isText) {
+    return (
+      <div
+        ref={cardRef}
+        className="relative flex h-full w-full flex-col justify-center overflow-hidden bg-background px-8"
+        // The template: two soft brand-coloured washes on the near-black
+        // canvas, the same look as the generated cards but drawn live, so it is
+        // always on-brand and always editable.
+        style={{
+          backgroundImage: `radial-gradient(120% 80% at 15% 12%, ${accent}55, transparent 60%), radial-gradient(120% 80% at 90% 95%, #0d5c6d55, transparent 55%)`,
+        }}
+      >
+        <div className="absolute left-4 right-4 top-6 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
+            <Image src="/logos/mgz-mark.png" alt="" width={22} height={22} />
+          </div>
+          <p className="font-heading text-sm text-foreground">MadGigz</p>
+        </div>
+
+        <div className="flex flex-col gap-5">
+          <span
+            className="w-fit rounded-full px-3 py-1 text-xs font-heading uppercase tracking-wide text-foreground"
+            style={{ backgroundColor: accent }}
+          >
+            From MadGigz
+          </span>
+          {post.headline && (
+            <h2 className="font-display text-3xl leading-tight text-foreground">{post.headline}</h2>
+          )}
+          {post.caption && <p className="text-base text-muted">{post.caption}</p>}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="relative h-full w-full overflow-hidden bg-background">
+    <div ref={cardRef} className="relative h-full w-full overflow-hidden bg-background">
       {showVideo ? (
         <video
           ref={videoRef}

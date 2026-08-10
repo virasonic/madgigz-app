@@ -212,6 +212,8 @@ export async function fetchEventById(
 }
 
 export async function fetchContentPosts(supabase: SupabaseClient): Promise<ContentPost[]> {
+  // select("*") already includes the headline/accent_color columns added in
+  // addendum_029, so text announcements come through with no query change.
   const { data } = await supabase
     .from("content_posts")
     .select("*")
