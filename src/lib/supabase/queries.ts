@@ -217,6 +217,9 @@ export async function fetchContentPosts(supabase: SupabaseClient): Promise<Conte
   const { data } = await supabase
     .from("content_posts")
     .select("*")
+    // Moderation-hidden posts (addendum_031) drop out of the feed but stay in
+    // the table for the report trail.
+    .is("hidden_at", null)
     .order("created_at", { ascending: false });
   return ((data as ContentPostRow[]) ?? []).map(mapContentPost);
 }
@@ -229,6 +232,7 @@ export async function fetchShowContent(
     .from("content_posts")
     .select("*")
     .eq("event_id", eventId)
+    .is("hidden_at", null)
     .order("created_at", { ascending: true });
   return ((data as ContentPostRow[]) ?? []).map(mapContentPost);
 }

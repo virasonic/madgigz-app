@@ -448,6 +448,92 @@ export function adminClient() {
   return createAdminClient();
 }
 
+export interface AdminReportRow {
+  id: string;
+  reason: string;
+  detail: string | null;
+  status: string;
+  adminNote: string | null;
+  createdAt: string;
+  reporterUsername: string | null;
+  postId: string;
+  postHidden: boolean;
+  postCaption: string;
+  postHeadline: string | null;
+  postMediaUrl: string | null;
+  postMediaType: string;
+  postArtistName: string;
+  postArtistId: string | null;
+  postEventId: string | null;
+}
+
+export async function fetchContentReports(admin: SupabaseClient): Promise<AdminReportRow[]> {
+  const { data, error } = await admin
+    .from("content_reports")
+    .select(
+      "id, reason, detail, status, admin_note, created_at, reporter:profiles!content_reports_reporter_id_fkey(username), content_posts(id, caption, headline, media_url, media_type, artist_name, artist_id, event_id, hidden_at)"
+    )
+    .order("created_at", { ascending: false });
+
+  // 42P01 = addendum_031 not run yet. Empty queue beats a thrown admin panel.
+  if (error) {
+    if (error.code !== "42P01") console.error("fetchContentReports failed:", error);
+    return [];
+  }
+
+  type Row = {
+    id: string;
+    reason: string;
+    detail: string | null;
+    status: string;
+    admin_note: string | null;
+    created_at: string;
+    reporter: { username: string } | null;
+    content_posts: {
+      id: string;
+      caption: string;
+      headline: string | null;
+      media_url: string | null;
+      media_type: string;
+      artist_name: string;
+      artist_id: string | null;
+      event_id: string | null;
+      hidden_at: string | null;
+    } | null;
+  };
+
+  return ((data ?? []) as unknown as Row[])
+    // A report whose post was hard-deleted has nothing to act on.
+    .filter((r) => r.content_posts)
+    .map((r) => ({
+      id: r.id,
+      reason: r.reason,
+      detail: r.detail,
+      status: r.status,
+      adminNote: r.admin_note,
+      createdAt: r.created_at,
+      reporterUsername: r.reporter?.username ?? null,
+      postId: r.content_posts!.id,
+      postHidden: Boolean(r.content_posts!.hidden_at),
+      postCaption: r.content_posts!.caption,
+      postHeadline: r.content_posts!.headline,
+      postMediaUrl: r.content_posts!.media_url,
+      postMediaType: r.content_posts!.media_type,
+      postArtistName: r.content_posts!.artist_name,
+      postArtistId: r.content_posts!.artist_id,
+      postEventId: r.content_posts!.event_id,
+    }));
+}
+
+export async function fetchOpenReportCount(admin: SupabaseClient): Promise<number> {
+  const { count, error } = await admin
+    .from("content_reports")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "open");
+  if (error) return 0;
+  return count ?? 0;
+}
+
 export interface AdminFeedbackRow {
   id: string;
   type: string;

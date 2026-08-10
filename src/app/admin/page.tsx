@@ -4,6 +4,7 @@ import {
   fetchAllUsers,
   fetchDashboardStats,
   fetchOpenFeedbackCount,
+  fetchOpenReportCount,
   requireAdmin,
 } from "@/lib/supabase/admin-queries";
 
@@ -28,10 +29,11 @@ function StatCard({ label, value, href }: { label: string; value: string; href?:
 export default async function AdminDashboardPage() {
   await requireAdmin();
   const admin = adminClient();
-  const [stats, users, openFeedback] = await Promise.all([
+  const [stats, users, openFeedback, openReports] = await Promise.all([
     fetchDashboardStats(admin),
     fetchAllUsers(admin),
     fetchOpenFeedbackCount(admin),
+    fetchOpenReportCount(admin),
   ]);
 
   const recentUsers = [...users]
@@ -45,7 +47,7 @@ export default async function AdminDashboardPage() {
         <p className="text-sm text-muted">Overview of MadGigz activity.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-7">
         <StatCard label="Users" value={String(stats.userCount)} href="/admin/users" />
         <StatCard label="Events" value={String(stats.eventCount)} href="/admin/events" />
         <StatCard label="Tickets sold" value={String(stats.ticketsSold)} />
@@ -55,9 +57,10 @@ export default async function AdminDashboardPage() {
           value={String(stats.pendingArtistCount)}
           href="/admin/artists"
         />
-        {/* Open, not total: this box exists to say whether anything needs
+        {/* Open, not total: these boxes exist to say whether anything needs
             doing, and a lifetime count never changes that answer. */}
         <StatCard label="Open feedback" value={String(openFeedback)} href="/admin/feedback" />
+        <StatCard label="Open reports" value={String(openReports)} href="/admin/moderation" />
       </div>
 
       <div className="rounded-2xl bg-surface p-5">

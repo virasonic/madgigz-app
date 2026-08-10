@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { ContentPost, EventItem } from "@/lib/types";
 import ShareEventButton from "./ShareEventButton";
 import LikeButton from "./LikeButton";
+import ReportButton from "./ReportButton";
 
 function NoteIcon() {
   return (
@@ -149,6 +150,9 @@ export default function ContentReelCard({
         {/* Shares the gig, not the reel. A reel is an artist's post *about* a
             show; the recipient wants the show. */}
         <ShareEventButton event={event} />
+        {/* Report is on artist content, not MadGigz's own announcements -
+            those render through AnnouncementCard, which has no rail. */}
+        <ReportButton contentPostId={post.id} />
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-3 p-5 pb-8">
