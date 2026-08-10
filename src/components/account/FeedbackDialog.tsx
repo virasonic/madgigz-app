@@ -80,13 +80,16 @@ export default function FeedbackDialog({ onClose }: { onClose: () => void }) {
                   type="button"
                   onClick={() => setType(option.value)}
                   aria-pressed={type === option.value}
-                  className={`flex items-center justify-between rounded-2xl px-4 py-3 text-left transition-colors ${
+                  // Stacked rather than label-left/hint-right: at 375px
+                  // "Something's broken" and "A screen, a button, a payment"
+                  // ran into each other with no gap between them.
+                  className={`flex flex-col gap-0.5 rounded-2xl px-4 py-3 text-left transition-colors ${
                     type === option.value ? "bg-primary text-foreground" : "bg-background text-muted"
                   }`}
                 >
-                  <span className="text-sm">{option.label}</span>
+                  <span className="text-sm font-heading">{option.label}</span>
                   <span
-                    className={`text-xs ${type === option.value ? "text-foreground/70" : "text-muted"}`}
+                    className={`text-xs ${type === option.value ? "text-foreground/70" : "text-muted/70"}`}
                   >
                     {option.hint}
                   </span>
