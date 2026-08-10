@@ -27,11 +27,28 @@ type SocialKey = (typeof SOCIAL_FIELDS)[number]["key"];
 // end up with none. Spotify/YouTube stay optional, same as at signup.
 const REQUIRED_SOCIALS: SocialKey[] = ["instagram", "tiktok", "twitter"];
 
+// Same rule as signup and addendum_010's check constraint.
+const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,30}$/;
+
+// What change_username() (addendum_030) can return, in words for the field.
+const RENAME_ERRORS: Record<string, string> = {
+  invalid: "Use 3-30 letters, numbers, dots, dashes or underscores",
+  taken: "That username is taken",
+  not_signed_in: "Your session expired. Sign in again to continue.",
+  no_profile: "Couldn't find your profile.",
+};
+
 export default function EditProfilePage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [user, setUser] = useState<AppUser | null>(null);
+  const [username, setUsername] = useState("");
+  const [usernameError, setUsernameError] = useState<string | undefined>();
+  // Availability answer stored against the name it was for, so a slow reply
+  // about a previous value can't be mistaken for the current one - same shape
+  // as the signup form.
+  const [checkedName, setCheckedName] = useState<{ name: string; available: boolean } | null>(null);
   const [bio, setBio] = useState("");
   const [socials, setSocials] = useState<Record<SocialKey, string>>({
     instagram: "",
@@ -62,6 +79,7 @@ export default function EditProfilePage() {
         return;
       }
       setUser(current);
+      setUsername(current.username);
       setBio(current.artistBio ?? "");
       setSocials({
         instagram: current.instagram ?? "",
@@ -82,6 +100,27 @@ export default function EditProfilePage() {
     }
   }
 
+  // Debounced availability check, only once the name has actually changed and
+  // is well-formed - no point asking the server about the handle they already
+  // have, or about "ab". The RPC applies the 10-day release cooldown too.
+  useEffect(() => {
+    const trimmed = username.trim();
+    if (!user || trimmed.toLowerCase() === user.username.toLowerCase()) return;
+    if (!USERNAME_PATTERN.test(trimmed)) return;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const { data, error } = await createClient().rpc("username_available", { candidate: trimmed });
+      if (cancelled || error) return;
+      setCheckedName({ name: trimmed, available: data as boolean });
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [username, user]);
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!user) return;
@@ -99,7 +138,27 @@ export default function EditProfilePage() {
     setSubmitting(true);
     setError(undefined);
     setSocialError(undefined);
+    setUsernameError(undefined);
     const supabase = createClient();
+
+    // The username goes through its own door (change_username) - the client
+    // can't UPDATE the column directly, and the rename has rules a plain update
+    // can't enforce. Done first, so a rejected name stops the save before the
+    // rest is written.
+    const trimmedName = username.trim();
+    if (trimmedName !== user.username) {
+      const { data: renameResult, error: renameErr } = await supabase.rpc("change_username", {
+        p_new: trimmedName,
+      });
+      if (renameErr || (renameResult !== "ok" && renameResult !== "unchanged")) {
+        setSubmitting(false);
+        if (renameResult === "taken") setCheckedName({ name: trimmedName, available: false });
+        setUsernameError(
+          RENAME_ERRORS[renameResult as string] ?? "Couldn't change your username. Please try again."
+        );
+        return;
+      }
+    }
 
     // Only touch the photo column when a new file was actually picked -
     // otherwise saving the bio alone would overwrite a good photo with
@@ -133,6 +192,18 @@ export default function EditProfilePage() {
   if (!user) return null;
 
   const isArtist = isArtistRole(user.role);
+
+  const trimmedUsername = username.trim();
+  const usernameChanged = trimmedUsername.toLowerCase() !== user.username.toLowerCase();
+  const usernameStatus: "idle" | "invalid" | "checking" | "available" | "taken" = !usernameChanged
+    ? "idle"
+    : !USERNAME_PATTERN.test(trimmedUsername)
+      ? "invalid"
+      : checkedName?.name !== trimmedUsername
+        ? "checking"
+        : checkedName.available
+          ? "available"
+          : "taken";
 
   return (
     <div className="p-4">
@@ -171,6 +242,36 @@ export default function EditProfilePage() {
             className="hidden"
             onChange={handlePhotoChange}
           />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Input
+            label="Username"
+            value={username}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              setUsernameError(undefined);
+            }}
+            error={usernameError}
+            autoComplete="username"
+            placeholder="yourhandle"
+          />
+          {!usernameError &&
+            (usernameStatus === "taken" ? (
+              <p className="text-xs text-danger">That username is taken</p>
+            ) : usernameStatus === "available" ? (
+              <p className="text-xs text-accent">Username available</p>
+            ) : usernameStatus === "invalid" ? (
+              <p className="text-xs text-muted">
+                3-30 letters, numbers, dots, dashes or underscores.
+              </p>
+            ) : usernameStatus === "checking" ? (
+              <p className="text-xs text-muted">Checking…</p>
+            ) : (
+              <p className="text-xs text-muted">
+                Your old handle is held for 10 days after you change it.
+              </p>
+            ))}
         </div>
 
 {isArtist && (

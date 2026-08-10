@@ -6,9 +6,8 @@ import { FormEvent, Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import GoogleButton from "@/components/auth/GoogleButton";
-import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/site";
-import { cancelDeletionOnSignIn } from "@/app/(app)/profile/account-actions";
+import { signInWithIdentifier } from "./actions";
 
 // The route that sends people here only ever passes a safe code, never
 // Supabase's own error text (see src/app/auth/confirm/route.ts) - this maps
@@ -82,7 +81,10 @@ function SignInContent() {
   // rather than trusted - see safeNext - because it ends up in a redirect.
   const next = safeNext(searchParams.get("next"));
 
-  const [email, setEmail] = useState("");
+  // Email OR username now - the field takes either, and the server sorts out
+  // which (see signInWithIdentifier). The redirect logic that used to live here
+  // moved into that action so both paths share it.
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -91,53 +93,22 @@ function SignInContent() {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
 
-    if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = "Enter a valid email";
+    if (!identifier.trim()) nextErrors.identifier = "Enter your email or username";
     if (!password) nextErrors.password = "Enter your password";
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
     setSubmitting(true);
-    const supabase = createClient();
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const result = await signInWithIdentifier({ identifier, password, next });
     setSubmitting(false);
 
-    if (error) {
-      setErrors({ password: "Incorrect email or password" });
+    if (result.error || !result.destination) {
+      setErrors({ password: result.error ?? "Incorrect email or password" });
       return;
     }
 
-    // Coming back is the clearest possible statement that they didn't mean to
-    // delete the account, so a pending request is cancelled outright. They land
-    // on their profile with a notice rather than being told nothing - a silent
-    // restore leaves someone unsure whether it actually stopped.
-    const restored = await cancelDeletionOnSignIn(data.user.id);
-    if (restored) {
-      router.push("/profile?restored=1");
-      router.refresh();
-      return;
-    }
-
-    // An artist who hasn't submitted the claim form yet gets taken straight to
-    // it. It used to be reachable only through the confirmation email's
-    // redirect, but mail scanners consume that link before the artist taps it -
-    // so they'd sign in here and never see the form at all.
-    //
-    // That outranks ?next deliberately: an unclaimed artist account can't buy
-    // or manage anything until the form is done, so honouring the shared link
-    // first would just strand them somewhere they can't act.
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, evidence_submitted")
-      .eq("id", data.user.id)
-      .single();
-
-    const destination =
-      profile?.role === "artist" && !profile.evidence_submitted
-        ? "/signup/artist-profile"
-        : (next ?? "/feed");
-
-    router.push(destination);
+    router.push(result.destination);
     router.refresh();
   }
 
@@ -150,12 +121,11 @@ function SignInContent() {
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
         <Input
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={errors.email}
-          autoComplete="email"
+          label="Email or username"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
+          error={errors.identifier}
+          autoComplete="username"
         />
         <Input
           label="Password"
