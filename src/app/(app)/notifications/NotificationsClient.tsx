@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AppNotification, describeGroup, groupNotifications, Translate } from "@/lib/notifications";
 import { markNotificationsRead } from "./actions";
+import BackButton from "@/components/ui/BackButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
 function timeAgo(iso: string, now: number, t: Translate) {
@@ -50,7 +51,10 @@ export default function NotificationsClient({
   if (notifications.length === 0) {
     return (
       <div className="p-4">
-        <h1 className="font-display mb-6 text-2xl text-foreground">{t("notifications.title")}</h1>
+        <div className="mb-6 flex items-center gap-3">
+          <BackButton href="/profile" />
+          <h1 className="font-display text-2xl text-foreground">{t("notifications.title")}</h1>
+        </div>
         <p className="text-sm text-muted">
           {isArtist ? t("notifications.emptyArtist") : t("notifications.emptyFan")}
         </p>
@@ -60,7 +64,10 @@ export default function NotificationsClient({
 
   return (
     <div className="p-4">
-      <h1 className="font-display mb-6 text-2xl text-foreground">{t("notifications.title")}</h1>
+      <div className="mb-6 flex items-center gap-3">
+        <BackButton href="/profile" />
+        <h1 className="font-display text-2xl text-foreground">{t("notifications.title")}</h1>
+      </div>
 
       <div className="flex flex-col gap-2">
         {groups.map((g) => {

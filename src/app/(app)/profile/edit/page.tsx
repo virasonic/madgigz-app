@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import BackButton from "@/components/ui/BackButton";
 import { createClient } from "@/lib/supabase/client";
 import { fetchCurrentUser } from "@/lib/supabase/queries";
 import { uploadEventMedia } from "@/lib/supabase/storage";
@@ -211,7 +212,10 @@ export default function EditProfilePage() {
 
   return (
     <div className="p-4">
-      <h1 className="font-display mb-6 text-2xl text-foreground">{t("editProfile.title")}</h1>
+      <div className="mb-6 flex items-center gap-3">
+        <BackButton />
+        <h1 className="font-display text-2xl text-foreground">{t("editProfile.title")}</h1>
+      </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <div className="flex flex-col items-center gap-3">

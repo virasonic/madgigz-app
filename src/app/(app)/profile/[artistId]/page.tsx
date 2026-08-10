@@ -12,7 +12,7 @@ import FollowButton from "@/components/artist/FollowButton";
 import Avatar from "@/components/ui/Avatar";
 import SocialLinks from "@/components/ui/SocialLinks";
 import ArtistShowsGrid from "./ArtistShowsGrid";
-import BackButton from "./BackButton";
+import BackButton from "@/components/ui/BackButton";
 
 export default async function PublicArtistProfilePage({
   params,
@@ -48,7 +48,7 @@ export default async function PublicArtistProfilePage({
 
   return (
     <div className="p-4">
-      <BackButton />
+      <BackButton className="mb-4" />
 
       <div className="flex items-center gap-4">
         <Avatar photoUrl={artist.artistPhotoUrl} name={artist.artistName} size={72} />

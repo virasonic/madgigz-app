@@ -11,6 +11,7 @@ export const en = {
     saving: "Saving...",
     cancel: "Cancel",
     done: "Done",
+    back: "Back",
     continue: "Continue",
     loading: "Loading...",
     retry: "Try again",

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import BackButton from "@/components/ui/BackButton";
 import FeeBreakdown from "@/components/artist/FeeBreakdown";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
 import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
@@ -203,7 +204,10 @@ export default function AddShowPage() {
 
   return (
     <div className="p-4">
-      <h1 className="font-display mb-6 text-2xl text-foreground">{t("addShow.title")}</h1>
+      <div className="mb-6 flex items-center gap-3">
+        <BackButton />
+        <h1 className="font-display text-2xl text-foreground">{t("addShow.title")}</h1>
+      </div>
 
       {/* Up here rather than beside the ticketing toggle, which is most of the
           way down. A tester filled in the name, venue, date, poster and

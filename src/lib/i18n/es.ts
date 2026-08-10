@@ -11,6 +11,7 @@ export const es: Messages = {
     saving: "Guardando...",
     cancel: "Cancelar",
     done: "Listo",
+    back: "Volver",
     continue: "Continuar",
     loading: "Cargando...",
     retry: "Reintentar",
