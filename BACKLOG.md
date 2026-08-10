@@ -187,14 +187,7 @@ people onboarding at once is gated by email, not servers**: Supabase's custom-SM
 signup limit defaults to 30/hour and Resend's free tier is 100 emails/day — both
 config/plan settings to raise before any launch push, not code to change.
 
-## To test when you're back
-
-- **Smoke-test admin impersonation** (shipped 10 Aug 2026, `docs/impersonation.md`).
-  Set `ALLOW_ADMIN_IMPERSONATION=true` in Vercel → redeploy → as admin, /admin/users
-  → "Act as" your friend's account → confirm you land on his feed with the banner,
-  then Exit. Built and build-verified, but not yet clicked through on a live login.
-
-## Nothing else is currently waiting on you
+## Nothing is currently waiting on you
 
 `CRON_SECRET` set, every migration through `addendum_027` run, Stripe keys
 rotated, every active venue has an address, both email templates updated in the
