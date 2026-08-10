@@ -187,7 +187,15 @@ people onboarding at once is gated by email, not servers**: Supabase's custom-SM
 signup limit defaults to 30/hour and Resend's free tier is 100 emails/day — both
 config/plan settings to raise before any launch push, not code to change.
 
-## Nothing is currently waiting on you
+## To test when you're back
+
+- **Smoke-test fan → artist upgrade** (shipped 10 Aug 2026). As a fan (impersonate
+  one via /admin/users), Profile → Settings → "Switch to artist account" → confirm
+  → should land on the claim form; submit → appears in the admin artist queue as
+  pending → approve it. Built and build-verified, not yet clicked through on a
+  live login.
+
+## Nothing else is currently waiting on you
 
 `CRON_SECRET` set, every migration through `addendum_027` run, Stripe keys
 rotated, every active venue has an address, both email templates updated in the
