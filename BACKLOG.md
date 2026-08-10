@@ -10,6 +10,9 @@ the same thing across old conversations. Gaps are shipped items.
 | Order | # | Item | What the work actually is | Blocked on | Size |
 |---|---|---|---|---|---|
 | 1 | 82b | **Apple sign-in** | Enable the provider, add the button next to Google's. Small, because 82a already built the post-callback screen and it is provider-agnostic. | **Apple**, approving your developer verification. | S |
+| 2 | 103 | **Security: key-rotation checklist** | One documented, repeatable list of every secret the app holds, what breaks if it leaks, and how to rotate it without downtime — Supabase `anon` + `service_role`, Stripe secret + webhook signing secret, `CRON_SECRET`, Turnstile secret, Resend key, Google OAuth client secret, plus `NEXT_PUBLIC_*` public values. Encodes the two-phase order (rotate at provider → update Vercel env → redeploy → revoke old) so a rotation never takes the app down. Ties into #95: going live already rotates the Stripe set. See the note below. | Nothing. Worth doing alongside #95. | S |
+| 6 | 104 | **Claude skills for code organisation** | Package the repo's own conventions as `.claude/skills/` so they're applied the same way every time instead of living in CLAUDE.md prose and my head: the migration two-phase + column-GRANT rules, the i18n "add a string" workflow (en.ts → es.ts → `export-i18n-json.mjs` → regenerate the review PDF), the adversarial-probe pattern (read the stored value back), and the "read `node_modules/next/dist/docs` before writing Next code" rule. Turns tribal knowledge into invokable checklists. | Nothing. | S |
+| 7 | 105 | **Full web / desktop version** | The app is mobile-first — built and tested at 375px, every screen a single phone-width column. A proper wide-screen experience (multi-column feed/explore, a desktop layout rather than a centred phone) suits fans browsing on a laptop, and is likely what a promoter/venue back-office (#88) wants anyway. **Vir to confirm the intent** — this could instead mean a marketing site on the apex `aurasonic.es`, which is a separate job from restyling the app for wide screens. | Vir to clarify scope. | M–L |
 | 3 | 95 | **Go live on `madgigz.aurasonic.es`** | Decided 10 Aug 2026: the webapp gets a subdomain of the domain Vir already owns, with `aurasonic.es` itself left for the main AuraSonic site. Vercel stays the host. A DNS record and a Vercel domain, then the settings that must move with it — Stripe live keys, a new webhook endpoint, `NEXT_PUBLIC_APP_URL`, and Supabase's redirect allow-list. See below for what breaks quietly if one is missed. | Nothing. Vir's call on when. | M |
 | 4 | 90 | **"City centric"** | Vir to explain — noted 9 Aug 2026 so it isn't lost. | Vir. | ? |
 | 5 | 101 | **Live updates (Supabase realtime)** | Nothing on the app is live — the notifications bell, the sold count, and new announcements only change on reload. Principle 3 of the Rauch "rich web apps" piece: push data changes to clients rather than making them ask. Supabase ships realtime subscriptions and we use none. Scope it to the two places a stale number actually *misleads* someone: the unread bell and a show's sold/sold-out state. | Nothing. | M |
@@ -140,6 +143,39 @@ PSD2/SCA compliance, PCI scope, holding other people's money, and in Spain a
 licence to do it. Stripe's cut buys all of that plus the fraud handling and the
 Connect payouts. It only becomes arguable at volumes where a percentage point
 is real money, and MadGigz is a long way from there.
+
+**#103 is a checklist, not a build — but do it beside #95.** Every secret the
+app holds, what breaks if it leaks, and how to swap it without downtime. The
+non-obvious part is *order*: rotate at the provider, add the new value to
+Vercel's env, redeploy, and only then revoke the old one — the reverse takes the
+app down between steps (this is the same two-phase discipline the migrations
+use). Going live already forces the Stripe half (new live keys + a fresh webhook
+signing secret); #103 is writing the whole thing down once so a future rotation
+is a 20-minute chore, not an outage. See also `docs/load-and-capacity.md`, which
+leans on the same env-vars.
+
+**#104 pays for itself the moment a convention is applied wrong once.** The rules
+that already bit us live in CLAUDE.md prose — column GRANTs, the two-phase
+revoke, "read the stored value back" — and a skill turns each into an invokable
+checklist instead of something to remember. The i18n add-a-string flow is the
+clearest candidate: it's now four coordinated steps (en.ts, es.ts, the JSON
+export, the PDF) and easy to half-do.
+
+**#105 ("web version") needs one sentence from Vir before it's scoped.** The app
+is *already* web — so this means one of two different jobs: a wide-screen/desktop
+layout for the existing app (multi-column, not a phone in the middle of a
+monitor), or a separate marketing site on the apex. They share almost no work.
+Parked like #90 until clarified.
+
+## Load & servers — the short version
+
+Assessed 10 Aug 2026 (`docs/load-and-capacity.md`, `scripts/load-probe.mjs`):
+**100 people browsing at once is comfortable** — a live read probe held to 60
+concurrent page-loads (240 parallel queries) at p95 ~0.7s with zero errors on the
+free tier, and Vercel's burst ceiling is 1,000 concurrent, so 100 is ~10%. **100
+people onboarding at once is gated by email, not servers**: Supabase's custom-SMTP
+signup limit defaults to 30/hour and Resend's free tier is 100 emails/day — both
+config/plan settings to raise before any launch push, not code to change.
 
 ## Nothing is currently waiting on you
 
