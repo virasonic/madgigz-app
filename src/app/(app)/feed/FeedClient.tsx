@@ -121,6 +121,7 @@ export default function FeedClient({
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [addContentOpen, setAddContentOpen] = useState(false);
+  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   // Browsers block autoplay-with-sound, so reels start muted like TikTok/Reels;
   // shared (not per-card) so unmuting once stays unmuted as you scroll.
@@ -186,9 +187,26 @@ export default function FeedClient({
 
   const artistName = user.artistName ?? user.username;
 
+  // Oldest-first, the reading order of the intro set - the same order the feed
+  // itself uses. Empty means the button hides rather than opening to nothing.
+  const announcements = useMemo(
+    () => allPosts.filter((post) => !post.eventId).reverse(),
+    [allPosts]
+  );
+
   return (
     <div className="relative flex h-full flex-col">
       <div className="relative flex justify-center gap-2 p-4">
+        {announcements.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setAnnouncementsOpen(true)}
+            aria-label="From MadGigz"
+            className="absolute left-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface text-muted"
+          >
+            <MegaphoneIcon />
+          </button>
+        )}
         {canActAsArtist(user) && (
           <button
             type="button"
@@ -321,6 +339,94 @@ export default function FeedClient({
           onPosted={refreshContent}
         />
       )}
+
+      {announcementsOpen && (
+        <AnnouncementsSheet
+          announcements={announcements}
+          onClose={() => setAnnouncementsOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function MegaphoneIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6L6 10H4a1 1 0 0 0-1 1Z"
+        fill="currentColor"
+      />
+      <path
+        d="M14 8s2 1 2 4-2 4-2 4M17 5s3 2 3 7-3 7-3 7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+// A quick way to read MadGigz's own posts without scrolling the whole feed for
+// them. A list rather than the full-screen cards - someone tapping this wants
+// to catch up, not swipe through ten panels.
+function AnnouncementsSheet({
+  announcements,
+  onClose,
+}: {
+  announcements: ContentPost[];
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/60" onClick={onClose}>
+      <div
+        className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
+        <h2 className="font-display text-xl text-foreground">From MadGigz</h2>
+        <p className="mt-1 text-sm text-muted">Tips and updates for getting around.</p>
+
+        <div className="mt-5 flex flex-col gap-3">
+          {announcements.map((post) => {
+            const accent = post.accentColor || "#d76616";
+            const hasMedia = Boolean(post.image) || post.mediaType === "video";
+            return (
+              <div key={post.id} className="flex items-start gap-3 rounded-2xl bg-background p-3">
+                <div
+                  className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+                  style={
+                    hasMedia
+                      ? undefined
+                      : {
+                          backgroundImage: `radial-gradient(120% 100% at 20% 15%, ${accent}66, transparent 60%)`,
+                          backgroundColor: "#0a0807",
+                        }
+                  }
+                >
+                  {post.mediaType === "image" && post.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- Storage URL, small thumb
+                    <img src={post.image} alt="" className="h-full w-full object-cover" />
+                  ) : post.mediaType === "video" && post.videoUrl ? (
+                    <video src={post.videoUrl} className="h-full w-full object-cover" muted />
+                  ) : (
+                    <span className="font-display text-base" style={{ color: accent }}>
+                      MGz
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  {post.headline && (
+                    <p className="font-heading text-sm text-foreground">{post.headline}</p>
+                  )}
+                  {post.caption && <p className="text-sm text-muted">{post.caption}</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
