@@ -13,12 +13,13 @@ the same thing across old conversations. Gaps are shipped items.
 | 2 | 82b | **Apple sign-in** | Enable the provider, add the button. Small, because 82a already built the callback screen — it's provider-agnostic. | **Apple**, approving your developer verification. | S |
 | 3 | 59 | **Spanish/English localization** | Every UI string into translation files, a language switch, and the Spanish itself. Dates and currency are already `en-GB`/EUR. | Sequencing (see below), plus a fluent Spanish pass on the copy. | L |
 | 4 | 79 | **Verification link is decorative** | Say so in the email, drop the button, or leave it. Scanners open the link within ~15s of sending, so nobody completes verification by tapping it — the sign-in notice *is* the verification step. | Your decision. Can jump the queue any time — it's five minutes. | S |
-| 5 | 89 | **Let people change their username** | A field on Edit Profile. The database side is already built — `addendum_010`'s format check, `addendum_011`'s case-insensitive unique index and `username_available()` RPC — so this is the signup form's availability check, reused. The real work is the rules around it (see below), not the form. Cooldown decided: **10 days**. | Nothing. | S |
-| 6 | 91 | **Sign in with a username** | Supabase Auth only authenticates on email, so this needs a server-side username→email lookup that signs the person in without ever returning the email to the browser. Build it with #89, not apart from it — a changeable username that is also a login credential is one feature, not two. | Nothing. | M |
-| 7 | 90 | **"City centric"** | Vir to explain — noted 9 Aug 2026 so it isn't lost. | Vir. | ? |
-| 8 | 88 | **Promoter & venue flows** | Account types alongside fan/artist, probably web rather than the app. Groundwork exists: admin-created shows already model a show with no `artist_id` managed by its creator, `venues` rows carry a `verified` flag an account could claim, and the artist claim-and-evidence flow is the precedent for verifying someone represents a venue. | Later, your call. Decide ownership first. | L |
-| 9 | 92 | **Band profiles made of member accounts** | Members keep their own artist accounts but appear under one band profile. Explicitly **not MVP** — parked. `event_artists` (`addendum_012`) is the precedent for profile↔event tagging, but a band is profile↔profile, which is a new table and a new answer to "who owns this". The sharp edge is money, not tagging — see below. | Not now, by Vir's call. | L |
-| 10 | 58 | **Admin activity tracking** | Login frequency, geolocation, attendance history. A new events table and a write path, not just a query. | Nothing technical. Needs a purpose first. | L |
+| 5 | 94 | **Feedback & support inbox** | A "Send feedback" row in profile Settings, a `feedback` table, a Feedback tab in the admin panel with the same open/closed split as the artist review queue (#72), and an open count on the admin dashboard. Naming: **Feedback**, not tickets — see below. | Nothing. | M |
+| 6 | 89 | **Let people change their username** | A field on Edit Profile. The database side is already built — `addendum_010`'s format check, `addendum_011`'s case-insensitive unique index and `username_available()` RPC — so this is the signup form's availability check, reused. The real work is the rules around it (see below), not the form. Cooldown decided: **10 days**. | Nothing. | S |
+| 7 | 91 | **Sign in with a username** | Supabase Auth only authenticates on email, so this needs a server-side username→email lookup that signs the person in without ever returning the email to the browser. Build it with #89, not apart from it — a changeable username that is also a login credential is one feature, not two. | Nothing. | M |
+| 8 | 90 | **"City centric"** | Vir to explain — noted 9 Aug 2026 so it isn't lost. | Vir. | ? |
+| 9 | 88 | **Promoter & venue flows** | Account types alongside fan/artist, probably web rather than the app. Groundwork exists: admin-created shows already model a show with no `artist_id` managed by its creator, `venues` rows carry a `verified` flag an account could claim, and the artist claim-and-evidence flow is the precedent for verifying someone represents a venue. | Later, your call. Decide ownership first. | L |
+| 10 | 92 | **Band profiles made of member accounts** | Members keep their own artist accounts but appear under one band profile. Explicitly **not MVP** — parked. `event_artists` (`addendum_012`) is the precedent for profile↔event tagging, but a band is profile↔profile, which is a new table and a new answer to "who owns this". The sharp edge is money, not tagging — see below. | Not now, by Vir's call. | L |
+| 11 | 58 | **Admin activity tracking** | Login frequency, geolocation, attendance history. A new events table and a write path, not just a query. | Nothing technical. Needs a purpose first. | L |
 
 ## Why this order
 
@@ -33,6 +34,27 @@ your control.
 in the app, so anything built afterwards needs its own translation pass. Doing
 #82 first means those screens get translated once instead of twice. This is the
 only ordering constraint that actually costs money to get wrong.
+
+**#94 goes in before real fans arrive, not after.** Its whole value is catching
+what nobody anticipated, so a feedback channel that lands a month into launch
+misses exactly the month worth hearing about. It also depends on nothing, which
+is why it sits this high despite not being urgent.
+
+**Call it Feedback.** Vir's instinct to avoid "tickets" is right — the app
+already sells those, and `/admin/billing` already lists them. Of the
+alternatives, "inquiries" reads like a commercial contact form, "submissions"
+could mean an artist submitting a show, and "logs" sounds like something a
+developer reads. "Feedback" collides with nothing, and it is the word on the
+button the fan actually taps. If a bug report needs distinguishing from praise,
+that is a `type` column (bug / support / idea), not a different name.
+
+Worth building in from the start rather than bolting on: capture the route,
+role and app version automatically, so a report doesn't need a follow-up
+conversation to be actionable. Reuse #72's open/closed split for the admin tab
+and its resolution flow — it is the same shape as the artist review queue, and
+the dashboard box should count **open** items, since a total nobody can act on
+is decoration. Notify support@aurasonic.es through Resend, which is already
+wired up for approval emails.
 
 **#89 and #91 are one feature, and the risk is in the rules.** The form is an
 afternoon; deciding what happens to the old handle is the part worth thinking
