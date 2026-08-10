@@ -73,12 +73,12 @@ function buildForYouFeed(
   ];
 }
 
-function groupByDay(items: EventItem[]) {
+function groupByDay(items: EventItem[], dateLocale: string) {
   const groups = new Map<string, EventItem[]>();
   [...items]
     .sort((a, b) => a.date.localeCompare(b.date))
     .forEach((event) => {
-      const key = new Date(event.date).toLocaleDateString("en-GB", {
+      const key = new Date(event.date).toLocaleDateString(dateLocale, {
         weekday: "long",
         day: "numeric",
         month: "long",
@@ -119,7 +119,7 @@ export default function FeedClient({
   initialSavedIds,
   followedEventIds,
 }: FeedClientProps) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [pane, setPane] = useState<Pane>("forYou");
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
   // #102: the open ticket and the announcements sheet live in the URL now, so
@@ -168,14 +168,18 @@ export default function FeedClient({
   // groupByDay re-sorts by date, and Array.sort is stable, so pre-sorting
   // followed-first keeps the days in order while lifting followed artists
   // within each one. This Week is a schedule; it can't stop being chronological.
+  // The day headers ("viernes 15 agosto") follow the app's language; en-GB keeps
+  // the day-then-month order English readers expect.
+  const dateLocale = locale === "es" ? "es-ES" : "en-GB";
   const weeklyGroups = useMemo(
     () =>
       groupByDay(
         [...withinNextWeek(initialEvents)].sort(
           (a, b) => Number(followed.has(b.id)) - Number(followed.has(a.id))
-        )
+        ),
+        dateLocale
       ),
-    [initialEvents, followed]
+    [initialEvents, followed, dateLocale]
   );
 
   async function refreshContent() {
@@ -312,13 +316,10 @@ export default function FeedClient({
                             {event.venue} · {event.time}
                           </p>
                         </div>
+                        {/* Category pill dropped: every event is live music, so
+                            the tag said nothing. Price is the useful right-hand
+                            signal. */}
                         <div className="flex flex-col items-end gap-1">
-                          <span
-                            className="rounded-full px-2.5 py-0.5 text-[10px] font-heading uppercase text-foreground"
-                            style={{ backgroundColor: event.accentColor }}
-                          >
-                            {event.category}
-                          </span>
                           <span className="text-xs text-muted">€{event.price}</span>
                         </div>
                       </button>
