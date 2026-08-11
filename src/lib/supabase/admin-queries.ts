@@ -111,6 +111,45 @@ export async function fetchDashboardStats(admin: SupabaseClient) {
   };
 }
 
+export interface StorageBucketUsage {
+  bucket: string;
+  bytes: number;
+  files: number;
+}
+
+export interface StorageUsage {
+  totalBytes: number;
+  buckets: StorageBucketUsage[];
+}
+
+// Rolls up file storage per bucket via the admin_storage_usage() RPC
+// (addendum_034), which is the only way to reach storage.objects - that table
+// lives in the `storage` schema, which PostgREST doesn't expose. Returns zeros
+// (rather than throwing) if the migration hasn't run yet, so the dashboard
+// still renders during the window between deploy and running the SQL.
+export async function fetchStorageUsage(admin: SupabaseClient): Promise<StorageUsage> {
+  const { data, error } = await admin.rpc("admin_storage_usage");
+
+  if (error) {
+    // 42883 = function doesn't exist, i.e. addendum_034 hasn't run.
+    if (error.code !== "42883") console.error("fetchStorageUsage failed:", error);
+    return { totalBytes: 0, buckets: [] };
+  }
+
+  const buckets: StorageBucketUsage[] = (
+    (data ?? []) as { bucket_id: string; bytes: number; files: number }[]
+  ).map((r) => ({
+    bucket: r.bucket_id,
+    bytes: Number(r.bytes),
+    files: Number(r.files),
+  }));
+
+  return {
+    totalBytes: buckets.reduce((sum, b) => sum + b.bytes, 0),
+    buckets,
+  };
+}
+
 export interface AdminArtistApplication {
   id: string;
   email: string;

@@ -5,8 +5,22 @@ import {
   fetchDashboardStats,
   fetchOpenFeedbackCount,
   fetchOpenReportCount,
+  fetchStorageUsage,
   requireAdmin,
 } from "@/lib/supabase/admin-queries";
+
+// Supabase Pro includes ~100GB of file storage; we show usage against it so the
+// number reads as "how much headroom is left", not just an absolute size.
+const STORAGE_QUOTA_BYTES = 100 * 1024 * 1024 * 1024;
+
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return "0 MB";
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${Math.round(kb)} KB`;
+  const mb = kb / 1024;
+  if (mb < 1024) return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
+  return `${(mb / 1024).toFixed(2)} GB`;
+}
 
 function StatCard({ label, value, href }: { label: string; value: string; href?: string }) {
   const body = (
@@ -29,12 +43,15 @@ function StatCard({ label, value, href }: { label: string; value: string; href?:
 export default async function AdminDashboardPage() {
   await requireAdmin();
   const admin = adminClient();
-  const [stats, users, openFeedback, openReports] = await Promise.all([
+  const [stats, users, openFeedback, openReports, storage] = await Promise.all([
     fetchDashboardStats(admin),
     fetchAllUsers(admin),
     fetchOpenFeedbackCount(admin),
     fetchOpenReportCount(admin),
+    fetchStorageUsage(admin),
   ]);
+
+  const storagePercent = (storage.totalBytes / STORAGE_QUOTA_BYTES) * 100;
 
   const recentUsers = [...users]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -61,6 +78,60 @@ export default async function AdminDashboardPage() {
             doing, and a lifetime count never changes that answer. */}
         <StatCard label="Open feedback" value={String(openFeedback)} href="/admin/feedback" />
         <StatCard label="Open reports" value={String(openReports)} href="/admin/moderation" />
+      </div>
+
+      <div className="rounded-2xl bg-surface p-5">
+        <div className="mb-4 flex items-baseline justify-between gap-3">
+          <h2 className="font-heading text-lg text-foreground">Storage</h2>
+          <span className="text-sm text-muted">
+            {formatBytes(storage.totalBytes)} of {formatBytes(STORAGE_QUOTA_BYTES)} used
+            {" · "}
+            {storagePercent < 0.1 ? "<0.1" : storagePercent.toFixed(1)}%
+          </span>
+        </div>
+
+        {/* Headroom against the Pro quota. The point of this whole panel (#100)
+            is to see the number climb long before it's a problem, and to check
+            #96's image downscaling is holding uploads down - not to police a
+            bill. Egress/bandwidth isn't queryable from SQL (it's a billing
+            metric), so that stays in the Supabase dashboard; this is the file
+            footprint, which is the part that only ever grows. */}
+        <div className="h-2 w-full overflow-hidden rounded-full bg-background">
+          <div
+            className="h-2 rounded-full bg-primary"
+            style={{ width: `${Math.min(100, Math.max(storagePercent, storage.totalBytes > 0 ? 0.5 : 0))}%` }}
+          />
+        </div>
+
+        {storage.buckets.length === 0 ? (
+          <p className="mt-4 text-sm text-muted">
+            No files stored yet, or the storage-usage function hasn&apos;t been installed
+            (run <code className="text-foreground">addendum_034</code>).
+          </p>
+        ) : (
+          <table className="mt-5 w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-muted/15 text-muted">
+                <th className="pb-2 font-heading">Bucket</th>
+                <th className="pb-2 text-right font-heading">Files</th>
+                <th className="pb-2 text-right font-heading">Size</th>
+              </tr>
+            </thead>
+            <tbody>
+              {storage.buckets.map((b) => (
+                <tr key={b.bucket} className="border-b border-muted/10 last:border-0">
+                  <td className="py-2 text-foreground">{b.bucket}</td>
+                  <td className="py-2 text-right text-muted tabular-nums">
+                    {b.files.toLocaleString()}
+                  </td>
+                  <td className="py-2 text-right text-foreground tabular-nums">
+                    {formatBytes(b.bytes)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="rounded-2xl bg-surface p-5">
