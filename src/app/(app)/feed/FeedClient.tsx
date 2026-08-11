@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import TicketModal from "@/components/feed/TicketModal";
 import ContentReelCard from "@/components/feed/ContentReelCard";
 import AnnouncementCard from "@/components/feed/AnnouncementCard";
@@ -138,6 +138,16 @@ export default function FeedClient({
 
   const followed = useMemo(() => new Set(followedEventIds), [followedEventIds]);
 
+  // Desktop-only prev/next arrows scroll the snap feed by exactly one card
+  // (each slide is the container's own height), so a click lands on the next
+  // reel and snap-mandatory keeps it aligned. Trackpad scrolling is unaffected.
+  const forYouScrollRef = useRef<HTMLDivElement>(null);
+  const scrollFeed = useCallback((dir: 1 | -1) => {
+    const el = forYouScrollRef.current;
+    if (!el) return;
+    el.scrollBy({ top: dir * el.clientHeight, behavior: "smooth" });
+  }, []);
+
   // Read once, on mount, and never updated while the pane is open. That is
   // deliberate: marking a card seen must not re-order the list under the
   // finger of the person currently reading it. The new order applies next time
@@ -262,7 +272,11 @@ export default function FeedClient({
           forYouFeed.length === 0 ? (
             <p className="mt-6 px-4 text-center text-sm text-muted">{t("feed.emptyForYou")}</p>
           ) : (
-            <div className="h-full w-full snap-y snap-mandatory overflow-y-scroll">
+            <div className="relative h-full">
+            <div
+              ref={forYouScrollRef}
+              className="h-full w-full snap-y snap-mandatory overflow-y-scroll"
+            >
               {forYouFeed.map((entry) => (
                 // Mobile: the card fills the viewport (unchanged). Desktop: centre
                 // a fixed 9:16 card that fits *inside* the window — height clamped
@@ -294,6 +308,33 @@ export default function FeedClient({
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Desktop-only prev/next, TikTok-web style. Anchored just past the
+                right edge of the centred 26rem card; snaps one reel per click.
+                pointer-events-none on the column so its empty space never
+                blocks a tap or scroll on the card behind it. */}
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-y-1/2 flex-col gap-3 lg:flex"
+              style={{ marginLeft: "13.5rem" }}
+            >
+              <button
+                type="button"
+                onClick={() => scrollFeed(-1)}
+                aria-label={t("feed.previousReel")}
+                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-surface/80 text-foreground backdrop-blur transition-colors hover:bg-surface"
+              >
+                <ChevronIcon dir="up" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollFeed(1)}
+                aria-label={t("feed.nextReel")}
+                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-surface/80 text-foreground backdrop-blur transition-colors hover:bg-surface"
+              >
+                <ChevronIcon dir="down" />
+              </button>
+            </div>
             </div>
           )
         ) : (
@@ -371,6 +412,21 @@ export default function FeedClient({
         />
       )}
     </div>
+  );
+}
+
+function ChevronIcon({ dir }: { dir: "up" | "down" }) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      className={dir === "down" ? "rotate-180" : undefined}
+    >
+      <path d="M6 15l6-6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

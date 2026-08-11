@@ -47,6 +47,8 @@ export const en = {
     mute: "Mute",
     artistContent: "Artist Content",
     getTickets: "Get Tickets",
+    previousReel: "Previous",
+    nextReel: "Next",
   },
 
   // #90: the local-first identity. One city for now (Madrid); the name is

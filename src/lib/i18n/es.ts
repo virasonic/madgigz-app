@@ -47,6 +47,8 @@ export const es: Messages = {
     mute: "Silenciar",
     artistContent: "Contenido de artista",
     getTickets: "Comprar entradas",
+    previousReel: "Anterior",
+    nextReel: "Siguiente",
   },
 
   city: {

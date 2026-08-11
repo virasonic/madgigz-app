@@ -39,7 +39,9 @@
       "unmute": "Unmute",
       "mute": "Mute",
       "artistContent": "Artist Content",
-      "getTickets": "Get Tickets"
+      "getTickets": "Get Tickets",
+      "previousReel": "Previous",
+      "nextReel": "Next"
     },
     "city": {
       "youAreIn": "You're in {city}",
@@ -603,7 +605,9 @@
       "unmute": "Activar sonido",
       "mute": "Silenciar",
       "artistContent": "Contenido de artista",
-      "getTickets": "Comprar entradas"
+      "getTickets": "Comprar entradas",
+      "previousReel": "Anterior",
+      "nextReel": "Siguiente"
     },
     "city": {
       "youAreIn": "Estás en {city}",
