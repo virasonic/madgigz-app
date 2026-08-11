@@ -153,6 +153,26 @@ Once the branch is pushed and env is set:
    another quick confirmation they're separate stacks.
 4. Sign up a throwaway account on staging → it lands in the staging DB only.
 
+## External providers on a fresh staging project
+The staging Supabase project and the Cloudflare widget don't know about the
+staging domain until you tell them. Two gaps show up the first time you test
+onboarding:
+
+- **Google sign-in.** OAuth runs through the *staging* Supabase project, which
+  starts with no Google provider. Fix: (1) staging Supabase → **Authentication →
+  Providers → Google** → enable, paste the same Client ID + Secret as prod (both
+  are in Google Cloud Console → **Credentials → the OAuth client**); (2) in that
+  same Google client, add the staging Supabase callback to **Authorized redirect
+  URIs**: `https://<staging-ref>.supabase.co/auth/v1/callback` (keep the prod one
+  too). The app's own `/auth/callback` already uses the staging origin.
+- **Cloudflare Turnstile captcha.** Turnstile keys are locked to specific
+  hostnames, so prod's keys fail on the staging domain. Simplest on a
+  login-locked staging: scope both `*_TURNSTILE_*` vars to **Production only**
+  (untick Preview) so signup skips the captcha — **then redeploy Preview**, since
+  the site key is build-time inlined and a cached build keeps showing it. To keep
+  it instead, add the staging domain in Cloudflare → **Turnstile → the widget →
+  Hostname Management**.
+
 ## Promoting a change to production
 When a change tested on `staging` is good: merge `staging` → `main` (or
 cherry-pick the commits), push `main`, and the normal prod deploy carries it
