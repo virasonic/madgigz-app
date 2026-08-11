@@ -52,7 +52,7 @@ export default function NotificationsClient({
 
   if (notifications.length === 0) {
     return (
-      <div className="p-4">
+      <div className="p-4 lg:mx-auto lg:max-w-2xl">
         <div className="mb-6 flex items-center gap-3">
           <BackButton href="/profile" />
           <h1 className="font-display text-2xl text-foreground">{t("notifications.title")}</h1>

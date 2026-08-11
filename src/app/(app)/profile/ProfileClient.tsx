@@ -231,7 +231,7 @@ export default function ProfileClient({
   }
 
   return (
-    <div className="p-4">
+    <div className="p-4 lg:mx-auto lg:max-w-2xl">
       <Suspense>
         <RestoredNotice />
       </Suspense>

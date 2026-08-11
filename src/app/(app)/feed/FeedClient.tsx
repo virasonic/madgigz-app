@@ -218,7 +218,7 @@ export default function FeedClient({
       <div className="flex justify-center pt-3">
         <CityBadge />
       </div>
-      <div className="relative flex justify-center gap-2 px-4 pb-4 pt-2">
+      <div className="relative mx-auto flex w-full justify-center gap-2 px-4 pb-4 pt-2 lg:max-w-[26rem]">
         {announcements.length > 0 && (
           <button
             type="button"
@@ -262,7 +262,7 @@ export default function FeedClient({
           forYouFeed.length === 0 ? (
             <p className="mt-6 px-4 text-center text-sm text-muted">{t("feed.emptyForYou")}</p>
           ) : (
-            <div className="h-full snap-y snap-mandatory overflow-y-scroll">
+            <div className="mx-auto h-full w-full snap-y snap-mandatory overflow-y-scroll lg:max-w-[26rem]">
               {forYouFeed.map((entry) => (
                 <div key={entry.post.id} className="h-full w-full snap-start">
                   {entry.event ? (
@@ -288,7 +288,7 @@ export default function FeedClient({
             </div>
           )
         ) : (
-          <div className="h-full overflow-y-auto px-4 pb-6">
+          <div className="mx-auto h-full w-full overflow-y-auto px-4 pb-6 lg:max-w-xl">
             {weeklyGroups.length === 0 ? (
               <p className="mt-6 text-center text-sm text-muted">{t("feed.emptyThisWeek")}</p>
             ) : (

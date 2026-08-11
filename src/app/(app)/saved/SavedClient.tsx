@@ -130,7 +130,7 @@ export default function SavedClient({
   }
 
   return (
-    <div className="p-4">
+    <div className="p-4 lg:mx-auto lg:max-w-2xl">
       <div className="mb-4 flex items-center gap-2">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path

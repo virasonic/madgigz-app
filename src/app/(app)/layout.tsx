@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import BottomNav from "@/components/ui/BottomNav";
+import SideNav from "@/components/ui/SideNav";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { createClient } from "@/lib/supabase/server";
 import { fetchUnreadCount } from "@/lib/notifications";
@@ -36,10 +37,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // pt-safe sits on the shell rather than inside the scroll area, so content
     // clears the notch permanently instead of sliding under it once scrolled.
     // Paired with pb-safe on BottomNav; both collapse to zero in a browser tab.
-    <div className="pt-safe mx-auto flex h-screen w-full max-w-md flex-col bg-background">
-      {impersonating && <ImpersonationBanner username={impersonating} />}
-      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-      <BottomNav role={profile?.role ?? "fan"} userId={user.id} unreadCount={unreadCount} />
+    // Mobile: a centred max-w-md phone column with the bottom nav (unchanged).
+    // Desktop (lg+): the width cap lifts and the shell becomes a row — a
+    // persistent SideNav beside a full-height content column (#105).
+    <div className="pt-safe mx-auto flex h-screen w-full max-w-md flex-col bg-background lg:max-w-none lg:flex-row">
+      <SideNav role={profile?.role ?? "fan"} userId={user.id} unreadCount={unreadCount} />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {impersonating && <ImpersonationBanner username={impersonating} />}
+        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <BottomNav role={profile?.role ?? "fan"} userId={user.id} unreadCount={unreadCount} />
+      </div>
     </div>
   );
 }

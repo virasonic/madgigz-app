@@ -94,7 +94,7 @@ export default function ExploreClient({
   }
 
   return (
-    <div>
+    <div className="lg:mx-auto lg:max-w-5xl">
       {/* #106: the title, search and genre chips are pinned so they stay
           reachable while the grid scrolls beneath. bg-background is opaque, so
           it covers the event cards passing under it; z-20 keeps it on top. */}
@@ -163,7 +163,7 @@ export default function ExploreClient({
           {filteredArtists.length > 0 && (
             <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">{t("explore.eventsHeading")}</h2>
           )}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {filteredEvents.map((event) => (
               <EventCard
                 key={event.id}
