@@ -24,7 +24,7 @@ the same thing across old conversations. Gaps are shipped items.
 | 10 | 99 | **In-app video editor** | Trim, crop to vertical, add a music bed, maybe captions — so an artist can post from their phone without leaving for CapCut and coming back. Real scope: it is a media pipeline, not a screen. Browser-side trimming is doable with the WebCodecs API; anything more (music beds, transcode-on-upload) wants server-side ffmpeg, which Vercel's function limits make awkward. Music also needs a licensed library, which is a commercial deal, not code. | Nothing technical. Worth doing once artists are actually posting. | XL |
 | 11 | 100 | **Supabase storage and bandwidth headroom** | Vir is happy to pay — this is about noticing *before* uploads start failing, not about avoiding the bill. Free tier is 1GB storage / 5GB egress; Pro is $25/mo for 100GB. The real lever was #96 — **shipped 11 Aug 2026:** `src/lib/image-resize.ts` downscales images (long edge → 1920px, re-encoded) inside `uploadEventMedia`, so posters, avatars and content photos shrink client-side before Storage (a 4000×3000 test image went 432KB → 133KB). Cuts both storage and egress. Still wants a size figure in the admin dashboard so the trend is visible. **Update 11 Aug 2026: Vir upgraded Supabase to Pro** — ~100GB storage / 250GB egress included, so the ceiling is far off; the per-file **upload size limit can also be raised now** (a bucket `file_size_limit` plus the client-side check, e.g. for artist video posts feeding #99). Drops to a low-priority watch + the admin size figure. **Admin size figure built 11 Aug 2026 (on `staging`):** the admin dashboard now has a **Storage** panel — total used vs the ~100GB Pro quota with a headroom bar, plus a per-bucket breakdown (files + size for `event-media`, `artist-evidence`). Powered by `supabase/addendum_034_storage_usage.sql` — a service-role-only `admin_storage_usage()` RPC that aggregates `storage.objects` (that table's in the `storage` schema, which PostgREST can't reach directly). Egress/bandwidth is a billing-only metric with no SQL source, so it stays in the Supabase dashboard; this is the file footprint, the part that only grows. Degrades gracefully (shows a "run addendum_034" note) until the migration runs. Verified on staging (addendum_034 run there); **code promoted to prod 11 Aug 2026**. **One step left:** run `addendum_034` on the **prod** Supabase to light up the panel with real numbers (dormant/graceful-note until then). | Run addendum_034 on prod. | S |
 | ✅ | 109 | **Surface upload errors in the artist claim form** | **Shipped 11 Aug 2026.** `ArtistClaimForm.tsx` now wraps `uploadArtistEvidence` in try/catch — a rejected upload shows the error and logs the reason instead of leaving the button stuck on "submitting…". The silent-throw that masked the staging grant issue is gone. | Done. | S |
-| 12 | 97 | **Tax & invoicing compliance** | Spanish IVA on the MadGigz fee, invoices artists can give their accountant, and whatever an artist selling tickets needs to declare. Stage 6 deliberately left VAT out of scope as "an accountant's question, not a guess in code" — this is that question coming back. | An accountant. Genuinely not a coding decision. | L |
+| 12 | 97 | **Tax & invoicing (facturación) — Odoo-backed** | Real euros mean IVA on the MadGigz fee, facturas artists can hand their accountant, and ticket-sales invoicing for house shows. **Refined 11 Aug 2026 (Vir, planning ahead — not building until the gestor signs off):** Odoo is the **invoice engine** (Invoicing app live, Spanish PGCE chart, "MadGigz service fee" 21%-IVA product, RPC via `tools/odoo/odoo.py`); MadGigz's job is **capturing fiscal identity + organisation data**, never generating a legal factura itself. Two distinct invoice flows and an open "where does capture live" fork — see the design note below. | **Gestor** — must sign off IVA treatment, invoice format, retención/IRPF, and Verifactu/SII obligations before any build. | L |
 | 13 | 98 | **In-house payments** | Replacing Stripe Connect with direct payment handling. **Much later, by Vir's note.** Would mean becoming a payment facilitator: PSD2/SCA, PCI scope, holding other people's money, and a licence. Stripe's 1.5% + €0.25 buys all of that. | Far future. Only worth it at real volume. | XL |
 
 ## Why this order
@@ -170,9 +170,62 @@ reason to start retaining people's locations.
 Tax (#97) is the one that arrives on its own schedule: the moment real euros
 move, somebody has to account for IVA on the MadGigz fee and artists start
 needing invoices for their accountant. Stage 6 explicitly parked VAT as "an
-accountant's question, not a guess in code" and that is still the right call -
-this item is a reminder that the question is waiting, not an invitation to
-guess at it.
+accountant's question, not a guess in code" and that is still the right call.
+
+**Design worked out with Vir on 11 Aug 2026 (planning ahead, gestor pending).**
+The frame: **Odoo is the invoice engine, MadGigz/website is the data-capture
+layer, the gestor signs off the tax.** MadGigz never generates a legal factura —
+it feeds Odoo accurate counterparties, and Odoo issues the documents. This is
+the only way to build any of it without guessing Spanish tax rules in code.
+
+_Two distinct invoice flows, and they are not the same job:_
+
+- **A — Artist-owned shows sold through MadGigz.** Money already flows
+  fan→artist via the Stripe destination charge, minus MadGigz's 5% + 21% IVA.
+  What's owed is a **service-fee factura, MadGigz → the artist** (or the org that
+  represents them). Needs the artist's fiscal identity, or an organisation to
+  bill instead.
+- **B — House shows (MadGigz owns the event).** MadGigz is the seller, so it must
+  **issue sales invoices for the tickets** (B2C — likely _factura simplificada_
+  per ticket, full factura on request; IVA rate on live-music tickets is a
+  gestor question). _Then_ MadGigz **pays the performing artist**, and this is
+  where "payouts get more complicated": the artist may not be autónomo and gets
+  paid via a **cooperativa de facturación** (ARTiCAT, Xº Décimo Arte, SMart,
+  etc.) that employs them for the event days and **invoices MadGigz under its own
+  CIF**. So the payee is often the cooperativa, not the artist — and Stripe
+  Connect doesn't apply here because MadGigz collected the ticket money itself.
+
+_The entity model MadGigz needs (the part that's ours to build, no tax guesses):_
+a private **fiscal identity** per artist (entity type individual/company/coop,
+legal name, NIF/NIE/CIF, fiscal address, IVA regime) — stored owner-only +
+service-role, **never on the public `profiles` table** (it's exactly the
+personal-data class CLAUDE.md warns about); an **organisations** store (promoters,
+agencies, cooperativas — same fiscal fields, admin-managed); and a link from
+artist → the entity to bill/pay (possibly per-event, since a touring artist may
+use different orgs show to show). Each maps to an Odoo `res.partner`.
+
+_The open architecture fork (Vir, 11 Aug):_ **where does fiscal capture live?**
+(1) In the MadGigz app, then sync Supabase→Odoo via the RPC tool; or (2) **on the
+Odoo-hosted website directly** (`aurasonic.es` is already Odoo-linked), so the
+data lands natively as `res.partner` with no sync bridge and Odoo stays the
+single source of truth. Option 2 is cleaner if the artist tolerates leaving the
+app for a form — the app then only needs a "fiscal registration complete" flag
+read back from Odoo to gate house-selling/invoicing. Leaning (2); decide when
+building.
+
+_Questions the gestor has to answer before any of this is built (these gate the
+schema and the flows, and are genuinely not a coding call):_
+1. Flow A: is a "service fee" factura MadGigz→artist for the 5% + 21% IVA the
+   correct instrument? Reverse-charge if the org is in another EU state?
+2. Flow B tickets: _factura simplificada_ per ticket vs a periodic summary; which
+   **IVA rate** applies to live-music tickets (21% / reduced 10% / cultural
+   treatment); and AuraSonic SL as fiscal seller of record.
+3. Flow B payout: accepting a supplier invoice from the artist/cooperativa, and
+   what **IRPF retención** applies when MadGigz pays a Spanish artist directly.
+4. **Verifactu / SII** e-invoicing obligations — these decide whether Odoo must
+   be the legal system of record and constrain how invoices may be issued.
+5. Exactly which **fields a valid Spanish invoice requires** for each flow, so
+   MadGigz captures precisely those and no more.
 
 In-house payments (#98) is the furthest thing on this list and should probably
 stay there. Taking payments directly means becoming a payment facilitator:
