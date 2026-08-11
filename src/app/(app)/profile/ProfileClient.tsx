@@ -469,9 +469,12 @@ export default function ProfileClient({
                   <button
                     key={show.id}
                     onClick={() => setActiveTaggedShow(show)}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-surface p-4 text-left"
+                    className="flex items-center gap-3 rounded-2xl bg-surface p-3 text-left"
                   >
-                    <div className="min-w-0">
+                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-background">
+                      <Image src={show.image} alt="" fill sizes="56px" className="object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
                       <p className="truncate font-heading text-sm text-foreground">{show.title}</p>
                       <p className="truncate text-xs text-muted">
                         {new Date(show.date).toLocaleDateString(dl, {
