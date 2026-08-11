@@ -59,6 +59,21 @@ export async function GET() {
     // Safe to echo: this is the public site origin, and getting it wrong sends
     // paying customers to a dead page after checkout, so it's worth surfacing.
     appUrl: process.env.NEXT_PUBLIC_APP_URL ?? null,
+    // Just the host of the Supabase project this deploy talks to - never a key.
+    // The URL already ships in the browser bundle, so it isn't secret, and it's
+    // the one reliable way to confirm a staging deploy points at its OWN database
+    // and not production (the whole point of #108). Prod and staging must show
+    // different hosts here; if staging shows the prod host, an env var is leaking
+    // across environments - see docs/staging.md.
+    supabaseHost: (() => {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (!url) return null;
+      try {
+        return new URL(url).host;
+      } catch {
+        return "unparseable";
+      }
+    })(),
     // Just the mode, never the key. Whether Stripe is test or live isn't secret
     // (the checkout page and the in-app notice both reveal it), and surfacing it
     // is the reliable way to confirm a soft launch isn't quietly taking real
