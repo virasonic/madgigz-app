@@ -3,7 +3,6 @@ import { FEE_PERCENT, MIN_FEE_CENTS, VAT_PERCENT } from "@/lib/pricing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// (staging bring-up: forcing a fresh commit hash so a new build is verifiable)
 
 // Lets a deploy be verified from outside: which commit is actually live, and
 // whether the configuration it needs is present. Added after three production
