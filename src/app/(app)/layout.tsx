@@ -39,7 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="pt-safe mx-auto flex h-screen w-full max-w-md flex-col bg-background">
       {impersonating && <ImpersonationBanner username={impersonating} />}
       <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-      <BottomNav role={profile?.role ?? "fan"} unreadCount={unreadCount} />
+      <BottomNav role={profile?.role ?? "fan"} userId={user.id} unreadCount={unreadCount} />
     </div>
   );
 }

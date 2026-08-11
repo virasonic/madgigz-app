@@ -11,6 +11,7 @@ import LikeButton from "./LikeButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
 import { useStripeTestMode } from "@/lib/stripe-mode";
+import { useLiveEventStats } from "@/lib/realtime";
 
 type Tab = "tickets" | "info";
 
@@ -60,8 +61,19 @@ export default function TicketModal({
   const [promoError, setPromoError] = useState<string | undefined>();
   const [checkingPromo, setCheckingPromo] = useState(false);
 
-  const soldPercent = Math.round((event.sold / event.capacity) * 100);
-  const remaining = Math.max(event.capacity - event.sold, 0);
+  // The sold count is the one number here that goes stale while the sheet sits
+  // open - other people are buying the same show. Subscribe to this event's row
+  // so the bar, "Almost gone" and the sold-out lock stay honest (#101). Seeded
+  // from the event we were handed, so there's no flash and it works even before
+  // the first realtime message.
+  const { sold, capacity } = useLiveEventStats(
+    event.id,
+    { sold: event.sold, capacity: event.capacity },
+    true
+  );
+
+  const soldPercent = Math.round((sold / capacity) * 100);
+  const remaining = Math.max(capacity - sold, 0);
   const soldOut = remaining <= 0;
   const almostGone = !soldOut && soldPercent >= 90;
   // Whichever runs out first: the organiser's per-order cap or the seats left.

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Role } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { useLiveUnreadCount } from "@/lib/realtime";
 
 interface NavItem {
   href: string;
@@ -121,13 +122,18 @@ function NoteIcon(active: boolean) {
 
 export default function BottomNav({
   role,
+  userId,
   unreadCount = 0,
 }: {
   role: Role;
+  userId: string;
   unreadCount?: number;
 }) {
   const pathname = usePathname();
   const { t } = useT();
+  // Seeded from the server-rendered count, then kept live so the dot appears
+  // (and clears) without a reload as notifications arrive or are read (#101).
+  const liveUnread = useLiveUnreadCount(userId, unreadCount);
 
   const items: NavItem[] = [
     { href: "/feed", label: t("nav.feed"), icon: FeedIcon },
@@ -159,9 +165,9 @@ export default function BottomNav({
               {/* On the Profile tab because that's where the bell lives. Without
                   it, notifications only exist for someone who happens to open
                   their profile. */}
-              {item.href === "/profile" && unreadCount > 0 && (
+              {item.href === "/profile" && liveUnread > 0 && (
                 <span
-                  aria-label={`${unreadCount} unread notifications`}
+                  aria-label={`${liveUnread} unread notifications`}
                   className="absolute -right-1.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background"
                 />
               )}
