@@ -322,7 +322,7 @@ export default function FeedClient({
                 type="button"
                 onClick={() => scrollFeed(-1)}
                 aria-label={t("feed.previousReel")}
-                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-surface/80 text-foreground backdrop-blur transition-colors hover:bg-surface"
+                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-surface text-muted backdrop-blur transition-colors hover:bg-primary hover:text-foreground"
               >
                 <ChevronIcon dir="up" />
               </button>
@@ -330,7 +330,7 @@ export default function FeedClient({
                 type="button"
                 onClick={() => scrollFeed(1)}
                 aria-label={t("feed.nextReel")}
-                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-surface/80 text-foreground backdrop-blur transition-colors hover:bg-surface"
+                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-surface text-muted backdrop-blur transition-colors hover:bg-primary hover:text-foreground"
               >
                 <ChevronIcon dir="down" />
               </button>
