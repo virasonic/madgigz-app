@@ -38,6 +38,8 @@ export function useLiveUnreadCount(userId: string, initial: number): number {
     if (!userId) return;
     const supabase = createClient();
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
 
     const recount = () => {
       if (timer) clearTimeout(timer);
@@ -46,23 +48,35 @@ export function useLiveUnreadCount(userId: string, initial: number): number {
       }, 300);
     };
 
-    const channel = supabase
-      .channel(`notif-count-${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-          filter: `recipient_id=eq.${userId}`,
-        },
-        recount
-      )
-      .subscribe();
+    (async () => {
+      // notifications is RLS-scoped to the recipient, so the realtime socket
+      // has to carry this user's JWT or the server sends it nothing. The SSR
+      // browser client keeps the session in cookies and doesn't reliably push
+      // it to the websocket before we subscribe, so set it explicitly first -
+      // this is the fix for "the bell only updated when I changed pages".
+      const { data } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (data.session) await supabase.realtime.setAuth(data.session.access_token);
+
+      channel = supabase
+        .channel(`notif-count-${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "notifications",
+            filter: `recipient_id=eq.${userId}`,
+          },
+          recount
+        )
+        .subscribe();
+    })();
 
     return () => {
+      cancelled = true;
       if (timer) clearTimeout(timer);
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [userId]);
 
@@ -93,29 +107,41 @@ export function useLiveEventStats(
   useEffect(() => {
     if (!enabled || !eventId) return;
     const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
 
-    const channel = supabase
-      .channel(`event-stats-${eventId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "events",
-          filter: `id=eq.${eventId}`,
-        },
-        (payload) => {
-          const row = payload.new as { sold?: number; capacity?: number };
-          setStats((prev) => ({
-            sold: typeof row.sold === "number" ? row.sold : prev.sold,
-            capacity: typeof row.capacity === "number" ? row.capacity : prev.capacity,
-          }));
-        }
-      )
-      .subscribe();
+    (async () => {
+      // events is publicly readable, so an anon socket would receive this
+      // anyway - but a signed-in fan's socket should carry their token for
+      // consistency with the bell, and it's harmless for the public read.
+      const { data } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (data.session) await supabase.realtime.setAuth(data.session.access_token);
+
+      channel = supabase
+        .channel(`event-stats-${eventId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "events",
+            filter: `id=eq.${eventId}`,
+          },
+          (payload) => {
+            const row = payload.new as { sold?: number; capacity?: number };
+            setStats((prev) => ({
+              sold: typeof row.sold === "number" ? row.sold : prev.sold,
+              capacity: typeof row.capacity === "number" ? row.capacity : prev.capacity,
+            }));
+          }
+        )
+        .subscribe();
+    })();
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [eventId, enabled]);
 
