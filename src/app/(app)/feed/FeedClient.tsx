@@ -153,14 +153,30 @@ export default function FeedClient({
   // finger of the person currently reading it. The new order applies next time
   // they open the feed.
   const [seenAnnouncements, setSeenAnnouncements] = useState<Set<string>>(new Set());
+  const [seenLoaded, setSeenLoaded] = useState(false);
   useEffect(() => {
     // localStorage cannot be read during render: the server has no window, so
     // a lazy useState initialiser would return an empty set on the server and a
     // populated one on the client, and the feed would hydrate in a different
     // order than it rendered. Reading after mount is the correct shape here.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- see above
+    /* eslint-disable react-hooks/set-state-in-effect -- see above */
     setSeenAnnouncements(new Set(getSeenAnnouncements()));
+    setSeenLoaded(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
+
+  // Once the seen-order is applied, land at the TOP of the feed rather than
+  // wherever the browser restored the snap container to on refresh. After a seen
+  // announcement drops to the bottom, that restored scroll position can sit
+  // mid-feed on an announcement - which is what "I spawn on the announcement"
+  // was. rAF so this runs after the browser's own scroll restoration.
+  useEffect(() => {
+    if (!seenLoaded) return;
+    const el = forYouScrollRef.current;
+    if (!el) return;
+    const id = requestAnimationFrame(() => el.scrollTo({ top: 0 }));
+    return () => cancelAnimationFrame(id);
+  }, [seenLoaded]);
 
   const handleAnnouncementSeen = useCallback((id: string) => {
     markAnnouncementSeen(id);
