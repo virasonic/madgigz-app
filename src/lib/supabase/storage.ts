@@ -1,12 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { downscaleImage } from "@/lib/image-resize";
 
 export async function uploadEventMedia(
   supabase: SupabaseClient,
   file: File,
   folder: string
 ): Promise<string> {
-  const path = `${folder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-  const { error } = await supabase.storage.from("event-media").upload(path, file);
+  // #96: shrink images before upload (posters, avatars, content photos all come
+  // through here). Videos and undecodable formats pass through unchanged.
+  const upload = await downscaleImage(file);
+  const path = `${folder}/${Date.now()}-${upload.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+  const { error } = await supabase.storage.from("event-media").upload(path, upload);
   if (error) throw error;
 
   const {

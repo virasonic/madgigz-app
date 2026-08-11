@@ -56,7 +56,20 @@ export default function ArtistClaimForm() {
     // Goes to the private bucket, and the path is recorded in artist_evidence
     // rather than on profiles - profiles is readable by everyone, so a column
     // there would put verification documents on the open internet.
-    const evidencePath = file ? await uploadArtistEvidence(supabase, file, user.id) : null;
+    let evidencePath: string | null = null;
+    if (file) {
+      try {
+        evidencePath = await uploadArtistEvidence(supabase, file, user.id);
+      } catch (err) {
+        // A rejected upload used to throw uncaught here, leaving the button stuck
+        // on "submitting…" with no message (#109). Surface it, and log the real
+        // reason for anyone debugging.
+        console.error("evidence upload failed:", err);
+        setSubmitting(false);
+        setErrors({ evidence: t("artistClaim.errorEvidenceSave") });
+        return;
+      }
+    }
 
     if (evidencePath) {
       const { error: evidenceError } = await supabase
