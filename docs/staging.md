@@ -6,6 +6,14 @@ exercised end-to-end **before** it touches the live site. Decided 11 Aug 2026:
 same Vercel project, a long-lived `staging` git branch that deploys as a locked
 Preview, viewable only by your Vercel login._
 
+## This project's staging (resolved 11 Aug 2026)
+- **Staging app (bookmark this):** https://madgigz-app-git-staging-aura-sonic.vercel.app
+- **Staging Supabase host:** `tbbhuzgqsbdbskugkngf.supabase.co` (prod is
+  `rxtiagsypwvuyyihbhal.supabase.co` — they must differ, see `/api/health`).
+- **Branch:** `staging` · **Stripe:** test · **Lock:** Vercel Authentication.
+- The per-deployment URL (random letters, e.g. `madgigz-knf1mrjux-…`) changes
+  every build — ignore it; always use the `git-staging` address above.
+
 ## The mental model
 
 - **`main` branch → madgigz.aurasonic.es → real users.** Don't test here.
