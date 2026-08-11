@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -64,12 +65,16 @@ function PayoutReturnDetector({ onReturn }: { onReturn: () => void }) {
 function SettingsSheet({
   onClose,
   onSendFeedback,
+  onLogOut,
+  onDeleteAccount,
   payoutConnected,
   payoutReady,
   isArtist,
 }: {
   onClose: () => void;
   onSendFeedback: () => void;
+  onLogOut: () => void;
+  onDeleteAccount: () => void;
   payoutConnected: boolean;
   payoutReady: boolean;
   isArtist: boolean;
@@ -145,7 +150,27 @@ function SettingsSheet({
             <span className="text-sm text-foreground">{t("settings.sendFeedback")}</span>
             <span className="text-xs text-muted">{t("settings.sendFeedbackHint")}</span>
           </button>
+
+          {/* Account controls live here now (#113) rather than loose on the
+              profile body. Log Out as a normal row. */}
+          <button
+            type="button"
+            onClick={onLogOut}
+            className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5 text-left"
+          >
+            <span className="text-sm text-foreground">{t("profile.logOut")}</span>
+          </button>
         </div>
+
+        {/* Quiet and last: rare and irreversible, kept apart from the rows above
+            so it doesn't sit like just another setting. */}
+        <button
+          type="button"
+          onClick={onDeleteAccount}
+          className="mt-6 w-full text-center text-xs text-muted underline underline-offset-4"
+        >
+          {t("profile.deleteAccount")}
+        </button>
       </div>
     </div>
   );
@@ -157,9 +182,14 @@ function ShowRow({ show, onOpen }: { show: EventItem; onOpen: () => void }) {
   return (
     <button
       onClick={onOpen}
-      className="flex items-center justify-between gap-3 rounded-2xl bg-surface p-3.5 text-left"
+      className="flex items-center gap-3 rounded-2xl bg-surface p-3 text-left"
     >
-      <div className="min-w-0">
+      {/* Poster thumbnail (#114): an artist recognises a show by its art far
+          faster than by reading titles down a list. */}
+      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-background">
+        <Image src={show.image} alt="" fill sizes="56px" className="object-cover" />
+      </div>
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate font-heading text-sm text-foreground">{show.title}</p>
           {!show.active && (
@@ -460,20 +490,7 @@ export default function ProfileClient({
         </>
       )}
 
-      <Button variant="ghost" onClick={handleLogOut}>
-        {t("profile.logOut")}
-      </Button>
-
-      {/* Quiet, and below Log Out, because it is a rare and irreversible thing -
-          but present rather than hidden behind an email to support. */}
-      <button
-        type="button"
-        onClick={() => setDeleteOpen(true)}
-        className="mt-4 w-full text-center text-xs text-muted underline underline-offset-4"
-      >
-        {t("profile.deleteAccount")}
-      </button>
-
+      {/* Log Out and Delete account moved into Settings (#113). */}
       {deleteOpen && <DeleteAccountDialog onClose={() => setDeleteOpen(false)} />}
 
       {activeTaggedShow && (
@@ -503,6 +520,12 @@ export default function ProfileClient({
           onSendFeedback={() => {
             settingsModal.close();
             setFeedbackOpen(true);
+          }}
+          onLogOut={handleLogOut}
+          // Close Settings first so the delete dialog isn't stacked on the sheet.
+          onDeleteAccount={() => {
+            settingsModal.close();
+            setDeleteOpen(true);
           }}
           payoutConnected={user.stripeAccountConnected}
           payoutReady={user.stripePayoutsReady}
