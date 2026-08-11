@@ -262,9 +262,17 @@ export default function FeedClient({
           forYouFeed.length === 0 ? (
             <p className="mt-6 px-4 text-center text-sm text-muted">{t("feed.emptyForYou")}</p>
           ) : (
-            <div className="mx-auto h-full w-full snap-y snap-mandatory overflow-y-scroll lg:max-w-[26rem]">
+            <div className="h-full w-full snap-y snap-mandatory overflow-y-scroll">
               {forYouFeed.map((entry) => (
-                <div key={entry.post.id} className="h-full w-full snap-start">
+                // Mobile: the card fills the viewport (unchanged). Desktop: centre
+                // a fixed 9:16 card that fits *inside* the window — height clamped
+                // to the smaller of the viewport or a 26rem-wide card's height, so
+                // the video never re-crops as the window gets taller or shorter.
+                <div
+                  key={entry.post.id}
+                  className="h-full w-full snap-start lg:flex lg:items-center lg:justify-center"
+                >
+                  <div className="h-full w-full overflow-hidden lg:aspect-[9/16] lg:h-[min(100%,calc(26rem*16/9))] lg:w-auto lg:rounded-2xl">
                   {entry.event ? (
                     <ContentReelCard
                       post={entry.post}
@@ -283,6 +291,7 @@ export default function FeedClient({
                       onSeen={handleAnnouncementSeen}
                     />
                   )}
+                  </div>
                 </div>
               ))}
             </div>
