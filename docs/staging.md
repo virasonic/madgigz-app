@@ -179,6 +179,19 @@ cherry-pick the commits), push `main`, and the normal prod deploy carries it
 live. The tooling files added for staging (`supabase/staging_full_setup.sql`,
 this doc, the `/api/health` `supabaseHost` field) ride along on that first merge.
 
+## Never `drop schema public` to start over
+It looks like a clean reset, but it **wipes Supabase's default table grants** for
+`anon`/`authenticated`. RLS policies still show in the dashboard, so it looks
+fine — but the roles have no table *privilege*, so every logged-in write fails
+(e.g. "Couldn't save that file" on evidence upload) and reads on an empty DB just
+look empty. Explicit column grants in the migrations (profiles, tickets, events)
+survive; everything relying on the defaults (artist_evidence, saved_events,
+content_posts, follows, notifications, …) silently breaks. **If a setup run says
+"… already exists", the project isn't fresh — delete and recreate the Supabase
+project instead of dropping the schema.** A fresh project + one run of
+`staging_full_setup.sql` reproduces prod exactly. (Learned the hard way, 11 Aug
+2026.)
+
 ## Notes
 - **Emails:** a fresh Supabase project's default email sender is heavily rate
   limited (a few per hour). Fine for occasional test signups; for a load test
