@@ -14,6 +14,7 @@ import { getSeenAnnouncements, markAnnouncementSeen } from "@/lib/seen-announcem
 import { useUrlModal } from "@/lib/useUrlModal";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
+import CityBadge from "@/components/ui/CityBadge";
 
 type Pane = "forYou" | "thisWeek";
 
@@ -214,7 +215,10 @@ export default function FeedClient({
 
   return (
     <div className="relative flex h-full flex-col">
-      <div className="relative flex justify-center gap-2 p-4">
+      <div className="flex justify-center pt-3">
+        <CityBadge />
+      </div>
+      <div className="relative flex justify-center gap-2 px-4 pb-4 pt-2">
         {announcements.length > 0 && (
           <button
             type="button"

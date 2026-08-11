@@ -10,6 +10,7 @@ import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem, PublicArtistProfile } from "@/lib/types";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import CityBadge from "@/components/ui/CityBadge";
 
 interface ExploreClientProps {
   userId: string;
@@ -98,7 +99,10 @@ export default function ExploreClient({
           reachable while the grid scrolls beneath. bg-background is opaque, so
           it covers the event cards passing under it; z-20 keeps it on top. */}
       <div className="sticky top-0 z-20 bg-background px-4 pt-4 pb-2">
-        <h1 className="font-display mb-4 text-2xl text-foreground">{t("explore.title")}</h1>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h1 className="font-display text-2xl text-foreground">{t("explore.title")}</h1>
+          <CityBadge />
+        </div>
 
         <input
           value={query}

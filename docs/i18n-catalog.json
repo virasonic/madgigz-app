@@ -41,6 +41,10 @@
       "artistContent": "Artist Content",
       "getTickets": "Get Tickets"
     },
+    "city": {
+      "youAreIn": "You're in {city}",
+      "whatsOn": "What's on in {city}"
+    },
     "explore": {
       "title": "Explore",
       "searchPlaceholder": "Search events, artists, venues...",
@@ -600,6 +604,10 @@
       "mute": "Silenciar",
       "artistContent": "Contenido de artista",
       "getTickets": "Comprar entradas"
+    },
+    "city": {
+      "youAreIn": "Estás en {city}",
+      "whatsOn": "Qué hay en {city}"
     },
     "explore": {
       "title": "Explorar",

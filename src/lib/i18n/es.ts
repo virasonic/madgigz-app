@@ -49,6 +49,11 @@ export const es: Messages = {
     getTickets: "Comprar entradas",
   },
 
+  city: {
+    youAreIn: "Estás en {city}",
+    whatsOn: "Qué hay en {city}",
+  },
+
   explore: {
     title: "Explorar",
     searchPlaceholder: "Busca eventos, artistas, salas...",

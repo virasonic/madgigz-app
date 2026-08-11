@@ -186,12 +186,16 @@ export async function fetchFollowedEventIds(
 
 export async function fetchEvents(
   supabase: SupabaseClient,
-  options: { activeOnly?: boolean } = {}
+  options: { activeOnly?: boolean; city?: string } = {}
 ): Promise<EventItem[]> {
   // The venue embed carries the address through to the ticket and the public
   // page, where it becomes a maps link. One join beats a lookup per event.
   let query = supabase.from("events").select("*, venues(address)").order("event_date");
   if (options.activeOnly) query = query.eq("active", true);
+  // #90: the fan surfaces are local - only show what's on in the current city.
+  // A no-op while every show is in Madrid, but it makes "what's on in Madrid"
+  // literally true and stops a stray out-of-city show leaking into the feed.
+  if (options.city) query = query.eq("city", options.city);
   const { data } = await query;
   return ((data as EventRow[]) ?? []).map(mapEvent);
 }

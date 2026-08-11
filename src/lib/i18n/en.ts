@@ -49,6 +49,13 @@ export const en = {
     getTickets: "Get Tickets",
   },
 
+  // #90: the local-first identity. One city for now (Madrid); the name is
+  // interpolated so it becomes dynamic for free when #90b lands.
+  city: {
+    youAreIn: "You're in {city}",
+    whatsOn: "What's on in {city}",
+  },
+
   explore: {
     title: "Explore",
     searchPlaceholder: "Search events, artists, venues...",
