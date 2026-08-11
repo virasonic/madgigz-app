@@ -14,6 +14,19 @@ const nextConfig: NextConfig = {
       dynamic: 30,
     },
   },
+  // #110: the service worker must be served as JavaScript and never cached, so
+  // an update ships immediately instead of clients pinning an old worker.
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

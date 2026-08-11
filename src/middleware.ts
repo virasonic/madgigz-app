@@ -48,6 +48,6 @@ export const config = {
   // middleware does has no business touching a machine-to-machine request that
   // carries its own credential.
   matcher: [
-    "/((?!api/stripe/webhook|api/cron|api/health|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api/stripe/webhook|api/cron|api/health|sw.js|offline.html|manifest.webmanifest|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
