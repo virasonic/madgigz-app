@@ -57,3 +57,85 @@ policy, not `schema.sql`. This is what went wrong in `addendum_012`, fixed in
 A `revoke` takes effect immediately and breaks whatever is currently deployed.
 Split it: an additive migration to run *before* the deploy, and the revoking one
 to run *after*. `addendum_017` / `addendum_018` are the worked example.
+
+## Migrations are run by hand, and code must survive the gap
+
+Addenda are numbered SQL files run manually in the Supabase SQL editor —
+**staging project first, then prod** — not by an automated migration runner. So
+code that depends on a new table/column/function ships *before* the SQL is run,
+and must **degrade gracefully in the meantime**: catch the "missing" error codes
+(`42P01` table, `42883` function, `42501` grant) and fall back, rather than
+throwing. `addendum_033`/`034` and their callers are the pattern. When you add an
+addendum, also append it to `supabase/staging_full_setup.sql` (the one-paste
+fresh-DB build).
+
+# Deploy workflow
+
+`staging` is a locked Vercel Preview (its own Supabase + Stripe test); `main` is
+prod. The loop is: **build on `staging` → verify on the staging URL → promote**.
+Promote with `git merge --ff-only staging` onto `main`, then push.
+
+`git push origin main` **must be its own isolated command** — compounded with
+other commands (`&&`) it trips the auto-mode classifier and is blocked; alone it
+succeeds. After promoting, fast-forward `staging` back up to `main` so they don't
+drift.
+
+`BACKLOG.md` is the source of truth for what's open/shipped; keep it current as
+part of the change, not after.
+
+# Frontend & design conventions
+
+The app is **mobile-first**: the `(app)` shell is a centred `max-w-md` phone
+column (`src/app/(app)/layout.tsx`), and until #105 every screen assumes that
+width. Wide-screen layouts are the exception, added deliberately.
+
+Colours and type come from **design tokens**, never hardcoded hex. `globals.css`
+defines the brand palette (maroon/orange/cream/teal on a warm near-black) as CSS
+vars exposed through Tailwind's `@theme inline` — use `bg-surface`,
+`text-foreground`, `text-muted`, `bg-primary`, `text-accent`, `text-danger`,
+etc. Display/heading type is **Galdern** (`font-display`, `font-heading`); body
+is **DM Sans**. Reuse the primitives in `src/components/ui/` (Button, Input, …)
+rather than restyling raw elements.
+
+# i18n — every user-facing string goes through the catalog
+
+`src/lib/i18n/en.ts` is the source of truth; `es.ts` is typed to it
+(`Messages = typeof en`), so a missing/extra key fails the build. Add each new
+string to **both**, read it via `useT()`'s `t("...")`, and interpolate with
+`{var}` placeholders — never concatenate translated fragments. Dates render
+`en-GB`, prices EUR, in both locales by design.
+
+**The admin panel (`src/app/admin/**`) stays English** — do not wire it to the
+catalog.
+
+After changing any strings, regenerate the review artefacts so they don't drift:
+`node scripts/export-i18n-json.mjs` (then
+`python3 scripts/make-translation-review-pdf.py` for the review PDF).
+
+# React / Next 16 gotchas (these break the build, not just lint)
+
+- **Read `node_modules/next/dist/docs/` before writing Next code** (see
+  AGENTS.md) — this Next has breaking changes from training-data conventions.
+- **Never throw on a missing env var at module scope.** It kills the *entire*
+  Vercel build, not just the one route. Default or guard instead
+  (`Number(process.env.X ?? 5)`, `if (!url) return null`).
+- **No `useSyncExternalStore`** — it broke the app here. Use
+  `useState` + `useEffect`.
+- **Don't call `setState` synchronously inside an effect body** — the Next 16
+  lint (`react-hooks/set-state-in-effect`) errors on it. For a prop-driven
+  reset, use React's *adjust-state-during-render* pattern: keep the last-seen
+  prop in state and reset during render when it changes (see the seed handling
+  in `src/lib/realtime.ts`), not an effect.
+- **Realtime on RLS-scoped tables needs an authenticated socket.** The
+  `@supabase/ssr` browser client doesn't push the cookie session to the
+  websocket before subscribe, so `getSession()` + `realtime.setAuth(token)`
+  before `.subscribe()` (again, `src/lib/realtime.ts`).
+
+# Verify what you ship
+
+If a change is observable in the browser, run the dev server and check it before
+declaring it done — don't ask the user to verify what you can. Three adversarial
+probes in `scripts/` (`security-probe.mjs`, `probe-artist-side.mjs`,
+`probe-feedback.mjs`) are worth re-running after any migration touching policies
+or grants; each reads the stored value back, because an UPDATE matching zero rows
+returns no error and "did it error?" reports a locked door as a hole.
