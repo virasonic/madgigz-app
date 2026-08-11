@@ -7,7 +7,7 @@ import { Role } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useLiveUnreadCount } from "@/lib/realtime";
-import { BellIcon, ExploreIcon, FeedIcon, NoteIcon, PersonIcon, TicketIcon } from "@/components/ui/nav-icons";
+import { BellIcon, ExploreIcon, FeedIcon, NoteIcon, PersonIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
 
 interface NavItem {
   href: string;
@@ -40,6 +40,14 @@ export default function SideNav({
     { href: "/notifications", label: t("notifications.title"), icon: BellIcon, badge: liveUnread },
     { href: "/profile", label: t("nav.profile"), icon: isArtistRole(role) ? NoteIcon : PersonIcon },
   ];
+
+  // Admins get a link straight to the web admin panel, under Profile. Desktop
+  // only (this whole rail is), and the /admin routes are gated server-side by
+  // requireAdmin regardless, so this is a convenience shortcut, not the control.
+  // Label stays English on purpose — the admin panel is English-only by design.
+  if (role === "admin") {
+    items.push({ href: "/admin", label: "Admin panel", icon: ShieldIcon });
+  }
 
   return (
     <nav className="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:gap-1 lg:border-r lg:border-muted/15 lg:px-3 lg:py-5">

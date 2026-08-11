@@ -32,6 +32,12 @@ const ACCENT_SWATCHES = [
 
 type TicketingMode = "internal" | "external";
 
+// The in-progress show is autosaved here so it survives leaving the page and
+// coming back - most importantly the Stripe payout onboarding round-trip, where
+// a half-filled form used to vanish. The poster File can't be serialised, so it
+// isn't part of the draft (the restore note tells the artist to re-add it).
+const DRAFT_KEY = "madgigz_add_show_draft";
+
 export default function AddShowPage() {
   const { t } = useT();
   const router = useRouter();
@@ -58,23 +64,109 @@ export default function AddShowPage() {
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  // draftLoaded gates the autosave so it doesn't overwrite the stored draft
+  // with empty initial state before the restore has run.
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [restoredFromDraft, setRestoredFromDraft] = useState(false);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect --
+       One-time mount: restore the localStorage draft into form state. This can't
+       be a lazy useState initialiser because localStorage has no value on the
+       server, which would hydrate a different form than it rendered. */
     const supabase = createClient();
+
+    // Restore an autosaved draft first, so the fields are populated before the
+    // async user load resolves (which would otherwise re-prefill the lineup).
+    let draft: Record<string, unknown> | null = null;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) draft = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      draft = null;
+    }
+    if (draft) {
+      if (typeof draft.name === "string") setName(draft.name);
+      if (draft.venue && typeof draft.venue === "object") setVenue(draft.venue as VenueSelection);
+      if (Array.isArray(draft.genreIds)) setGenreIds(draft.genreIds as string[]);
+      if (typeof draft.date === "string") setDate(draft.date);
+      if (typeof draft.time === "string") setTime(draft.time);
+      if (typeof draft.price === "string") setPrice(draft.price);
+      if (typeof draft.capacity === "string") setCapacity(draft.capacity);
+      if (typeof draft.maxPerOrder === "string") setMaxPerOrder(draft.maxPerOrder);
+      if (Array.isArray(draft.lineup)) setLineup(draft.lineup as LineupEntry[]);
+      if (typeof draft.description === "string") setDescription(draft.description);
+      if (typeof draft.accentColor === "string") setAccentColor(draft.accentColor);
+      if (draft.ticketingMode === "internal" || draft.ticketingMode === "external") {
+        setTicketingMode(draft.ticketingMode);
+      }
+      if (typeof draft.externalUrl === "string") setExternalUrl(draft.externalUrl);
+      setRestoredFromDraft(true);
+    }
+
     fetchCurrentUser(supabase).then((current) => {
       if (!current || !canActAsArtist(current)) {
         router.replace("/profile");
         return;
       }
       setUser(current);
-      // Pre-fills the headliner slot with the artist's own name - they can
-      // still edit or replace it, this is just a sane starting point.
-      setLineup([{ name: current.artistName ?? current.username, profileId: null }]);
+      // Pre-fill the headliner slot with the artist's own name - a sane start.
+      // Skipped when a draft already carries a lineup, so a restore isn't
+      // clobbered by this async resolving after it.
+      if (!draft || !Array.isArray(draft.lineup)) {
+        setLineup([{ name: current.artistName ?? current.username, profileId: null }]);
+      }
       fetchApprovedArtists(supabase).then(setArtists);
       fetchVenues(supabase).then(setVenues);
       fetchGenres(supabase).then(setAllGenres);
     });
+
+    setDraftLoaded(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [router]);
+
+  // Autosave the serialisable fields on every change, once the restore has run.
+  // Writes only - no setState here, so no cascading renders.
+  useEffect(() => {
+    if (!draftLoaded) return;
+    try {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          name,
+          venue,
+          genreIds,
+          date,
+          time,
+          price,
+          capacity,
+          maxPerOrder,
+          lineup,
+          description,
+          accentColor,
+          ticketingMode,
+          externalUrl,
+        })
+      );
+    } catch {
+      // storage full or unavailable - the form still works, it just won't persist
+    }
+  }, [
+    draftLoaded,
+    name,
+    venue,
+    genreIds,
+    date,
+    time,
+    price,
+    capacity,
+    maxPerOrder,
+    lineup,
+    description,
+    accentColor,
+    ticketingMode,
+    externalUrl,
+  ]);
 
   function handlePosterChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -194,6 +286,14 @@ export default function AddShowPage() {
       return;
     }
 
+    // The show is saved for real now - drop the draft so it doesn't resurface
+    // the next time the artist opens Add Show.
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // ignore - a stale draft is harmless, it's just fields to overwrite
+    }
+
     setSubmitting(false);
     router.push("/profile");
   }
@@ -208,6 +308,12 @@ export default function AddShowPage() {
         <BackButton />
         <h1 className="font-display text-2xl text-foreground">{t("addShow.title")}</h1>
       </div>
+
+      {restoredFromDraft && (
+        <div className="mb-6 rounded-2xl border border-accent/40 bg-accent-dark/15 p-4">
+          <p className="text-xs text-foreground">{t("addShow.draftRestored")}</p>
+        </div>
+      )}
 
       {/* Up here rather than beside the ticketing toggle, which is most of the
           way down. A tester filled in the name, venue, date, poster and

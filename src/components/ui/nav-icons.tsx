@@ -77,6 +77,21 @@ export function NoteIcon(active: boolean) {
   );
 }
 
+// Admin panel — only ever shown in the desktop SideNav for admin accounts.
+export function ShieldIcon(active: boolean) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 3l7 3v5c0 4.4-3 8-7 9-4-1-7-4.6-7-9V6l7-3Z"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+        strokeLinejoin="round"
+      />
+      <path d="m9 12 2 2 4-4" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 // Notifications. The bell lives on the Profile tab dot on mobile, but the
 // desktop sidebar gives it its own row, so it needs its own icon.
 export function BellIcon(active: boolean) {

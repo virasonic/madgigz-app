@@ -475,6 +475,8 @@ export const en = {
     cantSellBody:
       "Free shows and external ticket links work right away. To charge through MadGigz you need a payout account — it takes a few minutes.",
     setUpPayouts: "Set up payouts",
+    draftRestored:
+      "We brought back the show you were filling in. If you'd added a poster, please choose it again.",
     showName: "Show name",
     venue: "Venue",
     genres: "Genres",

@@ -470,6 +470,8 @@ export const es: Messages = {
     cantSellBody:
       "Los bolos gratis y los enlaces de entradas externos funcionan ya. Para cobrar por MadGigz necesitas una cuenta de pagos — se tarda unos minutos.",
     setUpPayouts: "Configurar pagos",
+    draftRestored:
+      "Hemos recuperado el bolo que estabas rellenando. Si habías añadido un cartel, vuelve a seleccionarlo.",
     showName: "Nombre del bolo",
     venue: "Sala",
     genres: "Géneros",
