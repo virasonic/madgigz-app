@@ -465,7 +465,7 @@ export const en = {
     showLabel: "Show",
     photoOrVideo: "Photo or video",
     previewAlt: "Post preview",
-    tapToAdd: "Tap to add a photo or video",
+    tapToAdd: "Add a photo or video",
     captionPlaceholder: "Add a caption (optional)...",
     posting: "Posting...",
     post: "Post",

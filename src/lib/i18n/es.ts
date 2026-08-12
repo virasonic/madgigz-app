@@ -460,7 +460,7 @@ export const es: Messages = {
     showLabel: "Bolo",
     photoOrVideo: "Foto o vídeo",
     previewAlt: "Vista previa de la publicación",
-    tapToAdd: "Toca para añadir una foto o vídeo",
+    tapToAdd: "Añade una foto o vídeo",
     captionPlaceholder: "Añade un pie de foto (opcional)...",
     posting: "Publicando...",
     post: "Publicar",

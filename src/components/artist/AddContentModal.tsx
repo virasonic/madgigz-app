@@ -107,15 +107,30 @@ export default function AddContentModal({
 
   return (
     <div
-      className="fixed inset-0 z-30 flex items-end justify-center bg-black/60"
+      className="fixed inset-0 z-30 flex items-end justify-center bg-black/60 lg:items-center lg:p-6"
       onClick={onClose}
     >
+      {/* Mobile: a bottom sheet with a drag handle (phone-native). Desktop: a
+          centred, fully-rounded dialog with a close button - a web affordance
+          rather than a sheet stranded at the bottom of a monitor. */}
       <div
-        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10"
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10 lg:rounded-3xl lg:pb-6 lg:shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
-        <h2 className="font-display text-xl text-foreground">{t("addContent.title")}</h2>
+        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30 lg:hidden" />
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-display text-xl text-foreground">{t("addContent.title")}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.close")}
+            className="-mr-1 -mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background text-muted transition-colors hover:bg-primary hover:text-foreground lg:flex"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
 
         {shows.length === 0 ? (
           <p className="mt-4 text-sm text-muted">{t("addContent.noShows")}</p>
