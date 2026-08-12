@@ -12,6 +12,12 @@ export const GRACE_PERIOD_DAYS = 30;
 // Why the tombstone exists, in one place, so the reasoning travels with the
 // code: tickets are AuraSonic's sales records and Spanish commercial books run
 // to six years, which GDPR art. 17(3)(b) explicitly defers to.
+//
+// Not yet referenced in code - purgeAccount keeps records indefinitely by
+// tombstoning rather than deleting, so nothing enforces the six-year expiry
+// yet. Kept as the documented anchor for that future "purge past retention"
+// job; @knipignore stops the unused-export check flagging it in the meantime.
+/** @knipignore */
 export const RETENTION_YEARS = 6;
 
 export interface DeletionBlocker {

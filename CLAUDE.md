@@ -139,3 +139,10 @@ probes in `scripts/` (`security-probe.mjs`, `probe-artist-side.mjs`,
 `probe-feedback.mjs`) are worth re-running after any migration touching policies
 or grants; each reads the stored value back, because an UPDATE matching zero rows
 returns no error and "did it error?" reports a locked door as a hole.
+
+`npm run knip` catches dead code before it accumulates — unused files, exports,
+and dependencies. `knip.json` already excuses the intentional false positives
+(the standalone `scripts/*.mjs`, `public/sw.js`, `sharp`/`postcss`); it exits 0
+when clean, so it can gate CI. A genuinely-unused export you mean to keep gets a
+`/** @knipignore */` tag with a note on *why* (see `RETENTION_YEARS`), not a
+silent entry in the ignore list.
