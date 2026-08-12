@@ -13,6 +13,7 @@ import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
 import { useStripeTestMode } from "@/lib/stripe-mode";
 import { useLiveEventStats } from "@/lib/realtime";
+import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 
 type Tab = "tickets" | "info";
 
@@ -46,6 +47,7 @@ export default function TicketModal({
 }: TicketModalProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
+  const { handleProps, sheetStyle } = useDragToDismiss(onClose);
   // A test-mode Stripe key can't charge a real card, so this is a heads-up, not
   // a guard. Sourced server-side from STRIPE_SECRET_KEY, so it turns itself off
   // the moment live keys are set.
@@ -147,9 +149,14 @@ export default function TicketModal({
     >
       <div
         className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10"
+        style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
+        {/* Drag the handle down to dismiss (#130). Kept off the scrollable body
+            so it never fights the sheet's own overflow scrolling. */}
+        <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3">
+          <div className="h-1 w-10 rounded-full bg-muted/30" />
+        </div>
 
         {purchased ? (
           <div className="flex flex-col items-center gap-3 py-10 text-center">

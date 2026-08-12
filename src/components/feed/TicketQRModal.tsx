@@ -6,6 +6,7 @@ import { EventItem, Ticket } from "@/lib/types";
 import { mapsUrl } from "@/lib/site";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
+import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 
 interface TicketQRModalProps {
   ticket: Ticket;
@@ -26,6 +27,7 @@ export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalP
   const { t, locale } = useT();
   const dl = dateLocale(locale);
   const [qrSrc, setQrSrc] = useState<string | null>(null);
+  const { handleProps, sheetStyle } = useDragToDismiss(onClose);
 
   useEffect(() => {
     if (ticket.refunded) return;
@@ -47,9 +49,14 @@ export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalP
     >
       <div
         className="w-full max-w-md rounded-t-3xl bg-surface p-6 pb-10"
+        style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
+        {/* Grab area is padded well beyond the visible pill so the handle is
+            easy to catch; drag it down to dismiss (#130). */}
+        <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3">
+          <div className="h-1 w-10 rounded-full bg-muted/30" />
+        </div>
 
         <div className="text-center">
           <h2 className="font-display text-2xl text-foreground">{event.title}</h2>

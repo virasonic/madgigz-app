@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WebKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,30 +8,47 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // #128 - keep the login across app restarts.
+        //
+        // WKWebView holds its cookies in a store separate from the app's
+        // disk-backed HTTPCookieStorage, and the newest rotated Supabase auth
+        // cookie isn't always flushed to disk before iOS kills the app - so a
+        // cold launch can present a stale/missing session cookie and dump the
+        // user back at sign-in. On launch we copy any cookies we stashed in the
+        // shared store back into the web view's store.
+        //
+        // This is deliberately ADDITIVE: it only ever copies cookies in, never
+        // deletes one, so it can preserve a session but can't break a working
+        // one. Sign-out still clears cookies through the normal web flow.
+        restoreCookiesIntoWebView()
         return true
     }
 
-    func applicationWillResignActive(_ application: UIApplication) {
-        // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
-        // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
-    }
-
     func applicationDidEnterBackground(_ application: UIApplication) {
-        // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
-        // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
-    }
-
-    func applicationWillEnterForeground(_ application: UIApplication) {
-        // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
-    }
-
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        // The app is almost always killed from the background, so this is the
+        // reliable moment to persist the current session cookie to disk.
+        persistWebViewCookies()
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
-        // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+        persistWebViewCookies()
+    }
+
+    // Copy the web view's current cookies into the disk-backed shared store.
+    private func persistWebViewCookies() {
+        WKWebsiteDataStore.default().httpCookieStore.getAllCookies { cookies in
+            for cookie in cookies {
+                HTTPCookieStorage.shared.setCookie(cookie)
+            }
+        }
+    }
+
+    // On launch, seed the web view's store from the persisted cookies.
+    private func restoreCookiesIntoWebView() {
+        let store = WKWebsiteDataStore.default().httpCookieStore
+        for cookie in HTTPCookieStorage.shared.cookies ?? [] {
+            store.setCookie(cookie)
+        }
     }
 
     func application(_ application: UIApplication,
