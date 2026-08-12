@@ -22,6 +22,12 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- MadGigz only uses standard HTTPS/TLS (Apple's OS encryption), which is
+	     export-compliance exempt. Declaring it here means every upload skips the
+	     "App Encryption Documentation" prompt and never lands in "Missing
+	     Compliance" in App Store Connect. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<!-- Custom URL scheme the OAuth flow returns to. startOAuth (src/lib/native.ts)
 	     opens Google/Apple in the system browser with redirectTo
 	     madgigz://auth-callback; iOS routes that back here, NativeBridge catches it
