@@ -17,7 +17,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const [{ data: profile }, unreadCount] = await Promise.all([
-    supabase.from("profiles").select("role, onboarding_complete").eq("id", user.id).single(),
+    supabase
+      .from("profiles")
+      .select("role, onboarding_complete, artist_status")
+      .eq("id", user.id)
+      .single(),
     fetchUnreadCount(supabase, user.id),
   ]);
 
@@ -41,7 +45,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // Desktop (lg+): the width cap lifts and the shell becomes a row — a
     // persistent SideNav beside a full-height content column (#105).
     <div className="pt-safe mx-auto flex h-screen w-full max-w-md flex-col bg-background lg:max-w-none lg:flex-row">
-      <SideNav role={profile?.role ?? "fan"} userId={user.id} unreadCount={unreadCount} />
+      <SideNav
+        role={profile?.role ?? "fan"}
+        artistStatus={profile?.artist_status ?? null}
+        userId={user.id}
+        unreadCount={unreadCount}
+      />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {impersonating && <ImpersonationBanner username={impersonating} />}
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>

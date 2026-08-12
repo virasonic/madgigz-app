@@ -2,12 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Role } from "@/lib/types";
-import { isArtistRole } from "@/lib/roles";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
+import { ArtistStatus, Role } from "@/lib/types";
+import { canActAsArtist, isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useLiveUnreadCount } from "@/lib/realtime";
-import { BellIcon, ExploreIcon, FeedIcon, MegaphoneIcon, NoteIcon, PersonIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
+import { BellIcon, ExploreIcon, FeedIcon, MegaphoneIcon, NoteIcon, PersonIcon, PlusIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
 
 interface NavItem {
   href: string;
@@ -22,16 +23,29 @@ interface NavItem {
 // active-state logic with BottomNav so the two can't drift.
 export default function SideNav({
   role,
+  artistStatus,
   userId,
   unreadCount = 0,
 }: {
   role: Role;
+  artistStatus: ArtistStatus | null;
   userId: string;
   unreadCount?: number;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useT();
   const liveUnread = useLiveUnreadCount(userId, unreadCount);
+
+  // The rail's search box hands off to Explore, which owns the actual search
+  // (its own box seeds from ?q). Enter navigates; an empty query just opens
+  // Explore. A launcher, not a second search implementation to keep in step.
+  const [search, setSearch] = useState("");
+  function submitSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = search.trim();
+    router.push(q ? `/explore?q=${encodeURIComponent(q)}` : "/explore");
+  }
 
   const items: NavItem[] = [
     { href: "/feed", label: t("nav.feed"), icon: FeedIcon },
@@ -47,6 +61,14 @@ export default function SideNav({
     { href: "/profile", label: t("nav.profile"), icon: isArtistRole(role) ? NoteIcon : PersonIcon },
   ];
 
+  // Approved artists get a direct "Add Show" row — the create-a-gig action they
+  // otherwise reach only from the profile screen. Same full gate the feed "+"
+  // uses (artist-capable AND approved); the add-show page still guards the
+  // payout requirement (#85) on top. Desktop only, like the whole rail.
+  if (canActAsArtist({ role, artistStatus })) {
+    items.push({ href: "/profile/add-show", label: t("profile.addShow"), icon: PlusIcon });
+  }
+
   // Admins get a link straight to the web admin panel, under Profile. Desktop
   // only (this whole rail is), and the /admin routes are gated server-side by
   // requireAdmin regardless, so this is a convenience shortcut, not the control.
@@ -60,6 +82,22 @@ export default function SideNav({
       <Link href="/feed" className="mb-4 px-3" aria-label="MadGigz">
         <Image src="/logos/madgigz-wordmark.png" alt="MadGigz" width={148} height={47} priority />
       </Link>
+
+      <form onSubmit={submitSearch} className="mb-3">
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+            <SearchIcon />
+          </span>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("explore.searchPlaceholder")}
+            aria-label={t("explore.searchPlaceholder")}
+            className="w-full rounded-xl border border-muted/20 bg-surface py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+      </form>
 
       {items.map((item) => {
         const active = pathname === item.href;
@@ -84,5 +122,14 @@ export default function SideNav({
         );
       })}
     </nav>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
   );
 }

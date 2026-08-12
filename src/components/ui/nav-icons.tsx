@@ -114,6 +114,22 @@ export function MegaphoneIcon(active: boolean) {
   );
 }
 
+// Add show. Desktop SideNav only — an approved artist's create-a-gig action.
+// Mobile reaches Add Show from the profile screen, so the bottom nav skips it.
+export function PlusIcon(active: boolean) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+      <path
+        d="M12 8v8M8 12h8"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 // Notifications. The bell lives on the Profile tab dot on mobile, but the
 // desktop sidebar gives it its own row, so it needs its own icon.
 export function BellIcon(active: boolean) {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import EventCard from "@/components/feed/EventCard";
 import TicketModal from "@/components/feed/TicketModal";
@@ -38,7 +39,18 @@ export default function ExploreClient({
     () => initialEvents.find((e) => e.id === ticketModal.value) ?? null,
     [initialEvents, ticketModal.value]
   );
-  const [query, setQuery] = useState("");
+  // The desktop SideNav search hands off here via ?q. Seed the box from it, and
+  // re-sync when the param changes (searching again from the rail while already
+  // on Explore doesn't remount this) using React's adjust-state-during-render
+  // pattern rather than an effect - see the setState-in-effect note in CLAUDE.md.
+  // Typing in the box only touches local state, so it's never clobbered.
+  const qParam = useSearchParams().get("q") ?? "";
+  const [query, setQuery] = useState(qParam);
+  const [seenQ, setSeenQ] = useState(qParam);
+  if (qParam !== seenQ) {
+    setSeenQ(qParam);
+    setQuery(qParam);
+  }
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
 
   // Only genres actually on a live show - a filter chip that returns nothing is
