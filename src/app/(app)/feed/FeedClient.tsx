@@ -232,10 +232,14 @@ export default function FeedClient({
 
   const artistName = user.artistName ?? user.username;
 
-  // Oldest-first, the reading order of the intro set - the same order the feed
-  // itself uses. Empty means the button hides rather than opening to nothing.
+  // Newest-first for the panel: a fresh announcement belongs at the TOP of the
+  // catch-up list, not buried under the whole intro set (allPosts arrives
+  // newest-first, so no reverse). The feed *reel* keeps its own oldest-first
+  // ordering in buildForYouFeed, so the numbered intro cards still read as a
+  // sequence when scrolled - only this list flips. Empty means the button hides
+  // rather than opening to nothing.
   const announcements = useMemo(
-    () => allPosts.filter((post) => !post.eventId).reverse(),
+    () => allPosts.filter((post) => !post.eventId),
     [allPosts]
   );
 
