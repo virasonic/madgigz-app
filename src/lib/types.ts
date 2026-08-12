@@ -87,6 +87,12 @@ export interface ContentPost {
   eventId: string | null;
   artistId: string | null;
   artist: string;
+  /**
+   * The artist's profile picture, for the reel avatar (#123). Null for a
+   * MadGigz announcement (no artist) or an artist who hasn't set a photo -
+   * ContentReelCard falls back to the note icon in both cases.
+   */
+  artistPhotoUrl: string | null;
   showTitle: string;
   caption: string;
   image: string;
@@ -240,6 +246,13 @@ export interface ContentPostRow {
   media_type: "image" | "video" | "text";
   headline?: string | null;
   accent_color?: string | null;
+  /**
+   * Embedded from the artist_id -> profiles FK (#123). Present only when the
+   * query asks for it (fetchContentPosts/fetchShowContent do; the admin
+   * moderation query's plain select("*") leaves it undefined -> null photo,
+   * which is fine there).
+   */
+  profiles?: { artist_photo_url: string | null } | null;
 }
 
 export function mapContentPost(row: ContentPostRow): ContentPost {
@@ -248,6 +261,7 @@ export function mapContentPost(row: ContentPostRow): ContentPost {
     eventId: row.event_id,
     artistId: row.artist_id,
     artist: row.artist_name,
+    artistPhotoUrl: row.profiles?.artist_photo_url ?? null,
     showTitle: row.show_title,
     caption: row.caption,
     image: row.media_type === "image" ? (row.media_url ?? "") : "",

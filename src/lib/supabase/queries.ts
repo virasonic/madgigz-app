@@ -218,9 +218,11 @@ export async function fetchEventById(
 export async function fetchContentPosts(supabase: SupabaseClient): Promise<ContentPost[]> {
   // select("*") already includes the headline/accent_color columns added in
   // addendum_029, so text announcements come through with no query change.
+  // The profiles embed rides the artist_id FK for the reel avatar (#123);
+  // artist_photo_url is already public-API-readable, so no new grant.
   const { data } = await supabase
     .from("content_posts")
-    .select("*")
+    .select("*, profiles(artist_photo_url)")
     // Moderation-hidden posts (addendum_031) drop out of the feed but stay in
     // the table for the report trail.
     .is("hidden_at", null)
@@ -234,7 +236,7 @@ export async function fetchShowContent(
 ): Promise<ContentPost[]> {
   const { data } = await supabase
     .from("content_posts")
-    .select("*")
+    .select("*, profiles(artist_photo_url)")
     .eq("event_id", eventId)
     .is("hidden_at", null)
     .order("created_at", { ascending: true });

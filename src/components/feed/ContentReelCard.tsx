@@ -119,10 +119,20 @@ export default function ContentReelCard({
 
       <div className="absolute left-4 right-4 top-6 flex items-center gap-3">
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-full text-foreground"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-foreground"
           style={{ backgroundColor: event.accentColor }}
         >
-          <NoteIcon />
+          {post.artistPhotoUrl ? (
+            <Image
+              src={post.artistPhotoUrl}
+              alt=""
+              fill
+              sizes="40px"
+              className="object-cover"
+            />
+          ) : (
+            <NoteIcon />
+          )}
         </div>
         <div className="min-w-0 flex-1">
           {post.artistId ? (
