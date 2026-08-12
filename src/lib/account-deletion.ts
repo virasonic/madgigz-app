@@ -120,15 +120,19 @@ export async function purgeAccount(
     .select("id, media_url")
     .eq("artist_id", profileId);
 
-  const publicPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/event-media/`;
+  // Matched on the marker, not the full origin, so media saved under the old
+  // <ref>.supabase.co host and under the custom domain (auth.aurasonic.es, #122)
+  // are both purged - keying off NEXT_PUBLIC_SUPABASE_URL would leave every
+  // pre-cutover object behind, which for a deletion is a GDPR gap, not just bloat.
+  const marker = "/storage/v1/object/public/event-media/";
   const mediaPaths = [
     ...(posts ?? []).map((p) => p.media_url as string),
     profile.artist_photo_url as string | null,
   ]
     // Picsum seed URLs and anything else not in our bucket fall out here -
     // only objects we actually uploaded should ever be removed.
-    .filter((url): url is string => typeof url === "string" && url.startsWith(publicPrefix))
-    .map((url) => url.slice(publicPrefix.length));
+    .filter((url): url is string => typeof url === "string" && url.includes(marker))
+    .map((url) => url.slice(url.indexOf(marker) + marker.length));
 
   if (mediaPaths.length > 0) {
     await admin.storage.from("event-media").remove(mediaPaths);

@@ -38,12 +38,18 @@ export async function uploadArtistEvidence(
   return path;
 }
 
-const PUBLIC_URL_PREFIX = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/event-media/`;
+// Matched on the marker rather than the full origin, so a URL saved under the
+// old <ref>.supabase.co host and one saved under the custom domain
+// (auth.aurasonic.es, #122) both resolve to the same storage path. Keying off
+// NEXT_PUBLIC_SUPABASE_URL would strand every pre-cutover object the day the
+// project's domain changed.
+const PUBLIC_URL_MARKER = "/storage/v1/object/public/event-media/";
 
 // Picsum seed-data URLs return null here and are left alone - only our own
 // uploaded Storage objects should ever be removed.
 function eventMediaPath(url: string): string | null {
-  return url.startsWith(PUBLIC_URL_PREFIX) ? url.slice(PUBLIC_URL_PREFIX.length) : null;
+  const i = url.indexOf(PUBLIC_URL_MARKER);
+  return i === -1 ? null : url.slice(i + PUBLIC_URL_MARKER.length);
 }
 
 export async function removeEventMedia(supabase: SupabaseClient, urls: (string | null | undefined)[]) {
