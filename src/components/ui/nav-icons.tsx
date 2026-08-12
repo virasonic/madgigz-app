@@ -92,6 +92,28 @@ export function ShieldIcon(active: boolean) {
   );
 }
 
+// Announcements ("From MadGigz"). Only the desktop SideNav uses it — mobile
+// keeps the small megaphone in the feed header. Same active-stroke treatment as
+// the rest of the rail so it sits naturally beside them.
+export function MegaphoneIcon(active: boolean) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M4 10v4a1 1 0 0 0 1 1h2.5l5 4V5l-5 4H5a1 1 0 0 0-1 1Z"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+        strokeLinejoin="round"
+      />
+      <path
+        d="M17 8.5s1.5 1 1.5 3.5-1.5 3.5-1.5 3.5"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 // Notifications. The bell lives on the Profile tab dot on mobile, but the
 // desktop sidebar gives it its own row, so it needs its own icon.
 export function BellIcon(active: boolean) {

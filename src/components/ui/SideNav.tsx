@@ -7,7 +7,7 @@ import { Role } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useLiveUnreadCount } from "@/lib/realtime";
-import { BellIcon, ExploreIcon, FeedIcon, NoteIcon, PersonIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
+import { BellIcon, ExploreIcon, FeedIcon, MegaphoneIcon, NoteIcon, PersonIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
 
 interface NavItem {
   href: string;
@@ -35,6 +35,12 @@ export default function SideNav({
 
   const items: NavItem[] = [
     { href: "/feed", label: t("nav.feed"), icon: FeedIcon },
+    // "From MadGigz" announcements. Desktop gives them a first-class rail row
+    // that opens the panel beside the feed (via the ?panel= param FeedClient
+    // reads) rather than the awkward bottom sheet the mobile header still uses.
+    // Never pathname-active (its href carries a query the pathname never has),
+    // which is right — it's an action, not a destination.
+    { href: "/feed?panel=announcements", label: t("feed.announcements"), icon: MegaphoneIcon },
     { href: "/explore", label: t("nav.explore"), icon: ExploreIcon },
     { href: "/saved", label: t("nav.tickets"), icon: TicketIcon },
     { href: "/notifications", label: t("notifications.title"), icon: BellIcon, badge: liveUnread },

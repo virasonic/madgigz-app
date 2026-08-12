@@ -245,12 +245,14 @@ export default function FeedClient({
         <CityBadge />
       </div>
       <div className="relative mx-auto flex w-full justify-center gap-2 px-4 pb-4 pt-2 lg:max-w-[26rem]">
+        {/* Mobile only: desktop opens announcements from the SideNav rail and
+            shows them in a column beside the feed, not this header + sheet. */}
         {announcements.length > 0 && (
           <button
             type="button"
             onClick={() => announcementsModal.open("announcements")}
             aria-label={t("feed.fromMadgigz")}
-            className="absolute left-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface text-muted"
+            className="absolute left-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface text-muted lg:hidden"
           >
             <MegaphoneIcon />
           </button>
@@ -283,7 +285,18 @@ export default function FeedClient({
         ))}
       </div>
 
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 lg:flex lg:flex-row">
+        {/* Desktop: announcements open in-flow as a column to the left of the
+            feed, which re-centres the reel in the remaining width — side by
+            side, no overlay. Hidden on mobile, where the bottom sheet below
+            handles it instead (right for a phone). */}
+        {announcementsOpen && (
+          <DesktopAnnouncements
+            announcements={announcements}
+            onClose={announcementsModal.close}
+          />
+        )}
+        <div className="relative h-full min-h-0 min-w-0 lg:flex-1">
         {pane === "forYou" ? (
           forYouFeed.length === 0 ? (
             <p className="mt-6 px-4 text-center text-sm text-muted">{t("feed.emptyForYou")}</p>
@@ -329,9 +342,15 @@ export default function FeedClient({
             {/* Desktop-only prev/next, TikTok-web style. Anchored just past the
                 right edge of the centred 26rem card; snaps one reel per click.
                 pointer-events-none on the column so its empty space never
-                blocks a tap or scroll on the card behind it. */}
+                blocks a tap or scroll on the card behind it. When the
+                announcements column is open it steals 20rem, so the reel track
+                narrows and the arrows would clip the viewport edge at lg — hold
+                them back to xl there, where there's room again. Trackpad scroll
+                is unaffected either way. */}
             <div
-              className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-y-1/2 flex-col gap-3 lg:flex"
+              className={`pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-y-1/2 flex-col gap-3 ${
+                announcementsOpen ? "xl:flex" : "lg:flex"
+              }`}
               style={{ marginLeft: "13.5rem" }}
             >
               <button
@@ -400,6 +419,7 @@ export default function FeedClient({
             )}
           </div>
         )}
+        </div>
       </div>
 
       {activeEvent && (
@@ -464,9 +484,54 @@ function MegaphoneIcon() {
   );
 }
 
-// A quick way to read MadGigz's own posts without scrolling the whole feed for
-// them. A list rather than the full-screen cards - someone tapping this wants
-// to catch up, not swipe through ten panels.
+// The list of MadGigz's own posts - a catch-up list, not the full-screen swipe
+// cards. Shared by the mobile bottom sheet and the desktop side column so the
+// two renderings can't drift.
+function AnnouncementsList({ announcements }: { announcements: ContentPost[] }) {
+  return (
+    <div className="flex flex-col gap-3">
+      {announcements.map((post) => {
+        const accent = post.accentColor || "#d76616";
+        const hasMedia = Boolean(post.image) || post.mediaType === "video";
+        return (
+          <div key={post.id} className="flex items-start gap-3 rounded-2xl bg-background p-3">
+            <div
+              className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+              style={
+                hasMedia
+                  ? undefined
+                  : {
+                      backgroundImage: `radial-gradient(120% 100% at 20% 15%, ${accent}66, transparent 60%)`,
+                      backgroundColor: "#0a0807",
+                    }
+              }
+            >
+              {post.mediaType === "image" && post.image ? (
+                // eslint-disable-next-line @next/next/no-img-element -- Storage URL, small thumb
+                <img src={post.image} alt="" className="h-full w-full object-cover" />
+              ) : post.mediaType === "video" && post.videoUrl ? (
+                <video src={post.videoUrl} className="h-full w-full object-cover" muted />
+              ) : (
+                <span className="font-display text-base" style={{ color: accent }}>
+                  MGz
+                </span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              {post.headline && (
+                <p className="font-heading text-sm text-foreground">{post.headline}</p>
+              )}
+              {post.caption && <p className="text-sm text-muted">{post.caption}</p>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Mobile: the bottom sheet, unchanged - the right affordance on a phone. Hidden
+// on desktop, which shows DesktopAnnouncements beside the feed instead.
 function AnnouncementsSheet({
   announcements,
   onClose,
@@ -476,7 +541,10 @@ function AnnouncementsSheet({
 }) {
   const { t } = useT();
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/60" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 lg:hidden"
+      onClick={onClose}
+    >
       <div
         className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10"
         onClick={(e) => e.stopPropagation()}
@@ -484,46 +552,53 @@ function AnnouncementsSheet({
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
         <h2 className="font-display text-xl text-foreground">{t("feed.fromMadgigz")}</h2>
         <p className="mt-1 text-sm text-muted">{t("feed.announcementsSubtitle")}</p>
-
-        <div className="mt-5 flex flex-col gap-3">
-          {announcements.map((post) => {
-            const accent = post.accentColor || "#d76616";
-            const hasMedia = Boolean(post.image) || post.mediaType === "video";
-            return (
-              <div key={post.id} className="flex items-start gap-3 rounded-2xl bg-background p-3">
-                <div
-                  className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl"
-                  style={
-                    hasMedia
-                      ? undefined
-                      : {
-                          backgroundImage: `radial-gradient(120% 100% at 20% 15%, ${accent}66, transparent 60%)`,
-                          backgroundColor: "#0a0807",
-                        }
-                  }
-                >
-                  {post.mediaType === "image" && post.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- Storage URL, small thumb
-                    <img src={post.image} alt="" className="h-full w-full object-cover" />
-                  ) : post.mediaType === "video" && post.videoUrl ? (
-                    <video src={post.videoUrl} className="h-full w-full object-cover" muted />
-                  ) : (
-                    <span className="font-display text-base" style={{ color: accent }}>
-                      MGz
-                    </span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  {post.headline && (
-                    <p className="font-heading text-sm text-foreground">{post.headline}</p>
-                  )}
-                  {post.caption && <p className="text-sm text-muted">{post.caption}</p>}
-                </div>
-              </div>
-            );
-          })}
+        <div className="mt-5">
+          <AnnouncementsList announcements={announcements} />
         </div>
       </div>
     </div>
+  );
+}
+
+// Desktop (#120): announcements as an in-flow column beside the feed, not an
+// overlay - it sits in the empty canvas the centred reel leaves and pushes the
+// reel to re-centre in the rest. Its own scroll, and a close button since there
+// is no backdrop to tap.
+function DesktopAnnouncements({
+  announcements,
+  onClose,
+}: {
+  announcements: ContentPost[];
+  onClose: () => void;
+}) {
+  const { t } = useT();
+  return (
+    <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:border-r lg:border-muted/15">
+      <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
+        <div className="min-w-0">
+          <h2 className="font-display text-xl text-foreground">{t("feed.fromMadgigz")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("feed.announcementsSubtitle")}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t("feed.closeAnnouncements")}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-muted transition-colors hover:bg-primary hover:text-foreground"
+        >
+          <CloseIcon />
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+        <AnnouncementsList announcements={announcements} />
+      </div>
+    </aside>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
   );
 }
