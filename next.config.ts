@@ -33,6 +33,17 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
+      // Storage images are served from whatever host the project used when they
+      // were uploaded. After the #122 custom-domain switch the DB holds a mix:
+      // older rows under <ref>.supabase.co, newer ones under the custom domain
+      // (auth.aurasonic.es). BOTH must be allow-listed or the pre-cutover
+      // posters 400 through next/image and render broken. The wildcard covers
+      // any project ref (prod's old host + staging's own), and the env-derived
+      // host adds the custom domain on top.
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+      },
       ...(supabaseHostname
         ? [{ protocol: "https" as const, hostname: supabaseHostname }]
         : []),
