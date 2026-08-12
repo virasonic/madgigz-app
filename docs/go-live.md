@@ -79,6 +79,43 @@ Once the redeploy is done:
   (**100 emails/day**). These gate a crowd onboarding at once, not a trickle —
   see `docs/load-and-capacity.md`.
 
+## Google OAuth branding — custom auth domain (#122, done 12 Aug 2026)
+The Google sign-in screen used to read "to continue to
+`rxtiagsypwvuyyihbhal.supabase.co`" — Google prints the real OAuth redirect
+host, and only shows a name for a domain you can prove you own, which you can't
+for `supabase.co`. Fixed by giving the **prod** Supabase project a custom domain
+so auth runs on a domain we own. The order matters — do it exactly this way or
+live Google logins break:
+
+1. **Supabase → prod project → Custom Domains add-on** (~$10/mo). Enter
+   `auth.aurasonic.es`; it hands you a **CNAME** (`auth` → `rxtiagsypwvuyyihbhal.supabase.co`).
+2. **GoDaddy** (aurasonic.es DNS) → add that CNAME → back in Supabase **Activate**
+   (retain the CNAME afterwards; it says so).
+3. **Google Cloud → OAuth client → Authorized redirect URIs** → **add**
+   `https://auth.aurasonic.es/auth/v1/callback`, **keeping** the old
+   `…supabase.co/auth/v1/callback` during the transition.
+4. **Vercel → `NEXT_PUBLIC_SUPABASE_URL` = `https://auth.aurasonic.es`,
+   Production scope ONLY.** Do **not** change Preview — that's staging and must
+   keep its own Supabase URL, or staging writes to the prod DB (#108).
+5. **Redeploy prod** (a push to `main` does it). `NEXT_PUBLIC_*` is inlined at
+   **build** time, so the browser keeps the old URL until a rebuild — server
+   routes flip immediately (runtime env), the client bundle only after redeploy.
+6. **Verify:** `/api/health` → `supabaseHost: auth.aurasonic.es`; the authorize
+   endpoint returns `redirect_uri=…auth.aurasonic.es/auth/v1/callback`; app +
+   REST return 200 over the custom domain; a real Google sign-in shows
+   "auth.aurasonic.es" and logs in.
+
+Code note: media URLs saved under the old `…supabase.co` host are matched
+host-agnostically now (`src/lib/supabase/storage.ts`, `account-deletion.ts` key
+off the `/storage/v1/object/public/event-media/` marker, not the origin), so the
+domain change doesn't strand pre-cutover objects. Staging stays on `supabase.co`
+(its own project, no custom domain).
+
+**Still open (separate from the domain):** the Google OAuth app must be
+**published to Production** (OAuth consent screen → Publish app). While in
+Testing, only added test users can sign in with Google — a launch blocker.
+Non-sensitive scopes only, so no verification review is needed.
+
 ## Later: turning on real payments (the separate step)
 When ready for real money — and after the IVA/tax question (#97) is settled:
 - Swap Vercel's `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to the
