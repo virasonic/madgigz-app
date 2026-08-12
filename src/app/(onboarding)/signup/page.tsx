@@ -6,6 +6,7 @@ import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Turnstile, { TurnstileHandle } from "@/components/ui/Turnstile";
+import AppleButton from "@/components/auth/AppleButton";
 import GoogleButton from "@/components/auth/GoogleButton";
 import { LegalNotice } from "@/components/legal/LegalNotice";
 import { createClient } from "@/lib/supabase/client";
@@ -228,7 +229,8 @@ function SignUpForm() {
           and burying the quicker route under the slower one helps nobody. The
           role picked on the landing page rides along so the completion screen
           can default to it. */}
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col gap-3">
+        <AppleButton role={role} next={next} label={t("signup.withApple")} />
         <GoogleButton role={role} next={next} label={t("signup.withGoogle")} />
       </div>
 

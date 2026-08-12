@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import AppleButton from "@/components/auth/AppleButton";
 import GoogleButton from "@/components/auth/GoogleButton";
 import { LegalNotice } from "@/components/legal/LegalNotice";
 import { safeNext } from "@/lib/site";
@@ -157,9 +158,11 @@ function SignInContent() {
         <span className="h-px flex-1 bg-muted/20" />
       </div>
 
-      {/* Apple's button belongs alongside this one and is [[82b]] - it needs
-          Apple to approve the developer verification first. */}
-      <div className="mt-6">
+      {/* Apple above Google, per Apple's HIG (Sign in with Apple should be at
+          least as prominent as other providers) - matters for the iOS wrap
+          (#110). Both flow through the same provider-agnostic /auth/callback. */}
+      <div className="mt-6 flex flex-col gap-3">
+        <AppleButton next={next} label={t("signin.withApple")} />
         <GoogleButton next={next} label={t("signin.withGoogle")} />
       </div>
 
