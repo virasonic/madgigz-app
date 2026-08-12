@@ -1,8 +1,10 @@
+import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import RoleCard from "@/components/ui/RoleCard";
 import { safeNext } from "@/lib/site";
 import { getServerT } from "@/lib/i18n/server";
+import { createClient } from "@/lib/supabase/server";
 
 function HeartIcon() {
   return (
@@ -38,6 +40,21 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
   const next = safeNext(((await searchParams).next as string) ?? null);
   const withNext = (path: string) =>
     next ? `${path}${path.includes("?") ? "&" : "?"}next=${encodeURIComponent(next)}` : path;
+
+  // Already signed in? The sign-in/role-select screen is the wrong place to
+  // land - send them on. This is the real fix for #128: the native app's
+  // WKWebView always cold-launches at the root (its server.url), unlike the web
+  // PWA which starts at /feed, so without this a perfectly valid session showed
+  // the sign-in page on every launch and read as "logged out". The (app) layout
+  // takes it from here - it bounces a not-really-authed user back to "/" and an
+  // unfinished signup to /signup/complete-profile.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    redirect(next ?? "/feed");
+  }
 
   const { t } = await getServerT();
 
