@@ -69,6 +69,16 @@ Once the redeploy is done:
 4. Open a show → **Share** → the link is `https://madgigz.aurasonic.es/e/…`.
 5. Sign up a fresh test account → the confirmation email arrives and works.
 
+**Gotcha — signup captcha is Cloudflare Turnstile, and a domain change breaks
+it.** The signup form's Turnstile widget only runs on **hostnames allow-listed
+in the Cloudflare → Turnstile dashboard** (that widget → Hostname Management).
+If the app's host isn't listed, the widget throws **error `110200`** (a
+"can't connect to Cloudflare" box) and — because signup requires the token —
+**email sign-up silently fails** while Google/Apple (no captcha) keep working.
+Hit exactly this after moving to `madgigz.aurasonic.es`; fixed by adding that
+hostname. So on any future domain move, add the new host here too. Keep
+`localhost` listed for local dev.
+
 ## Two things to decide, not blockers
 - **Impersonation flag.** You set `ALLOW_ADMIN_IMPERSONATION=true` in Vercel to
   test the "act as any user" tool. With real users arriving, decide whether to
