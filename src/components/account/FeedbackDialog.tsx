@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import Button from "@/components/ui/Button";
 import { submitFeedback } from "@/app/(app)/profile/feedback-actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 
 // Label/hint are resolved through the catalog per value inside the component.
 const TYPES = [
@@ -15,6 +16,7 @@ const TYPES = [
 
 export default function FeedbackDialog({ onClose }: { onClose: () => void }) {
   const { t } = useT();
+  const { handleProps, sheetStyle } = useDragToDismiss(onClose);
   // Where they were when they opened this. Captured rather than asked for -
   // "which screen were you on?" is a question people answer badly a day later,
   // and the browser already knows.
@@ -49,9 +51,12 @@ export default function FeedbackDialog({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/60" onClick={onClose}>
       <div
         className="w-full max-w-md rounded-t-3xl bg-surface p-6 pb-10"
+        style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
+        <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3">
+          <div className="h-1 w-10 rounded-full bg-muted/30" />
+        </div>
 
         {sent ? (
           // Deliberately concrete about what happens next. "Thanks for your

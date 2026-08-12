@@ -8,46 +8,38 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // #128 - keep the login across app restarts.
-        //
-        // WKWebView holds its cookies in a store separate from the app's
-        // disk-backed HTTPCookieStorage, and the newest rotated Supabase auth
-        // cookie isn't always flushed to disk before iOS kills the app - so a
-        // cold launch can present a stale/missing session cookie and dump the
-        // user back at sign-in. On launch we copy any cookies we stashed in the
-        // shared store back into the web view's store.
-        //
-        // This is deliberately ADDITIVE: it only ever copies cookies in, never
-        // deletes one, so it can preserve a session but can't break a working
-        // one. Sign-out still clears cookies through the normal web flow.
-        restoreCookiesIntoWebView()
         return true
     }
 
+    // #128 - keep the login across app restarts (save half).
+    //
+    // WKWebView keeps its cookies in a store that isn't reliably flushed to disk
+    // before iOS kills the app, so the Supabase session cookie is lost on a full
+    // quit and the next launch lands on the sign-in screen. Here we copy the web
+    // view's cookies into the disk-backed HTTPCookieStorage while we still can;
+    // SceneDelegate restores them on the next cold launch. Wrapped in a
+    // background-task assertion so the async cookie read finishes even if the
+    // user swipes the app away right after backgrounding it.
     func applicationDidEnterBackground(_ application: UIApplication) {
-        // The app is almost always killed from the background, so this is the
-        // reliable moment to persist the current session cookie to disk.
-        persistWebViewCookies()
+        persistWebViewCookies(application)
     }
 
-    func applicationWillTerminate(_ application: UIApplication) {
-        persistWebViewCookies()
+    func applicationWillResignActive(_ application: UIApplication) {
+        // Going to the app switcher fires this before didEnterBackground - the
+        // point most kills happen from, so save here too.
+        persistWebViewCookies(application)
     }
 
-    // Copy the web view's current cookies into the disk-backed shared store.
-    private func persistWebViewCookies() {
+    private func persistWebViewCookies(_ application: UIApplication) {
+        var task: UIBackgroundTaskIdentifier = .invalid
+        task = application.beginBackgroundTask {
+            if task != .invalid { application.endBackgroundTask(task); task = .invalid }
+        }
         WKWebsiteDataStore.default().httpCookieStore.getAllCookies { cookies in
             for cookie in cookies {
                 HTTPCookieStorage.shared.setCookie(cookie)
             }
-        }
-    }
-
-    // On launch, seed the web view's store from the persisted cookies.
-    private func restoreCookiesIntoWebView() {
-        let store = WKWebsiteDataStore.default().httpCookieStore
-        for cookie in HTTPCookieStorage.shared.cookies ?? [] {
-            store.setCookie(cookie)
+            if task != .invalid { application.endBackgroundTask(task); task = .invalid }
         }
     }
 

@@ -21,6 +21,7 @@ import { useT } from "@/lib/i18n/LocaleProvider";
 import { LOCALES, LOCALE_LABELS } from "@/lib/i18n/config";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { dateLocale } from "@/lib/dates";
+import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 
 function formatDate(iso: string, dl: string) {
   return new Date(iso).toLocaleDateString(dl, {
@@ -81,6 +82,7 @@ function SettingsSheet({
   isArtist: boolean;
 }) {
   const { t, locale, setLocale } = useT();
+  const { handleProps, sheetStyle } = useDragToDismiss(onClose);
   const comingSoonRows = ["profile.promotions", "profile.analytics"];
   return (
     <div
@@ -89,9 +91,12 @@ function SettingsSheet({
     >
       <div
         className="w-full max-w-md rounded-t-3xl bg-surface p-6 pb-10"
+        style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
+        <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3">
+          <div className="h-1 w-10 rounded-full bg-muted/30" />
+        </div>
         <h2 className="font-display text-xl text-foreground">{t("settings.title")}</h2>
         <div className="mt-4 flex flex-col gap-2">
           <Link

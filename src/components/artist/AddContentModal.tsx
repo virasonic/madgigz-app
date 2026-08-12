@@ -7,6 +7,7 @@ import { uploadEventMedia } from "@/lib/supabase/storage";
 import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
 import { EventItem } from "@/lib/types";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 
 interface AddContentModalProps {
   shows: EventItem[];
@@ -22,6 +23,7 @@ export default function AddContentModal({
   onPosted,
 }: AddContentModalProps) {
   const { t } = useT();
+  const { handleProps, sheetStyle } = useDragToDismiss(onClose);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showId, setShowId] = useState(shows[0]?.id ?? "");
   const [caption, setCaption] = useState("");
@@ -115,9 +117,12 @@ export default function AddContentModal({
           rather than a sheet stranded at the bottom of a monitor. */}
       <div
         className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10 lg:rounded-3xl lg:pb-6 lg:shadow-2xl"
+        style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30 lg:hidden" />
+        <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3 lg:hidden">
+          <div className="h-1 w-10 rounded-full bg-muted/30" />
+        </div>
         <div className="flex items-start justify-between gap-3">
           <h2 className="font-display text-xl text-foreground">{t("addContent.title")}</h2>
           <button

@@ -29,6 +29,7 @@ import {
 import { Genre, PublicArtistProfile, Venue } from "@/lib/types";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
+import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 
 // <input type="time"> wants HH:MM; Postgres hands back HH:MM:SS.
 function toTimeInput(value: string) {
@@ -67,6 +68,7 @@ export default function ManageShowModal({
 }: ManageShowModalProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
+  const { handleProps, sheetStyle } = useDragToDismiss(onClose);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [posts, setPosts] = useState<ContentPost[]>([]);
@@ -338,9 +340,12 @@ export default function ManageShowModal({
     >
       <div
         className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10"
+        style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
+        <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3">
+          <div className="h-1 w-10 rounded-full bg-muted/30" />
+        </div>
 
         <h2 className="font-display text-2xl text-foreground">{show.title}</h2>
         <p className="mt-1 text-sm text-muted">

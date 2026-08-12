@@ -13,6 +13,7 @@ import { canActAsArtist } from "@/lib/roles";
 import { getSeenAnnouncements, markAnnouncementSeen } from "@/lib/seen-announcements";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 import { dateLocale } from "@/lib/dates";
 import CityBadge from "@/components/ui/CityBadge";
 
@@ -544,6 +545,7 @@ function AnnouncementsSheet({
   onClose: () => void;
 }) {
   const { t } = useT();
+  const { handleProps, sheetStyle } = useDragToDismiss(onClose);
   return (
     <div
       className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 lg:hidden"
@@ -551,9 +553,12 @@ function AnnouncementsSheet({
     >
       <div
         className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10"
+        style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
+        <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3">
+          <div className="h-1 w-10 rounded-full bg-muted/30" />
+        </div>
         <h2 className="font-display text-xl text-foreground">{t("feed.fromMadgigz")}</h2>
         <p className="mt-1 text-sm text-muted">{t("feed.announcementsSubtitle")}</p>
         <div className="mt-5">

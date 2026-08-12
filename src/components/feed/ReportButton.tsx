@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { reportContent } from "@/app/(app)/feed/report-actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 
 const REASONS = [
   { value: "inappropriate", labelKey: "report.reasonInappropriate" },
@@ -22,6 +23,7 @@ export default function ReportButton({ contentPostId }: { contentPostId: string 
   const [detail, setDetail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const { handleProps, sheetStyle } = useDragToDismiss(() => setOpen(false));
 
   async function submit() {
     setSubmitting(true);
@@ -48,9 +50,12 @@ export default function ReportButton({ contentPostId }: { contentPostId: string 
         >
           <div
             className="w-full max-w-md rounded-t-3xl bg-surface p-6 pb-10"
+            style={sheetStyle}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
+            <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3">
+              <div className="h-1 w-10 rounded-full bg-muted/30" />
+            </div>
 
             {done ? (
               <div className="flex flex-col gap-4 text-center">

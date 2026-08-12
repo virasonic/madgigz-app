@@ -12,6 +12,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
+import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 
 function formatDate(iso: string, dl: string) {
   return new Date(iso).toLocaleDateString(dl, {
@@ -24,6 +25,7 @@ function formatDate(iso: string, dl: string) {
 export default function DeleteAccountDialog({ onClose }: { onClose: () => void }) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
+  const { handleProps, sheetStyle } = useDragToDismiss(onClose);
   const router = useRouter();
   const [state, setState] = useState<DeletionState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -83,9 +85,12 @@ export default function DeleteAccountDialog({ onClose }: { onClose: () => void }
     >
       <div
         className="w-full max-w-md rounded-t-3xl bg-surface p-6 pb-10"
+        style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-muted/30" />
+        <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3">
+          <div className="h-1 w-10 rounded-full bg-muted/30" />
+        </div>
         {error && <p className="mb-4 text-sm text-primary">{error}</p>}
 
         {!state ? (
