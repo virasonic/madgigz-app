@@ -1,8 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": ["scripts/*.mjs"],
-  "ignore": ["public/sw.js"],
-  "ignoreDependencies": ["sharp", "postcss"],
+  "ignore": ["public/sw.js", "ios/**"],
+  "ignoreDependencies": ["sharp", "postcss", "@capacitor/ios", "@capacitor/assets"],
   "ignoreExportsUsedInFile": true,
   "tags": ["-knipignore"]
 }

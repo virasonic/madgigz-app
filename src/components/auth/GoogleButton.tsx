@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { isNativeApp, startOAuth } from "@/lib/native";
 
 interface GoogleButtonProps {
   /**
@@ -55,22 +55,21 @@ export default function GoogleButton({ role, next, label = "Continue with Google
     if (next) params.set("next", next);
     const query = params.toString();
 
-    const supabase = createClient();
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        // Supabase bounces back to its own /auth/v1/callback first, then here.
-        // This URL has to be on the allow-list in the Supabase dashboard, or
-        // the round trip silently lands on the site root instead.
-        redirectTo: `${window.location.origin}/auth/callback${query ? `?${query}` : ""}`,
-      },
-    });
+    // The redirectTo must be on the allow-list in the Supabase dashboard, or the
+    // round trip silently lands on the site root. In the native app startOAuth
+    // ignores this and uses the deep-link scheme instead (see native.ts).
+    const webRedirectTo = `${window.location.origin}/auth/callback${query ? `?${query}` : ""}`;
+    const oauthError = await startOAuth("google", webRedirectTo, query);
 
-    // On success the browser is already navigating to Google, so there is
-    // nothing to reset - only the failure path comes back here.
     if (oauthError) {
-      console.error("signInWithOAuth failed:", oauthError.message);
+      console.error("signInWithOAuth failed:", oauthError);
       setError("Couldn't reach Google just then. Try again?");
+      setBusy(false);
+    } else if (isNativeApp()) {
+      // Native: control returns here once the system browser is presented, so
+      // reset the button - the sign-in completes later via the deep link, and a
+      // stuck spinner would strand anyone who dismisses the sheet. On the web the
+      // page is already navigating to Google, so there's nothing to reset.
       setBusy(false);
     }
   }

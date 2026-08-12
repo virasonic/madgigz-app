@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { isNativeApp, startOAuth } from "@/lib/native";
 
 interface AppleButtonProps {
   /**
@@ -41,22 +41,20 @@ export default function AppleButton({ role, next, label = "Continue with Apple" 
     if (next) params.set("next", next);
     const query = params.toString();
 
-    const supabase = createClient();
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "apple",
-      options: {
-        // Supabase bounces back to its own /auth/v1/callback first, then here.
-        // This URL has to be on the allow-list in the Supabase dashboard, or
-        // the round trip silently lands on the site root instead.
-        redirectTo: `${window.location.origin}/auth/callback${query ? `?${query}` : ""}`,
-      },
-    });
+    // The redirectTo must be on the allow-list in the Supabase dashboard, or the
+    // round trip silently lands on the site root. In the native app startOAuth
+    // ignores this and uses the deep-link scheme instead (see native.ts).
+    const webRedirectTo = `${window.location.origin}/auth/callback${query ? `?${query}` : ""}`;
+    const oauthError = await startOAuth("apple", webRedirectTo, query);
 
-    // On success the browser is already navigating to Apple, so there is
-    // nothing to reset - only the failure path comes back here.
     if (oauthError) {
-      console.error("signInWithOAuth (apple) failed:", oauthError.message);
+      console.error("signInWithOAuth (apple) failed:", oauthError);
       setError("Couldn't reach Apple just then. Try again?");
+      setBusy(false);
+    } else if (isNativeApp()) {
+      // Native: control returns here once the system browser is presented, so
+      // reset the button - the sign-in completes later via the deep link. On the
+      // web the page is already navigating to Apple, so there's nothing to reset.
       setBusy(false);
     }
   }

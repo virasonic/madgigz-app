@@ -6,6 +6,7 @@ import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { getLocale } from "@/lib/i18n/server";
 import { StripeModeProvider } from "@/lib/stripe-mode";
 import ServiceWorkerRegistrar from "@/components/pwa/ServiceWorkerRegistrar";
+import NativeBridge from "@/components/native/NativeBridge";
 
 const galdernExtraBold = localFont({
   src: "./fonts/Galdern-ExtraBold.otf",
@@ -67,6 +68,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <StripeModeProvider testMode={stripeTestMode}>{children}</StripeModeProvider>
         </LocaleProvider>
         <ServiceWorkerRegistrar />
+        <NativeBridge />
       </body>
     </html>
   );

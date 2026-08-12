@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>MadGigz</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0a0807;
+        color: #f5efe6;
+        font-family: -apple-system, system-ui, sans-serif;
+      }
+      .wrap {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 2rem;
+        text-align: center;
+      }
+      h1 {
+        font-size: 1.5rem;
+        letter-spacing: 0.02em;
+        margin: 0;
+      }
+      p {
+        margin: 0;
+        color: #b8ada0;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      This screen only appears if the live site can't be reached at launch. The
+      real app is served remotely (see capacitor.config.ts server.url), so there
+      is deliberately nothing else bundled here.
+    -->
+    <div class="wrap">
+      <h1>MadGigz</h1>
+      <p>Can't reach MadGigz right now.<br />Check your connection and reopen the app.</p>
+    </div>
+  </body>
+</html>
