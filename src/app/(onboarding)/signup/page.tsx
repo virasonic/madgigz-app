@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Turnstile, { TurnstileHandle } from "@/components/ui/Turnstile";
 import GoogleButton from "@/components/auth/GoogleButton";
+import { LegalNotice } from "@/components/legal/LegalNotice";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/site";
 import { verifyTurnstileToken } from "./turnstile-actions";
@@ -230,6 +231,13 @@ function SignUpForm() {
       <div className="mt-6">
         <GoogleButton role={role} next={next} label={t("signup.withGoogle")} />
       </div>
+
+      {/* Before either path is taken, not after the form: acceptance has to be
+          stated ahead of the action it binds, and Google skips the form. */}
+      <LegalNotice
+        messageKey="signup.legalNotice"
+        className="mt-3 text-center text-xs text-muted"
+      />
 
       <div className="mt-6 flex items-center gap-3">
         <span className="h-px flex-1 bg-muted/20" />

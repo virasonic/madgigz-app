@@ -28,6 +28,15 @@ export const en = {
     system: "Match my device",
   },
 
+  // Labels for the legal documents on aurasonic.es. Interpolated into the
+  // *.legalNotice templates as links (see components/legal/LegalNotice.tsx)
+  // and listed in the Settings sheet.
+  legal: {
+    termsOfService: "Terms of Service",
+    organiserTerms: "Organiser Terms",
+    privacyPolicy: "Privacy Policy",
+  },
+
   nav: {
     feed: "Feed",
     explore: "Explore",
@@ -112,7 +121,10 @@ export const en = {
     buyStarting: "Starting checkout...",
     buyFree: "Get tickets",
     buyPay: "Continue to payment",
-    finalSale: "Tickets are final sale. If something comes up, contact the organiser.",
+    // The no-withdrawal rule only binds a consumer if stated before they pay,
+    // so this line (and its Terms link) must stay visible above the buy button.
+    finalSale:
+      "Tickets are sold by the organiser and are final sale unless the show is cancelled — see the {terms}.",
     testMode:
       "Preview mode — payments aren't live yet, so you won't be charged. To try checkout, use test card 4242 4242 4242 4242 with any future date and any CVC.",
     lineup: "Lineup",
@@ -175,6 +187,9 @@ export const en = {
     errorIdentifier: "Enter your email or username",
     errorPassword: "Enter your password",
     errorWrong: "Incorrect email or password",
+    // Under the Google button: signing in with Google can also create the
+    // account, so the acceptance line has to sit on this page too.
+    legalNotice: "By continuing you agree to the {terms} and the {privacy}.",
   },
 
   signup: {
@@ -207,6 +222,7 @@ export const en = {
     errorCaptcha: "Complete the verification below",
     errorCaptchaFailed: "Verification failed - please try again",
     usernameJustTaken: "That username was just taken - try another",
+    legalNotice: "By creating an account you agree to the {terms} and the {privacy}.",
   },
 
   settings: {
@@ -222,6 +238,9 @@ export const en = {
     switchConfirmTitle: "Become an artist?",
     switchConfirmBody:
       "You'll set up your artist profile and we'll verify it before you can sell tickets. Your tickets and the artists you follow stay exactly as they are.",
+    // Selling is what the Organiser Terms govern, so acceptance is asked for at
+    // the moment the account gains that ability.
+    switchLegalNotice: "By continuing you accept the {organiserTerms}.",
     switching: "Switching...",
   },
 
@@ -436,6 +455,7 @@ export const en = {
     errorSocial: "Add at least one social link",
     errorEvidence: "Upload evidence to verify your profile",
     errorEvidenceSave: "Couldn't save that file. Please try again.",
+    legalNotice: "By submitting you accept the {organiserTerms}.",
   },
 
   report: {

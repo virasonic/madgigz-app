@@ -6,6 +6,7 @@ import { FormEvent, Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import GoogleButton from "@/components/auth/GoogleButton";
+import { LegalNotice } from "@/components/legal/LegalNotice";
 import { safeNext } from "@/lib/site";
 import { signInWithIdentifier } from "./actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -161,6 +162,13 @@ function SignInContent() {
       <div className="mt-6">
         <GoogleButton next={next} label={t("signin.withGoogle")} />
       </div>
+
+      {/* Google sign-in doubles as account creation for anyone new, so the
+          acceptance line lives on this page too. */}
+      <LegalNotice
+        messageKey="signin.legalNotice"
+        className="mt-3 text-center text-xs text-muted"
+      />
 
       <p className="mt-8 text-center text-sm text-muted">
         {t("signin.noAccount")}{" "}

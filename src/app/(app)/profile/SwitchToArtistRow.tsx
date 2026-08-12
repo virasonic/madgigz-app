@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
+import { LegalNotice } from "@/components/legal/LegalNotice";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { startArtistUpgrade } from "./artist-upgrade-actions";
 
@@ -38,6 +39,10 @@ export default function SwitchToArtistRow() {
               {t("settings.switchConfirmTitle")}
             </h3>
             <p className="mt-2 text-sm text-muted">{t("settings.switchConfirmBody")}</p>
+            <LegalNotice
+              messageKey="settings.switchLegalNotice"
+              className="mt-2 text-xs text-muted"
+            />
             {error && <p className="mt-3 text-sm text-danger">{error}</p>}
             <div className="mt-6 flex flex-col gap-2">
               <Button

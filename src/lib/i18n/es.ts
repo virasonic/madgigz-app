@@ -28,6 +28,12 @@ export const es: Messages = {
     system: "Según mi dispositivo",
   },
 
+  legal: {
+    termsOfService: "Términos y Condiciones",
+    organiserTerms: "Condiciones para organizadores",
+    privacyPolicy: "Política de privacidad",
+  },
+
   nav: {
     feed: "Feed",
     explore: "Explorar",
@@ -110,7 +116,8 @@ export const es: Messages = {
     buyStarting: "Iniciando pago...",
     buyFree: "Conseguir entradas",
     buyPay: "Continuar al pago",
-    finalSale: "Las entradas son venta final. Si surge algo, contacta con el organizador.",
+    finalSale:
+      "Las entradas las vende el organizador y son venta final salvo cancelación — consulta los {terms}.",
     testMode:
       "Modo de prueba — los pagos aún no están activos, así que no se te cobrará. Para probar el pago, usa la tarjeta de prueba 4242 4242 4242 4242 con cualquier fecha futura y cualquier CVC.",
     lineup: "Cartel",
@@ -174,6 +181,7 @@ export const es: Messages = {
     errorIdentifier: "Introduce tu email o usuario",
     errorPassword: "Introduce tu contraseña",
     errorWrong: "Email o contraseña incorrectos",
+    legalNotice: "Al continuar aceptas los {terms} y la {privacy}.",
   },
 
   signup: {
@@ -206,6 +214,7 @@ export const es: Messages = {
     errorCaptcha: "Completa la verificación de abajo",
     errorCaptchaFailed: "La verificación falló; inténtalo de nuevo",
     usernameJustTaken: "Ese usuario acaba de cogerse; prueba con otro",
+    legalNotice: "Al crear una cuenta aceptas los {terms} y la {privacy}.",
   },
 
   settings: {
@@ -221,6 +230,7 @@ export const es: Messages = {
     switchConfirmTitle: "¿Hacerte artista?",
     switchConfirmBody:
       "Configurarás tu perfil de artista y lo verificaremos antes de que puedas vender entradas. Tus entradas y los artistas que sigues se quedan igual.",
+    switchLegalNotice: "Al continuar aceptas las {organiserTerms}.",
     switching: "Cambiando...",
   },
 
@@ -431,6 +441,7 @@ export const es: Messages = {
     errorSocial: "Añade al menos un enlace social",
     errorEvidence: "Sube una prueba para verificar tu perfil",
     errorEvidenceSave: "No se pudo guardar el archivo. Inténtalo de nuevo.",
+    legalNotice: "Al enviar tu solicitud aceptas las {organiserTerms}.",
   },
 
   report: {

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { LegalNotice } from "@/components/legal/LegalNotice";
 import { createClient } from "@/lib/supabase/client";
 import { uploadArtistEvidence } from "@/lib/supabase/storage";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -222,6 +223,13 @@ export default function ArtistClaimForm() {
         <Button type="submit" className="mt-2" disabled={submitting}>
           {submitting ? t("artistClaim.submitting") : t("artistClaim.submit")}
         </Button>
+
+        {/* Submitting this form is what puts the account on the path to
+            selling, so the Organiser Terms acceptance sits on its button. */}
+        <LegalNotice
+          messageKey="artistClaim.legalNotice"
+          className="-mt-2 text-center text-xs text-muted"
+        />
       </form>
     </div>
   );

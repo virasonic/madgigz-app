@@ -15,6 +15,7 @@ import { AppUser, EventItem } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
 import DeleteAccountDialog from "@/components/account/DeleteAccountDialog";
 import FeedbackDialog from "@/components/account/FeedbackDialog";
+import { LegalLinksRow } from "@/components/legal/LegalNotice";
 import SwitchToArtistRow from "./SwitchToArtistRow";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { LOCALES, LOCALE_LABELS } from "@/lib/i18n/config";
@@ -162,12 +163,16 @@ function SettingsSheet({
           </button>
         </div>
 
+        {/* The permanent home of the legal documents - consumer law expects
+            them findable any time, not only flashed at signup/checkout. */}
+        <LegalLinksRow className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-muted" />
+
         {/* Quiet and last: rare and irreversible, kept apart from the rows above
             so it doesn't sit like just another setting. */}
         <button
           type="button"
           onClick={onDeleteAccount}
-          className="mt-6 w-full text-center text-xs text-muted underline underline-offset-4"
+          className="mt-4 w-full text-center text-xs text-muted underline underline-offset-4"
         >
           {t("profile.deleteAccount")}
         </button>

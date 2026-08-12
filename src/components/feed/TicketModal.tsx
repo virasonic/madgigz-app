@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import Button from "@/components/ui/Button";
+import { LegalNotice } from "@/components/legal/LegalNotice";
 import { createCheckout, previewPromoCode } from "@/app/(app)/checkout-actions";
 import { EventItem } from "@/lib/types";
 import ShareEventButton from "./ShareEventButton";
@@ -338,7 +339,10 @@ export default function TicketModal({
                     this before they pay, not tucked behind an icon they'd have
                     no reason to tap. */}
                 {!soldOut && (
-                  <p className="-mt-3 text-center text-[11px] text-muted">{t("ticket.finalSale")}</p>
+                  <LegalNotice
+                    messageKey="ticket.finalSale"
+                    className="-mt-3 text-center text-[11px] text-muted"
+                  />
                 )}
               </div>
             ) : (
