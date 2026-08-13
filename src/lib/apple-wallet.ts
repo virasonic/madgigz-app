@@ -71,6 +71,10 @@ export async function buildTicketPass(input: TicketPassInput): Promise<Buffer | 
       backgroundColor: "rgb(10, 8, 7)",
       foregroundColor: "rgb(245, 240, 232)",
       labelColor: toRgb(input.accentColor, "rgb(215, 102, 22)"),
+      // A unique grouping id per ticket so Wallet shows each as its own card,
+      // instead of stacking every MadGigz event ticket into one pile (they share
+      // a Pass Type ID, which Wallet groups by default).
+      groupingIdentifier: input.ticketId,
     }
   );
 
