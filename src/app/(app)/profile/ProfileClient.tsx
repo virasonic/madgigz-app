@@ -23,6 +23,10 @@ import { useUrlModal } from "@/lib/useUrlModal";
 import { dateLocale } from "@/lib/dates";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 
+// Read once at module load (React purity), same pattern as the feed/tickets
+// "now" reads. Splits the artist's upcoming shows from past ones (#141).
+const TODAY = new Date().toISOString().slice(0, 10);
+
 function formatDate(iso: string, dl: string) {
   return new Date(iso).toLocaleDateString(dl, {
     day: "numeric",
@@ -262,7 +266,16 @@ export default function ProfileClient({
   // signal that the form was actually completed.
   const claimSubmitted = user.evidenceSubmitted;
   const ticketsSold = useMemo(() => shows.reduce((sum, show) => sum + show.sold, 0), [shows]);
-  const visibleShows = useMemo(() => shows.filter((show) => show.active), [shows]);
+  // Active shows split into upcoming vs past (#141) so an artist's own list stops
+  // showing gigs that already happened under the same heading as what's coming up.
+  const upcomingShows = useMemo(
+    () => shows.filter((show) => show.active && show.date >= TODAY),
+    [shows]
+  );
+  const pastShows = useMemo(
+    () => shows.filter((show) => show.active && show.date < TODAY),
+    [shows]
+  );
   const hiddenShows = useMemo(() => shows.filter((show) => !show.active), [shows]);
 
   async function handleLogOut() {
@@ -467,18 +480,34 @@ export default function ProfileClient({
           </div>
 
           <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">
-            {t("profile.yourShows")}
+            {t("profile.upcomingShows")}
           </h2>
           {shows.length === 0 ? (
             <p className="mb-8 text-sm text-muted">{t("profile.noShows")}</p>
           ) : (
             <div className="mb-8 flex flex-col gap-3">
-              {visibleShows.length === 0 && (
+              {upcomingShows.length === 0 && pastShows.length === 0 ? (
                 <p className="text-sm text-muted">{t("profile.allHidden")}</p>
+              ) : upcomingShows.length === 0 ? (
+                <p className="text-sm text-muted">{t("profile.noUpcomingShows")}</p>
+              ) : (
+                upcomingShows.map((show) => (
+                  <ShowRow key={show.id} show={show} onOpen={() => setActiveShow(show)} />
+                ))
               )}
-              {visibleShows.map((show) => (
-                <ShowRow key={show.id} show={show} onOpen={() => setActiveShow(show)} />
-              ))}
+
+              {/* Past shows separated (#141): still the artist's to manage (sales,
+                  content), but not mixed in with what's coming up. */}
+              {pastShows.length > 0 && (
+                <>
+                  <h3 className="mb-1 mt-4 font-heading text-sm uppercase tracking-wide text-muted">
+                    {t("profile.pastShows")}
+                  </h3>
+                  {pastShows.map((show) => (
+                    <ShowRow key={show.id} show={show} onOpen={() => setActiveShow(show)} />
+                  ))}
+                </>
+              )}
 
               {/* Hidden shows are the ones an artist has deliberately parked -
                   still theirs to manage, but not what they came to the page

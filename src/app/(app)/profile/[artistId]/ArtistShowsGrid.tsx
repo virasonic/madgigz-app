@@ -11,20 +11,23 @@ import { useT } from "@/lib/i18n/LocaleProvider";
 
 export default function ArtistShowsGrid({
   userId,
-  shows,
+  upcoming,
+  past,
   initialSavedIds,
 }: {
   userId: string;
-  shows: EventItem[];
+  upcoming: EventItem[];
+  past: EventItem[];
   initialSavedIds: string[];
 }) {
   const { t } = useT();
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   // #102: open ticket sheet is ?ticket=<id>, resolved from this artist's shows.
   const ticketModal = useUrlModal("ticket");
+  const allShows = useMemo(() => [...upcoming, ...past], [upcoming, past]);
   const activeEvent = useMemo(
-    () => shows.find((s) => s.id === ticketModal.value) ?? null,
-    [shows, ticketModal.value]
+    () => allShows.find((s) => s.id === ticketModal.value) ?? null,
+    [allShows, ticketModal.value]
   );
 
   async function handleToggleSave(eventId: string) {
@@ -37,21 +40,36 @@ export default function ArtistShowsGrid({
     }
   }
 
-  if (shows.length === 0) {
-    return <p className="text-sm text-muted">{t("profile.noUpcomingShows")}</p>;
-  }
-
   return (
     <>
-      <div className="grid grid-cols-2 gap-3">
-        {shows.map((show) => (
-          <EventCard
-            key={show.id}
-            event={show}
-            onOpen={() => ticketModal.open(show.id)}
-          />
-        ))}
-      </div>
+      <h2 className="mb-3 mt-8 font-heading text-sm uppercase tracking-wide text-muted">
+        {t("profile.upcomingShows")}
+      </h2>
+      {upcoming.length === 0 ? (
+        <p className="text-sm text-muted">{t("profile.noUpcomingShows")}</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {upcoming.map((show) => (
+            <EventCard key={show.id} event={show} onOpen={() => ticketModal.open(show.id)} />
+          ))}
+        </div>
+      )}
+
+      {/* Past shows kept separate (#141): a fan browsing an artist wants to see
+          what's coming up first, with the back catalogue below rather than mixed
+          into "upcoming". */}
+      {past.length > 0 && (
+        <>
+          <h2 className="mb-3 mt-8 font-heading text-sm uppercase tracking-wide text-muted">
+            {t("profile.pastShows")}
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            {past.map((show) => (
+              <EventCard key={show.id} event={show} onOpen={() => ticketModal.open(show.id)} />
+            ))}
+          </div>
+        </>
+      )}
 
       {activeEvent && (
         <TicketModal

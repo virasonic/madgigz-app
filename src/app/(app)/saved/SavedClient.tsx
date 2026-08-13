@@ -14,6 +14,9 @@ import { dateLocale } from "@/lib/dates";
 
 type SubTab = "events" | "tickets";
 
+// Read once at module load (React purity). Splits upcoming shows from past (#141).
+const TODAY = new Date().toISOString().slice(0, 10);
+
 function formatDate(iso: string, dl: string) {
   return new Date(iso).toLocaleDateString(dl, {
     day: "numeric",
@@ -98,8 +101,12 @@ export default function SavedClient({
     [allTicketRows]
   );
 
+  // "My Tickets" is upcoming only (#141): a ticket to a show that has already
+  // happened and was never scanned in just drops off — it's neither something
+  // you're going to nor somewhere you've been. Attended past shows live under
+  // "Where you've been" (attendedRows) regardless of date.
   const ticketRows = useMemo(
-    () => allTicketRows.filter((row) => !row.ticket.checkedInAt),
+    () => allTicketRows.filter((row) => !row.ticket.checkedInAt && row.event.date >= TODAY),
     [allTicketRows]
   );
 

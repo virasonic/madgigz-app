@@ -18,6 +18,10 @@ interface TicketQRModalProps {
   onClose: () => void;
 }
 
+// Read once at module load (React purity), same pattern as the profile/feed
+// "now" reads. Good enough to tell a past show from an upcoming one (#141).
+const TODAY = new Date().toISOString().slice(0, 10);
+
 function formatDate(iso: string, dl: string) {
   return new Date(iso).toLocaleDateString(dl, {
     weekday: "long",
@@ -118,10 +122,12 @@ export default function TicketQRModal({ ticket, event, walletEnabled, onClose }:
 
             <p className="mt-5 text-center text-xs text-muted">{t("ticket.showAtDoor")}</p>
 
-            {/* Opens the signed .pkpass in the system browser (SFSafariViewController
-                in the native shell), which presents iOS's Add-to-Wallet sheet — a
-                WKWebView can't. Only shown when the server has the signing cert. */}
-            {walletEnabled && (
+            {/* Opens the signed .pkpass in the system browser, which presents the
+                OS Add-to-Wallet sheet (Apple Wallet on iOS, Google Wallet on
+                Android — the .pkpass works on both). Shown only when the server has
+                the signing cert AND the show hasn't happened yet (#141): a wallet
+                pass for a past gig is pointless. */}
+            {walletEnabled && event.date >= TODAY && (
               <button
                 type="button"
                 onClick={handleAddToWallet}

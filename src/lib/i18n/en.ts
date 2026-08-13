@@ -138,7 +138,7 @@ export const en = {
     qrAlt: "Ticket QR code",
     generating: "Generating code...",
     showAtDoor: "Show this code at the door. If it can't be scanned, give the code above to staff.",
-    addToWallet: "Add to Apple Wallet",
+    addToWallet: "Add to Wallet",
     refundedTitle: "This ticket was refunded",
     refundedBody:
       "The payment has been returned to your original payment method - it can take a few days to appear on your statement. This ticket is no longer valid for entry.",
@@ -280,6 +280,8 @@ export const en = {
     shows: "Shows",
     ticketsSold: "Tickets Sold",
     yourShows: "Your Shows",
+    upcomingShows: "Upcoming shows",
+    pastShows: "Past shows",
     noShows: "You haven't added any shows yet.",
     allHidden: "All your shows are hidden right now.",
     hiddenShows: "Hidden shows",

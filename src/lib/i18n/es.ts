@@ -132,7 +132,7 @@ export const es: Messages = {
     generating: "Generando código...",
     showAtDoor:
       "Muestra este código en la entrada. Si no se puede escanear, dale el código de arriba al personal.",
-    addToWallet: "Añadir a Apple Wallet",
+    addToWallet: "Añadir a Wallet",
     refundedTitle: "Esta entrada fue reembolsada",
     refundedBody:
       "El pago se ha devuelto a tu método de pago original; puede tardar unos días en aparecer en tu extracto. Esta entrada ya no es válida para entrar.",
@@ -266,6 +266,8 @@ export const es: Messages = {
     shows: "Bolos",
     ticketsSold: "Entradas vendidas",
     yourShows: "Tus bolos",
+    upcomingShows: "Próximos bolos",
+    pastShows: "Bolos pasados",
     noShows: "Aún no has añadido ningún bolo.",
     allHidden: "Todos tus bolos están ocultos ahora mismo.",
     hiddenShows: "Bolos ocultos",

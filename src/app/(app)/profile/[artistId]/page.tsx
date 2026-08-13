@@ -42,9 +42,19 @@ export default async function PublicArtistProfilePage({
   // fan - fetchShowsByArtist returns everything because the artist's own
   // Manage view needs to see hidden shows too. Shows they were tagged on are
   // billed the same way here: to a fan, being on the bill is being on the bill.
-  const visibleShows = [...shows, ...taggedShows]
-    .filter((show) => show.active && !show.cancelled)
+  const visibleShows = [...shows, ...taggedShows].filter(
+    (show) => show.active && !show.cancelled
+  );
+
+  // Split upcoming from past (#141): upcoming soonest-first, past most-recent-first.
+  // Server-rendered per request, so "today" is always fresh.
+  const today = new Date().toISOString().slice(0, 10);
+  const upcomingShows = visibleShows
+    .filter((show) => show.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date));
+  const pastShows = visibleShows
+    .filter((show) => show.date < today)
+    .sort((a, b) => b.date.localeCompare(a.date));
 
   return (
     <div className="p-4">
@@ -73,10 +83,12 @@ export default async function PublicArtistProfilePage({
 
       <SocialLinks source={artist} className="mt-4" />
 
-      <h2 className="mb-3 mt-8 font-heading text-sm uppercase tracking-wide text-muted">
-        Upcoming shows
-      </h2>
-      <ArtistShowsGrid userId={currentUser.id} shows={visibleShows} initialSavedIds={savedIds} />
+      <ArtistShowsGrid
+        userId={currentUser.id}
+        upcoming={upcomingShows}
+        past={pastShows}
+        initialSavedIds={savedIds}
+      />
     </div>
   );
 }
