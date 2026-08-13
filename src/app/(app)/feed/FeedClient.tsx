@@ -149,6 +149,110 @@ export default function FeedClient({
     el.scrollBy({ top: dir * el.clientHeight, behavior: "smooth" });
   }, []);
 
+  // Which reel is in view, so we can eagerly preload it and its neighbours (#135)
+  // — the first video was slow to start because nothing was fetched until it
+  // scrolled into view AND play() fired. Each slide is exactly the container's
+  // height, so the index is scrollTop / clientHeight. rAF-throttled; only the
+  // active reel ±1 get preload="auto", the rest stay "none" to spare egress.
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollTickRef = useRef(false);
+  const handleFeedScroll = useCallback(() => {
+    if (scrollTickRef.current) return;
+    scrollTickRef.current = true;
+    requestAnimationFrame(() => {
+      scrollTickRef.current = false;
+      const el = forYouScrollRef.current;
+      if (!el || el.clientHeight === 0) return;
+      const idx = Math.round(el.scrollTop / el.clientHeight);
+      setActiveIndex((prev) => (prev === idx ? prev : idx));
+    });
+  }, []);
+
+  // Pull-to-refresh (#136): pulling down while already at the top of the reel
+  // feed re-fetches the posts. The threshold to fire and the live pull distance
+  // (for the spinner) live in refs so the touch handlers stay stable; only the
+  // render mirror goes through state.
+  const REFRESH_AT = 72;
+  const [pullDistance, setPullDistance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshingRef = useRef(false);
+  const pullRef = useRef({ startY: 0, active: false, dist: 0 });
+
+  const doRefresh = useCallback(async () => {
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
+    setRefreshing(true);
+    try {
+      const supabase = createClient();
+      setAllPosts(await fetchContentPosts(supabase));
+    } catch {
+      // A failed refresh just keeps the current feed - nothing to surface.
+    } finally {
+      refreshingRef.current = false;
+      pullRef.current.dist = 0;
+      setRefreshing(false);
+      setPullDistance(0);
+    }
+  }, []);
+
+  // Native, non-passive touch listeners: React attaches touchmove as passive, so
+  // preventDefault (needed to suppress iOS rubber-band / Android's own PTR while
+  // we drive our own) wouldn't take. Re-attached when the feed pane mounts.
+  useEffect(() => {
+    const el = forYouScrollRef.current;
+    if (!el) return;
+    const st = pullRef.current;
+
+    function onStart(e: TouchEvent) {
+      if (!el || el.scrollTop > 0 || refreshingRef.current) {
+        st.active = false;
+        return;
+      }
+      st.startY = e.touches[0].clientY;
+      st.active = true;
+    }
+    function onMove(e: TouchEvent) {
+      if (!st.active || !el) return;
+      if (el.scrollTop > 0) {
+        st.active = false;
+        st.dist = 0;
+        setPullDistance(0);
+        return;
+      }
+      const dy = e.touches[0].clientY - st.startY;
+      if (dy <= 0) {
+        st.dist = 0;
+        setPullDistance(0);
+        return;
+      }
+      // Drive our own pull and hold back the browser's overscroll bounce.
+      e.preventDefault();
+      st.dist = Math.min(dy * 0.5, 120); // resistance + cap
+      setPullDistance(st.dist);
+    }
+    function onEnd() {
+      if (!st.active) return;
+      st.active = false;
+      if (st.dist >= REFRESH_AT) void doRefresh();
+      else {
+        st.dist = 0;
+        setPullDistance(0);
+      }
+    }
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+    // Re-attach when the reel pane mounts/unmounts (the scroll node changes).
+  }, [doRefresh, pane]);
+
   // Read once, on mount, and never updated while the pane is open. That is
   // deliberate: marking a card seen must not re-order the list under the
   // finger of the person currently reading it. The new order applies next time
@@ -307,11 +411,29 @@ export default function FeedClient({
             <p className="mt-6 px-4 text-center text-sm text-muted">{t("feed.emptyForYou")}</p>
           ) : (
             <div className="relative h-full">
+            {/* Pull-to-refresh spinner (#136). Floats at the top and follows the
+                pull; a floating badge rather than transforming the snap track,
+                which would fight scroll-snap. */}
+            {(pullDistance > 0 || refreshing) && (
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center"
+                style={{
+                  transform: `translateY(${(refreshing ? REFRESH_AT : pullDistance) - 4}px)`,
+                  opacity: refreshing ? 1 : Math.min(pullDistance / REFRESH_AT, 1),
+                  transition: pullDistance === 0 && !refreshing ? "transform .2s, opacity .2s" : "none",
+                }}
+              >
+                <div className="mt-2 flex h-9 w-9 items-center justify-center rounded-full bg-surface/90 text-foreground shadow-lg backdrop-blur">
+                  <RefreshIcon spinning={refreshing} angle={pullDistance * 2.4} />
+                </div>
+              </div>
+            )}
             <div
               ref={forYouScrollRef}
-              className="h-full w-full snap-y snap-mandatory overflow-y-scroll"
+              onScroll={handleFeedScroll}
+              className="h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-y-contain"
             >
-              {forYouFeed.map((entry) => (
+              {forYouFeed.map((entry, index) => (
                 // Mobile: the card fills the viewport (unchanged). Desktop: centre
                 // a fixed 9:16 card that fits *inside* the window — height clamped
                 // to the smaller of the viewport or a 26rem-wide card's height, so
@@ -330,6 +452,7 @@ export default function FeedClient({
                       onOpen={() => ticketModal.open(entry.event!.id)}
                       liked={savedIds.includes(entry.event.id)}
                       onToggleLike={() => handleToggleLike(entry.event!.id)}
+                      preload={Math.abs(index - activeIndex) <= 1 ? "auto" : "none"}
                     />
                   ) : (
                     <AnnouncementCard
@@ -467,6 +590,28 @@ function ChevronIcon({ dir }: { dir: "up" | "down" }) {
       className={dir === "down" ? "rotate-180" : undefined}
     >
       <path d="M6 15l6-6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function RefreshIcon({ spinning, angle }: { spinning: boolean; angle: number }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      className={spinning ? "animate-spin" : undefined}
+      style={spinning ? undefined : { transform: `rotate(${angle}deg)` }}
+    >
+      <path
+        d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

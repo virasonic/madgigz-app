@@ -55,6 +55,10 @@ interface ContentReelCardProps {
   onOpen: () => void;
   liked: boolean;
   onToggleLike: () => void;
+  /** How eagerly to fetch this reel's video. The feed sets "auto" for the reel
+   *  in view and its immediate neighbours so the next swipe plays instantly, and
+   *  "none" for the rest so we don't stream every clip at once (egress, #101). */
+  preload?: "auto" | "metadata" | "none";
 }
 
 export default function ContentReelCard({
@@ -65,6 +69,7 @@ export default function ContentReelCard({
   onOpen,
   liked,
   onToggleLike,
+  preload = "none",
 }: ContentReelCardProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
@@ -100,6 +105,7 @@ export default function ContentReelCard({
           ref={videoRef}
           src={post.videoUrl}
           poster={post.image}
+          preload={preload}
           className="absolute inset-0 h-full w-full object-cover"
           muted={muted}
           loop
