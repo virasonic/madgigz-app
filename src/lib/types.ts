@@ -98,6 +98,12 @@ export interface ContentPost {
   image: string;
   mediaType: "image" | "video" | "text";
   videoUrl?: string;
+  /**
+   * Cloudflare Stream video id (#138, addendum_035). Present on video posts
+   * uploaded after the Stream cutover; playback + poster URLs are derived from
+   * it. Null on legacy videos, which keep playing their Supabase `videoUrl`.
+   */
+  streamUid?: string | null;
   /** Text announcements only (addendum_029): rendered on the brand template. */
   headline?: string | null;
   accentColor?: string | null;
@@ -244,6 +250,9 @@ export interface ContentPostRow {
   caption: string;
   media_url: string | null;
   media_type: "image" | "video" | "text";
+  // Undefined until addendum_035 runs (queries use select("*"), so the column
+  // simply isn't there yet) — mapContentPost reads it as null. Graceful.
+  stream_uid?: string | null;
   headline?: string | null;
   accent_color?: string | null;
   /**
@@ -267,6 +276,7 @@ export function mapContentPost(row: ContentPostRow): ContentPost {
     image: row.media_type === "image" ? (row.media_url ?? "") : "",
     mediaType: row.media_type,
     videoUrl: row.media_type === "video" ? (row.media_url ?? undefined) : undefined,
+    streamUid: row.stream_uid ?? null,
     headline: row.headline ?? null,
     accentColor: row.accent_color ?? null,
   };

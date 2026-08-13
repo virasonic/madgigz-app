@@ -470,6 +470,7 @@ export const es: Messages = {
     errorAddShow: "Añade un bolo primero",
     errorAddMedia: "Añade una foto o un vídeo para publicar",
     errorSignedIn: "Debes iniciar sesión para publicar",
+    errorUpload: "No se pudo subir el vídeo. Inténtalo de nuevo.",
     title: "Publicar una novedad",
     noShows: "Añade un bolo primero y luego podrás publicar novedades aquí.",
     showLabel: "Bolo",

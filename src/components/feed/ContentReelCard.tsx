@@ -9,6 +9,7 @@ import LikeButton from "./LikeButton";
 import ReportButton from "./ReportButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
+import { streamHlsUrl, streamThumbnailUrl } from "@/lib/cloudflare-stream";
 
 function NoteIcon() {
   return (
@@ -74,18 +75,63 @@ export default function ContentReelCard({
   const { t, locale } = useT();
   const dl = dateLocale(locale);
   const videoRef = useRef<HTMLVideoElement>(null);
+  // Kept in a ref so the source-loading and the observer can agree on whether
+  // this reel is the one on screen without re-running the effect.
+  const activeRef = useRef(false);
 
-  const showVideo = post.mediaType === "video" && post.videoUrl;
+  // A Cloudflare Stream video (#138) carries a stream_uid and plays via HLS with
+  // an auto-generated thumbnail poster; a legacy video still plays its Supabase
+  // file directly. streamUid wins when both somehow exist.
+  const streamUid = post.mediaType === "video" ? post.streamUid ?? null : null;
+  const showVideo = post.mediaType === "video" && (Boolean(post.videoUrl) || Boolean(streamUid));
+  const posterUrl = streamUid ? streamThumbnailUrl(streamUid) : post.image;
+  // Legacy reels set the file directly on the element; a Stream reel is attached
+  // in the effect below (native HLS or hls.js), so it gets no src attribute.
+  const directSrc = streamUid ? undefined : post.videoUrl;
 
-  // Only the reel actually in view should play - without this, every video
-  // in the scroll-snap feed autoplays at once and their audio overlaps.
+  // Point the element at its source (HLS for Stream), then play only the reel in
+  // view — without the in-view gate every video in the scroll-snap feed autoplays
+  // at once and their audio overlaps.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
+    let destroyed = false;
+    let hls: import("hls.js").default | undefined;
+    const playIfActive = () => {
+      if (!destroyed && activeRef.current) video.play().catch(() => {});
+    };
+
+    if (streamUid) {
+      const src = streamHlsUrl(streamUid);
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // iOS / Safari WKWebView play HLS natively — just set the manifest.
+        video.src = src;
+        playIfActive();
+      } else {
+        // Desktop Chrome/Firefox: hls.js, imported on demand so it never ships
+        // to the iOS app that plays HLS natively.
+        void (async () => {
+          const Hls = (await import("hls.js")).default;
+          if (destroyed || !videoRef.current) return;
+          if (Hls.isSupported()) {
+            hls = new Hls();
+            hls.loadSource(src);
+            hls.attachMedia(videoRef.current);
+            hls.on(Hls.Events.MANIFEST_PARSED, playIfActive);
+          } else {
+            videoRef.current.src = src;
+            playIfActive();
+          }
+        })();
+      }
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+        const active = entry.isIntersecting && entry.intersectionRatio >= 0.6;
+        activeRef.current = active;
+        if (active) {
           video.play().catch(() => {});
         } else {
           video.pause();
@@ -95,16 +141,21 @@ export default function ContentReelCard({
       { threshold: [0, 0.6, 1] }
     );
     observer.observe(video);
-    return () => observer.disconnect();
-  }, []);
+
+    return () => {
+      destroyed = true;
+      observer.disconnect();
+      hls?.destroy();
+    };
+  }, [streamUid]);
 
   return (
     <div className="relative h-full w-full overflow-hidden">
       {showVideo ? (
         <video
           ref={videoRef}
-          src={post.videoUrl}
-          poster={post.image}
+          src={directSrc}
+          poster={posterUrl}
           preload={preload}
           className="absolute inset-0 h-full w-full object-cover"
           muted={muted}

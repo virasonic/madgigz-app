@@ -484,6 +484,7 @@ export const en = {
     errorAddShow: "Add a show first",
     errorAddMedia: "Add a photo or video to post",
     errorSignedIn: "You need to be signed in to post",
+    errorUpload: "Couldn't upload that video. Please try again.",
     title: "Post an update",
     noShows: "Add a show first, then you can post updates about it here.",
     showLabel: "Show",

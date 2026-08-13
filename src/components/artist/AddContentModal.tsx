@@ -4,6 +4,7 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { uploadEventMedia } from "@/lib/supabase/storage";
+import { createStreamDirectUpload } from "@/app/(app)/feed/stream-actions";
 import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
 import { EventItem } from "@/lib/types";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -84,7 +85,34 @@ export default function AddContentModal({
       return;
     }
 
-    const mediaUrl = await uploadEventMedia(supabase, file, `content/${showId}`);
+    // Video → Cloudflare Stream (#138): transcode + adaptive HLS + CDN + a real
+    // thumbnail, and the file uploads straight to Cloudflare (never our server).
+    // Everything else — images, or video when Stream isn't configured / errors —
+    // keeps the original Supabase-Storage path, so posting never hard-fails on
+    // the video route.
+    let mediaUrl: string | null = null;
+    let streamUid: string | null = null;
+
+    if (mediaType === "video") {
+      const upload = await createStreamDirectUpload();
+      if (upload && "uploadURL" in upload) {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch(upload.uploadURL, { method: "POST", body: form });
+        if (!res.ok) {
+          setPosting(false);
+          setError(t("addContent.errorUpload"));
+          return;
+        }
+        streamUid = upload.uid;
+      } else {
+        // upload === null (Stream not configured) or { error } (Cloudflare
+        // refused): fall back to Supabase so the artist can still post.
+        mediaUrl = await uploadEventMedia(supabase, file, `content/${showId}`);
+      }
+    } else {
+      mediaUrl = await uploadEventMedia(supabase, file, `content/${showId}`);
+    }
 
     const { error: insertError } = await supabase.from("content_posts").insert({
       event_id: showId,
@@ -94,6 +122,10 @@ export default function AddContentModal({
       caption: caption.trim(),
       media_url: mediaUrl,
       media_type: mediaType,
+      // Only sent when we actually have one, so the insert stays valid before
+      // addendum_035 adds the column (the Stream path can't run until the token
+      // is set, which is done AFTER the migration — see #138).
+      ...(streamUid ? { stream_uid: streamUid } : {}),
     });
 
     setPosting(false);

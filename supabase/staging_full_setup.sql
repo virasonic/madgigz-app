@@ -2403,3 +2403,13 @@ $$;
 
 revoke all on function public.admin_storage_usage() from public, anon, authenticated;
 grant execute on function public.admin_storage_usage() to service_role;
+
+
+-- ############# addendum_035_stream_uid.sql #############
+
+-- addendum_035 (#138): Cloudflare Stream video id for reels. Nullable + additive;
+-- existing rows keep playing their Supabase media_url (app falls back on null).
+-- content_posts uses row-level policies (world-readable), not the column GRANTs
+-- profiles carries, so no extra grant is needed.
+alter table public.content_posts
+  add column if not exists stream_uid text;
