@@ -53,11 +53,15 @@ export async function createStreamDirectUpload(): Promise<
       // Cloudflare's error text can echo account internals — log it, hand the
       // caller a safe message (same discipline as the Stripe/checkout errors).
       console.error("Cloudflare direct_upload failed:", json?.errors ?? res.status);
-      return { error: "Video upload could not start" };
+      // TEMP DIAG (#138): surface the real reason on-screen so we can see why
+      // uploads aren't reaching Stream. Revert to the generic message after.
+      return {
+        error: `Stream ${res.status}: ${JSON.stringify(json?.errors ?? json).slice(0, 220)}`,
+      };
     }
     return { uploadURL: json.result.uploadURL as string, uid: json.result.uid as string };
   } catch (err) {
     console.error("Cloudflare direct_upload threw:", err);
-    return { error: "Video upload could not start" };
+    return { error: `Stream threw: ${String(err).slice(0, 160)}` }; // TEMP DIAG (#138)
   }
 }

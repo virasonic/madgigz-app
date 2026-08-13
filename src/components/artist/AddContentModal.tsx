@@ -101,14 +101,21 @@ export default function AddContentModal({
         const res = await fetch(upload.uploadURL, { method: "POST", body: form });
         if (!res.ok) {
           setPosting(false);
-          setError(t("addContent.errorUpload"));
+          setError(`[diag] file upload to Stream failed: ${res.status}`); // TEMP DIAG (#138)
           return;
         }
         streamUid = upload.uid;
+      } else if (upload && "error" in upload) {
+        // TEMP DIAG (#138): Cloudflare rejected minting an upload URL — show why
+        // instead of silently falling back, so we can read the real reason.
+        setPosting(false);
+        setError(upload.error);
+        return;
       } else {
-        // upload === null (Stream not configured) or { error } (Cloudflare
-        // refused): fall back to Supabase so the artist can still post.
-        mediaUrl = await uploadEventMedia(supabase, file, `content/${showId}`);
+        // TEMP DIAG (#138): upload === null → the server has no token at runtime.
+        setPosting(false);
+        setError("[diag] Stream not configured on server (no token reaching it)");
+        return;
       }
     } else {
       mediaUrl = await uploadEventMedia(supabase, file, `content/${showId}`);
