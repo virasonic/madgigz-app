@@ -57,3 +57,25 @@ export async function startOAuth(
   await Browser.open({ url: data.url });
   return null;
 }
+
+/**
+ * Opens an off-origin URL - an external ticketing site (Entradium, DICE...), and
+ * anywhere else we deliberately want to leave the app's own origin.
+ *
+ * Web: a normal new tab, exactly as before.
+ *
+ * Native: an in-app browser sheet (SFSafariViewController) so the fan stays
+ * inside MadGigz rather than being thrown out to Safari - and that sheet carries
+ * its own "open in Safari" button, so the full external browser is still one tap
+ * away. Stripe is deliberately NOT routed through here: it uses
+ * server.allowNavigation (capacitor.config.ts) so checkout runs in the main
+ * webview and returns to the app on its own.
+ */
+export async function openExternal(url: string): Promise<void> {
+  if (!isNativeApp()) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    return;
+  }
+  const { Browser } = await import("@capacitor/browser");
+  await Browser.open({ url });
+}

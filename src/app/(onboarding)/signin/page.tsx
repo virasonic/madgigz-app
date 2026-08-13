@@ -88,7 +88,10 @@ function SignInContent() {
   // which (see signInWithIdentifier). The redirect logic that used to live here
   // moved into that action so both paths share it.
   const { t } = useT();
-  const [identifier, setIdentifier] = useState("");
+  // Prefilled when arriving from the "check your email" screen's "Already
+  // confirmed? Sign in" link, so a fan coming back into the native app after
+  // confirming in Safari doesn't have to retype their address.
+  const [identifier, setIdentifier] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);

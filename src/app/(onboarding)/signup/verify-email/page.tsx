@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import Button from "@/components/ui/Button";
@@ -43,6 +44,28 @@ function VerifyEmailContent() {
           {resent ? t("verifyEmail.resent") : t("verifyEmail.resend")}
         </Button>
       </div>
+
+      {/* Once confirmed, this screen must not be a dead end. It matters most in
+          the native app: the confirmation link opens in Safari, not the app's
+          webview, so the app never sees that session - the fan comes back here
+          still logged out. This gives them the way forward: sign in with the
+          email + password they just set, in-app, where the session lands. The
+          address is carried through so the sign-in field is prefilled. */}
+      <p className="mt-6 text-sm text-muted">
+        {t("verifyEmail.confirmedPrompt")}{" "}
+        <Link
+          href={`/signin${
+            email
+              ? `?email=${encodeURIComponent(email)}${next ? `&next=${encodeURIComponent(next)}` : ""}`
+              : next
+                ? `?next=${encodeURIComponent(next)}`
+                : ""
+          }`}
+          className="font-heading text-foreground"
+        >
+          {t("verifyEmail.signInLink")}
+        </Link>
+      </p>
     </div>
   );
 }

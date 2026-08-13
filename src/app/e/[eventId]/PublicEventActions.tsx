@@ -10,6 +10,7 @@ import { absoluteUrl, eventPath } from "@/lib/site";
 import { EventItem } from "@/lib/types";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { useT } from "@/lib/i18n/LocaleProvider";
+import { isNativeApp, openExternal } from "@/lib/native";
 
 export default function PublicEventActions({
   event,
@@ -54,8 +55,22 @@ export default function PublicEventActions({
     // to sign up first, only to bounce them straight out to Entradium, would be
     // a toll booth on a road we don't own.
     if (externalUrl) {
+      // A real anchor on the web (new tab, middle-click, SEO). In the native
+      // shell we intercept and open an in-app browser sheet instead of throwing
+      // the fan out to Safari - see openExternal.
       return (
-        <a href={externalUrl} target="_blank" rel="noopener noreferrer" className="block">
+        <a
+          href={externalUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+          onClick={(e) => {
+            if (isNativeApp()) {
+              e.preventDefault();
+              void openExternal(externalUrl);
+            }
+          }}
+        >
           <Button>{t("publicEvent.getTickets")}</Button>
         </a>
       );

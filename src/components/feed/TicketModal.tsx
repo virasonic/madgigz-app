@@ -14,6 +14,7 @@ import { dateLocale } from "@/lib/dates";
 import { useStripeTestMode } from "@/lib/stripe-mode";
 import { useLiveEventStats } from "@/lib/realtime";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
+import { openExternal } from "@/lib/native";
 
 type Tab = "tickets" | "info";
 
@@ -139,7 +140,10 @@ export default function TicketModal({
   }
 
   function handleBuyExternal() {
-    if (externalUrl) window.open(externalUrl, "_blank", "noopener,noreferrer");
+    // In the native shell this opens an in-app browser sheet (keeps the fan in
+    // MadGigz, with a built-in "open in Safari" option); on the web it's a new
+    // tab, unchanged. See openExternal.
+    if (externalUrl) void openExternal(externalUrl);
   }
 
   return (

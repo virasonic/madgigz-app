@@ -13,6 +13,13 @@ const config: CapacitorConfig = {
   webDir: "capacitor-shell",
   server: {
     url: "https://madgigz.aurasonic.es",
+    // Third-party domains the WKWebView may navigate to IN-APP instead of kicking
+    // out to Safari. Stripe Checkout + Connect onboarding live here: without this
+    // the pay screen opens in the system browser and the post-payment return URL
+    // lands in Safari, stranding the fan outside the app (#131). Test-mode 3-D
+    // Secure also stays on *.stripe.com. External ticket links are handled
+    // separately - an in-app browser sheet, see `openExternal` in src/lib/native.ts.
+    allowNavigation: ["*.stripe.com"],
   },
   plugins: {
     SplashScreen: {

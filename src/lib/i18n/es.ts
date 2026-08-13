@@ -380,6 +380,8 @@ export const es: Messages = {
     clickToFinish: "Haz clic para terminar de configurar tu cuenta.",
     resend: "Reenviar enlace",
     resent: "Enlace reenviado",
+    confirmedPrompt: "¿Ya lo confirmaste?",
+    signInLink: "Inicia sesión",
   },
 
   forgotPassword: {

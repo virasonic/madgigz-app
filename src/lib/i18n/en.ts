@@ -394,6 +394,8 @@ export const en = {
     clickToFinish: "Click it to finish setting up your account.",
     resend: "Resend link",
     resent: "Link resent",
+    confirmedPrompt: "Already confirmed?",
+    signInLink: "Sign in",
   },
 
   forgotPassword: {
