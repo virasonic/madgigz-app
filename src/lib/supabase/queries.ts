@@ -186,12 +186,18 @@ export async function fetchFollowedEventIds(
 
 export async function fetchEvents(
   supabase: SupabaseClient,
-  options: { activeOnly?: boolean; city?: string } = {}
+  options: { activeOnly?: boolean; city?: string; upcomingOnly?: boolean } = {}
 ): Promise<EventItem[]> {
   // The venue embed carries the address through to the ticket and the public
   // page, where it becomes a maps link. One join beats a lookup per event.
   let query = supabase.from("events").select("*, venues(address)").order("event_date");
   if (options.activeOnly) query = query.eq("active", true);
+  // #141: Explore is discovery of what's *still to come*, so drop past shows.
+  // Date-only compare in UTC (event_date is a plain date), same "today" the
+  // profile/ticket splits use; >= keeps a show live through its own day.
+  if (options.upcomingOnly) {
+    query = query.gte("event_date", new Date().toISOString().slice(0, 10));
+  }
   // #90: the fan surfaces are local - only show what's on in the current city.
   // A no-op while every show is in Madrid, but it makes "what's on in Madrid"
   // literally true and stops a stray out-of-city show leaking into the feed.

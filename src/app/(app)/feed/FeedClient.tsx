@@ -443,7 +443,11 @@ export default function FeedClient({
                 // the video never re-crops as the window gets taller or shorter.
                 <div
                   key={entry.post.id}
-                  className="h-full w-full snap-start lg:flex lg:items-center lg:justify-center"
+                  // snap-always (scroll-snap-stop: always) makes each swipe stop on
+                  // the very next reel instead of coasting past several - Android
+                  // Chrome otherwise honours snap-mandatory only loosely on a fast
+                  // flick, where iOS Safari is naturally stickier.
+                  className="h-full w-full snap-start snap-always lg:flex lg:items-center lg:justify-center"
                 >
                   <div className="h-full w-full overflow-hidden lg:aspect-[9/16] lg:h-[min(100%,calc(26rem*16/9))] lg:w-auto lg:rounded-2xl">
                   {entry.event ? (

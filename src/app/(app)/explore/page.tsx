@@ -17,7 +17,7 @@ export default async function ExplorePage() {
   if (!user) redirect("/");
 
   const [events, savedIds, artists, genresByEvent, followedEventIds] = await Promise.all([
-    fetchEvents(supabase, { activeOnly: true, city: CURRENT_CITY }),
+    fetchEvents(supabase, { activeOnly: true, city: CURRENT_CITY, upcomingOnly: true }),
     fetchSavedEventIds(supabase, user.id),
     fetchApprovedArtists(supabase),
     fetchGenresByEvent(supabase),
