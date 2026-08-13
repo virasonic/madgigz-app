@@ -14,12 +14,20 @@ export default async function AdminEventsPage() {
           <h1 className="font-display text-2xl text-foreground">Events</h1>
           <p className="text-sm text-muted">{events.length} events. Hiding an event removes it from Feed/Explore without deleting it.</p>
         </div>
-        <Link
-          href="/admin/events/new"
-          className="shrink-0 rounded-full bg-primary px-5 py-2.5 font-heading text-sm text-foreground"
-        >
-          New show
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/admin/events/import"
+            className="rounded-full bg-surface px-5 py-2.5 font-heading text-sm text-foreground ring-1 ring-muted/30"
+          >
+            Import gigs
+          </Link>
+          <Link
+            href="/admin/events/new"
+            className="rounded-full bg-primary px-5 py-2.5 font-heading text-sm text-foreground"
+          >
+            New show
+          </Link>
+        </div>
       </div>
       <div className="rounded-2xl bg-surface p-5">
         <EventsTable events={events} />
