@@ -416,14 +416,17 @@ export default function FeedClient({
                 which would fight scroll-snap. */}
             {(pullDistance > 0 || refreshing) && (
               <div
-                className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center"
+                className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center pt-3"
                 style={{
-                  transform: `translateY(${(refreshing ? REFRESH_AT : pullDistance) - 4}px)`,
+                  // Cap the travel so the badge stays in the empty top-centre band
+                  // (avatar sits left, mute right) instead of sliding down over the
+                  // reel — a full-screen video has no list to pull open.
+                  transform: `translateY(${Math.min(refreshing ? 28 : pullDistance * 0.45, 28)}px)`,
                   opacity: refreshing ? 1 : Math.min(pullDistance / REFRESH_AT, 1),
                   transition: pullDistance === 0 && !refreshing ? "transform .2s, opacity .2s" : "none",
                 }}
               >
-                <div className="mt-2 flex h-9 w-9 items-center justify-center rounded-full bg-surface/90 text-foreground shadow-lg backdrop-blur">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-foreground backdrop-blur-md">
                   <RefreshIcon spinning={refreshing} angle={pullDistance * 2.4} />
                 </div>
               </div>
