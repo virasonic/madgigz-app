@@ -22,41 +22,35 @@ export async function GET(request: NextRequest) {
 
   const auth = { Authorization: `Bearer ${token}` };
 
-  // 1. Can the server create an upload URL? (the exact call the app makes)
+  // List the actual videos with their state, so we can tell a real uploaded reel
+  // (state "ready"/"inprogress", has size/duration) from a leftover reservation
+  // (state "pendingupload", no file ever arrived). No mint here — that would add
+  // a phantom reservation on every hit.
   try {
     const res = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/stream/direct_upload`,
-      {
-        method: "POST",
-        headers: { ...auth, "Content-Type": "application/json" },
-        body: JSON.stringify({ maxDurationSeconds: 600 }),
-      }
-    );
-    const json = await res.json();
-    out.mint = {
-      status: res.status,
-      success: json?.success,
-      hasUploadURL: Boolean(json?.result?.uploadURL),
-      errors: json?.errors,
-      messages: json?.messages,
-    };
-  } catch (err) {
-    out.mint = { threw: String(err) };
-  }
-
-  // 2. How many videos does the account actually have?
-  try {
-    const res = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/stream?limit=5`,
+      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/stream?limit=20`,
       { headers: auth }
     );
     const json = await res.json();
-    out.list = {
-      status: res.status,
-      success: json?.success,
-      count: Array.isArray(json?.result) ? json.result.length : null,
-      errors: json?.errors,
-    };
+    const items = Array.isArray(json?.result) ? json.result : [];
+    out.count = items.length;
+    out.videos = items.map(
+      (v: {
+        uid?: string;
+        status?: { state?: string };
+        readyToStream?: boolean;
+        created?: string;
+        duration?: number;
+        size?: number;
+      }) => ({
+        uid: v.uid,
+        state: v.status?.state,
+        ready: v.readyToStream,
+        created: v.created,
+        duration: v.duration,
+        size: v.size,
+      })
+    );
   } catch (err) {
     out.list = { threw: String(err) };
   }
