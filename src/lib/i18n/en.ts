@@ -251,6 +251,9 @@ export const en = {
   profile: {
     attended: "Attended",
     saved: "Saved",
+    // The past-events poster wall (#116) - shows you were scanned in to.
+    pastShowsTitle: "Where you've been",
+    pastShowsSubtitle: "The shows you turned up to.",
     logOut: "Log Out",
     deleteAccount: "Delete my account",
     // Settings sheet "coming soon" rows

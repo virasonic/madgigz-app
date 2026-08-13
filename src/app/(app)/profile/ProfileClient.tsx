@@ -223,6 +223,7 @@ interface ProfileClientProps {
   attendedCount: number;
   shows: EventItem[];
   taggedShows: EventItem[];
+  attendedEvents: EventItem[];
   unreadCount: number;
 }
 
@@ -232,6 +233,7 @@ export default function ProfileClient({
   attendedCount,
   shows,
   taggedShows,
+  attendedEvents,
   unreadCount,
 }: ProfileClientProps) {
   const { t, locale } = useT();
@@ -343,16 +345,68 @@ export default function ProfileClient({
       )}
 
       {user.role === "fan" ? (
-        <div className="mb-8 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-surface p-4 text-center">
-            <p className="font-display text-3xl text-foreground">{attendedCount}</p>
-            <p className="text-sm text-muted">{t("profile.attended")}</p>
+        <>
+          <div className="mb-8 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-surface p-4 text-center">
+              <p className="font-display text-3xl text-foreground">{attendedCount}</p>
+              <p className="text-sm text-muted">{t("profile.attended")}</p>
+            </div>
+            <div className="rounded-2xl bg-surface p-4 text-center">
+              <p className="font-display text-3xl text-foreground">{savedCount}</p>
+              <p className="text-sm text-muted">{t("profile.saved")}</p>
+            </div>
           </div>
-          <div className="rounded-2xl bg-surface p-4 text-center">
-            <p className="font-display text-3xl text-foreground">{savedCount}</p>
-            <p className="text-sm text-muted">{t("profile.saved")}</p>
-          </div>
-        </div>
+
+          {/* Past-events poster wall (#116): the DICE "memories" pattern - the
+              posters of shows the fan was scanned in to, newest first. It's the
+              first real content on an otherwise-sparse fan profile (#115); it
+              only appears once there's something to show, so a brand-new fan
+              doesn't see an empty shelf. Each poster links to the public event
+              page. */}
+          {attendedEvents.length > 0 && (
+            <div className="mb-8">
+              <h2 className="font-heading text-sm uppercase tracking-wide text-muted">
+                {t("profile.pastShowsTitle")}
+              </h2>
+              <p className="mt-1 text-xs text-muted">{t("profile.pastShowsSubtitle")}</p>
+              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {attendedEvents.map((event) => (
+                  <Link
+                    key={event.id}
+                    href={`/e/${event.id}`}
+                    className="group relative aspect-[3/4] overflow-hidden rounded-xl bg-surface"
+                  >
+                    {event.image ? (
+                      <Image
+                        src={event.image}
+                        alt={event.title}
+                        fill
+                        sizes="(min-width: 640px) 160px, 33vw"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center p-2 text-center">
+                        <span className="line-clamp-3 font-heading text-xs text-muted">
+                          {event.title}
+                        </span>
+                      </div>
+                    )}
+                    {/* A quiet gradient so the title stays legible on any poster;
+                        the whole tile is the tap target. */}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 pt-6">
+                      <p className="truncate font-heading text-[11px] leading-tight text-white">
+                        {event.title}
+                      </p>
+                      <p className="truncate text-[10px] text-white/70">
+                        {formatDate(event.date, dl)}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       ) : user.artistStatus !== "approved" ? (
         <div className="mb-8 rounded-2xl bg-surface p-5 text-center">
           {user.artistStatus === "rejected" ? (

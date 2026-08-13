@@ -215,6 +215,8 @@
     "profile": {
       "attended": "Attended",
       "saved": "Saved",
+      "pastShowsTitle": "Where you've been",
+      "pastShowsSubtitle": "The shows you turned up to.",
       "logOut": "Log Out",
       "deleteAccount": "Delete my account",
       "promotions": "Promotions",
@@ -800,6 +802,8 @@
     "profile": {
       "attended": "Asistidos",
       "saved": "Guardados",
+      "pastShowsTitle": "Dónde has estado",
+      "pastShowsSubtitle": "Los conciertos a los que fuiste.",
       "logOut": "Cerrar sesión",
       "deleteAccount": "Eliminar mi cuenta",
       "promotions": "Promociones",

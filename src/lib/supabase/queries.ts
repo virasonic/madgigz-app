@@ -425,6 +425,38 @@ export async function fetchTaggedShows(
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+// Shows the fan actually turned up to - a ticket scanned at the door
+// (checked_in_at set), joined to its event. Powers the past-events poster wall
+// on the fan profile (#116). "Attended" means scanned in, not "the date has
+// passed", matching attendedCount and the Tickets tab's "Where you've been"
+// (SavedClient) - a ticket bought and never used isn't a gig you were at.
+// hidden_at is respected so the wall matches the count, and events are
+// de-duplicated (two tickets to one show is still one memory) and shown newest
+// first.
+export async function fetchAttendedEvents(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<EventItem[]> {
+  const { data } = await supabase
+    .from("tickets")
+    .select("checked_in_at, events(*, venues(address))")
+    .eq("user_id", userId)
+    .not("checked_in_at", "is", null)
+    .is("hidden_at", null);
+
+  const seen = new Set<string>();
+  return ((data ?? []) as unknown as { events: EventRow | null }[])
+    .map((row) => row.events)
+    .filter((event): event is EventRow => Boolean(event))
+    .filter((event) => {
+      if (seen.has(event.id)) return false;
+      seen.add(event.id);
+      return true;
+    })
+    .map(mapEvent)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
 export async function fetchShowsByArtist(
   supabase: SupabaseClient,
   artistId: string

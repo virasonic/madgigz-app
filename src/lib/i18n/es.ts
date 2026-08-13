@@ -241,6 +241,9 @@ export const es: Messages = {
   profile: {
     attended: "Asistidos",
     saved: "Guardados",
+    // El muro de carteles de eventos pasados (#116).
+    pastShowsTitle: "Dónde has estado",
+    pastShowsSubtitle: "Los conciertos a los que fuiste.",
     logOut: "Cerrar sesión",
     deleteAccount: "Eliminar mi cuenta",
     promotions: "Promociones",
