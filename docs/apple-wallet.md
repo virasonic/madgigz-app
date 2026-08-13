@@ -33,16 +33,34 @@ Download **Worldwide Developer Relations — G4** from
 
 ## 4. Convert everything to PEM
 
-Run these in the folder with the files (replace the `.p12` password after `pass:`
-if you set one; if blank, use `pass:`):
+Run these in **Terminal**, in the folder with the files (replace the `.p12`
+password after `pass:` if you set one; if blank, use `pass:`).
+
+**The `-legacy` flag is required** — Keychain exports the `.p12` with an old
+cipher (RC2-40-CBC) that OpenSSL 3+ rejects; without `-legacy` the two commands
+below silently produce **empty** files.
 
 ```bash
 # Signing certificate (PEM)
-openssl pkcs12 -in MadGigzPass.p12 -clcerts -nokeys -out signerCert.pem -passin pass:
+openssl pkcs12 -legacy -in MadGigzPass.p12 -clcerts -nokeys -out signerCert.pem -passin pass:
 # Private key (PEM, unencrypted)
-openssl pkcs12 -in MadGigzPass.p12 -nocerts -nodes -out signerKey.pem -passin pass:
+openssl pkcs12 -legacy -in MadGigzPass.p12 -nocerts -nodes -out signerKey.pem -passin pass:
 # WWDR intermediate (PEM)
 openssl x509 -inform DER -in AppleWWDRCAG4.cer -out wwdr.pem
+```
+
+Optional but tidy — strip Keychain's "Bag Attributes" preamble so the PEMs are
+clean blocks (some parsers dislike the preamble):
+
+```bash
+openssl x509 -in signerCert.pem -out signerCert.pem
+openssl pkey  -in signerKey.pem  -out signerKey.pem
+```
+
+Your **Team ID** is inside the certificate — no need to hunt for it:
+
+```bash
+openssl x509 -in signerCert.pem -noout -subject   # the OU=... value is your Team ID
 ```
 
 ## 5. Set the env vars on Vercel (Production + Preview) and redeploy
