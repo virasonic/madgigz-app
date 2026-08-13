@@ -96,15 +96,24 @@ export default function AddContentModal({
     if (mediaType === "video") {
       const upload = await createStreamDirectUpload();
       if (upload && "uploadURL" in upload) {
-        const form = new FormData();
-        form.append("file", file);
-        const res = await fetch(upload.uploadURL, { method: "POST", body: form });
-        if (!res.ok) {
+        // TEMP DIAG (#138): wrapped so a thrown fetch (CORS / network in the
+        // webview) surfaces instead of silently killing the post.
+        try {
+          const form = new FormData();
+          form.append("file", file);
+          const res = await fetch(upload.uploadURL, { method: "POST", body: form });
+          if (!res.ok) {
+            const body = await res.text().catch(() => "");
+            setPosting(false);
+            setError(`[diag] upload HTTP ${res.status}: ${body.slice(0, 120)}`);
+            return;
+          }
+          streamUid = upload.uid;
+        } catch (e) {
           setPosting(false);
-          setError(`[diag] file upload to Stream failed: ${res.status}`); // TEMP DIAG (#138)
+          setError(`[diag] upload threw: ${String(e).slice(0, 140)}`);
           return;
         }
-        streamUid = upload.uid;
       } else if (upload && "error" in upload) {
         // TEMP DIAG (#138): Cloudflare rejected minting an upload URL — show why
         // instead of silently falling back, so we can read the real reason.
