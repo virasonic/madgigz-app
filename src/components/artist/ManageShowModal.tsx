@@ -14,6 +14,7 @@ import {
 } from "@/lib/supabase/queries";
 import { removeEventMedia } from "@/lib/supabase/storage";
 import { uploadContentMedia } from "@/lib/content-upload";
+import { deleteReelStreamVideo } from "@/app/(app)/feed/stream-actions";
 import { maxBytesForMediaType, mediaTypeForFile } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/types";
 import { updateShow } from "@/app/(app)/profile/show-actions";
@@ -225,6 +226,9 @@ export default function ManageShowModal({
     setDeletingPostId(post.id);
     const supabase = createClient();
 
+    // Delete the Cloudflare Stream video first (#139), while the row still exists
+    // for the ownership check; legacy/image media is cleaned from Supabase.
+    if (post.streamUid) await deleteReelStreamVideo(post.streamUid);
     await removeEventMedia(supabase, [post.mediaType === "video" ? post.videoUrl : post.image]);
     await supabase.from("content_posts").delete().eq("id", post.id);
 

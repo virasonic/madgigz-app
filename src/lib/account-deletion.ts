@@ -2,6 +2,7 @@
 // import this from a "use client" module.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ARTIST_EVIDENCE_BUCKET } from "@/lib/supabase/storage";
+import { deleteStreamVideo } from "@/lib/cloudflare-stream-server";
 
 // How long an account sits in limbo before it is actually scrubbed. Signing in
 // during this window cancels the request - accidental and regretted deletions
@@ -148,6 +149,18 @@ export async function purgeAccount(
     await admin.storage.from(ARTIST_EVIDENCE_BUCKET).remove(evidencePaths);
   }
   await admin.from("artist_evidence").delete().eq("profile_id", profileId);
+
+  // Delete this artist's Cloudflare Stream videos before the rows go, so nothing
+  // is orphaned on Cloudflare (#139). Best-effort — a Stream failure never blocks
+  // the erasure; a missing stream_uid column returns no data and is a no-op.
+  const { data: streamPosts } = await admin
+    .from("content_posts")
+    .select("stream_uid")
+    .eq("artist_id", profileId)
+    .not("stream_uid", "is", null);
+  await Promise.all(
+    (streamPosts ?? []).map((p) => deleteStreamVideo((p as { stream_uid?: string | null }).stream_uid))
+  );
 
   await admin.from("content_posts").delete().eq("artist_id", profileId);
   await admin.from("saved_events").delete().eq("user_id", profileId);

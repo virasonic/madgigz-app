@@ -6,6 +6,7 @@ import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import { sendArtistStatusEmail } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { removeEventMedia } from "@/lib/supabase/storage";
+import { deleteStreamVideo } from "@/lib/cloudflare-stream-server";
 import { ArtistStatus } from "@/lib/types";
 
 export async function setArtistStatus(profileId: string, email: string, status: ArtistStatus) {
@@ -58,9 +59,15 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
       .single();
     const { data: posts } = await admin
       .from("content_posts")
-      .select("media_url")
+      .select("media_url, stream_uid")
       .eq("event_id", eventId);
 
+    // Hard-delete cascades content_posts, so clean their Cloudflare Stream videos
+    // too (#139) — the soft-cancel path (further down) keeps the posts, so no
+    // cleanup there.
+    await Promise.all(
+      (posts ?? []).map((p) => deleteStreamVideo((p as { stream_uid?: string | null }).stream_uid))
+    );
     await removeEventMedia(admin, [event?.image_url, ...(posts ?? []).map((p) => p.media_url)]);
     await admin.from("events").delete().eq("id", eventId);
     revalidatePath("/admin/events");

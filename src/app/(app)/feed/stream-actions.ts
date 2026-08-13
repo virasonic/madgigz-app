@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { deleteStreamVideo } from "@/lib/cloudflare-stream-server";
 
 // Account id is not a secret (it's in every API URL, and useless without the
 // token), so a baked-in default keeps setup to a single env var — the token.
@@ -60,4 +61,30 @@ export async function createStreamDirectUpload(): Promise<
     console.error("Cloudflare direct_upload threw:", err);
     return { error: "Video upload could not start" };
   }
+}
+
+/**
+ * Deletes the Cloudflare Stream video behind a reel the caller owns (#139),
+ * called from the client when an artist deletes their post. The ownership check
+ * — a content_post with this stream_uid AND artist_id = the caller — stops anyone
+ * deleting another artist's video by guessing a uid (they're semi-public, in
+ * playback URLs). Call it BEFORE deleting the row, while it still exists to check.
+ */
+export async function deleteReelStreamVideo(streamUid: string): Promise<void> {
+  if (!streamUid) return;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data } = await supabase
+    .from("content_posts")
+    .select("id")
+    .eq("stream_uid", streamUid)
+    .eq("artist_id", user.id)
+    .maybeSingle();
+  if (!data) return;
+
+  await deleteStreamVideo(streamUid);
 }
