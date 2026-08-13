@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { EventItem, Ticket } from "@/lib/types";
 import { mapsUrl } from "@/lib/site";
 import { openExternal } from "@/lib/native";
+import { createWalletPassUrl } from "@/app/(app)/saved/wallet-actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
@@ -30,7 +31,19 @@ export default function TicketQRModal({ ticket, event, walletEnabled, onClose }:
   const { t, locale } = useT();
   const dl = dateLocale(locale);
   const [qrSrc, setQrSrc] = useState<string | null>(null);
+  const [walletPending, setWalletPending] = useState(false);
   const { handleProps, sheetStyle } = useDragToDismiss(onClose);
+
+  // Mints a signed pass URL via a server action (which runs in-app, where the
+  // login exists) then opens it externally. The token authorises the request in
+  // the separate browser that SFSafariViewController is, where the app's login
+  // cookie doesn't reach (#129).
+  async function handleAddToWallet() {
+    setWalletPending(true);
+    const result = await createWalletPassUrl(ticket.id);
+    setWalletPending(false);
+    if ("url" in result) openExternal(`${window.location.origin}${result.url}`);
+  }
 
   useEffect(() => {
     if (ticket.refunded) return;
@@ -111,8 +124,9 @@ export default function TicketQRModal({ ticket, event, walletEnabled, onClose }:
             {walletEnabled && (
               <button
                 type="button"
-                onClick={() => openExternal(`${window.location.origin}/api/tickets/${ticket.id}/pass`)}
-                className="mx-auto mt-4 flex items-center justify-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-heading text-white"
+                onClick={handleAddToWallet}
+                disabled={walletPending}
+                className="mx-auto mt-4 flex items-center justify-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-heading text-white disabled:opacity-60"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M17 1H7a3 3 0 0 0-3 3v16a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V4a3 3 0 0 0-3-3ZM7 3h10a1 1 0 0 1 1 1v9H6V4a1 1 0 0 1 1-1Zm5 17a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6Z" />

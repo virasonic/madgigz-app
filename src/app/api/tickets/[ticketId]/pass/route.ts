@@ -1,13 +1,21 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { adminClient } from "@/lib/supabase/admin-queries";
 import { buildTicketPass } from "@/lib/apple-wallet";
 import { isAppleWalletConfigured } from "@/lib/apple-wallet-config";
+import { verifyWalletToken } from "@/lib/wallet-token";
 
-// GET /api/tickets/<id>/pass — returns a signed Apple Wallet .pkpass for the
-// caller's own ticket (#129 wallet). Gated on the signing cert; 404 when Wallet
-// isn't configured so the absence is indistinguishable from a missing route.
+// passkit-generator + node:crypto need the Node runtime, not Edge.
+export const runtime = "nodejs";
+
+// GET /api/tickets/<id>/pass?t=<token> — returns a signed Apple Wallet .pkpass for
+// the caller's own ticket (#129). Authorised by EITHER a signed token (the native
+// path: the pass opens in SFSafariViewController, which has no app login cookie —
+// so a server action mints this token first) OR the session cookie (the web path:
+// a same-origin new tab still carries it). Gated on the signing cert; 404 when
+// Wallet isn't configured so its absence looks like a missing route.
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ ticketId: string }> }
 ) {
   if (!isAppleWalletConfigured()) {
@@ -15,21 +23,36 @@ export async function GET(
   }
 
   const { ticketId } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return new Response("Unauthorized", { status: 401 });
+  const token = req.nextUrl.searchParams.get("t");
 
-  // RLS already scopes tickets to the owner; the explicit user_id match is a
-  // second lock so a guessed ticket id can't mint someone else's pass.
-  const { data: ticket } = await supabase
+  let authorized = Boolean(token && verifyWalletToken(token, ticketId));
+
+  // Session fallback: works in a same-origin web tab that still carries the cookie.
+  if (!authorized) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const { data } = await supabase
+        .from("tickets")
+        .select("id")
+        .eq("id", ticketId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      authorized = Boolean(data);
+    }
+  }
+
+  if (!authorized) return new Response("Unauthorized", { status: 401 });
+
+  // Authorisation is established; read the ticket + event with the service role
+  // (the token path has no session to scope RLS by).
+  const admin = adminClient();
+  const { data: ticket } = await admin
     .from("tickets")
-    .select(
-      "id, quantity, refunded, events(title, venue, event_date, event_time, accent_color)"
-    )
+    .select("id, quantity, refunded, events(title, venue, event_date, event_time, accent_color)")
     .eq("id", ticketId)
-    .eq("user_id", user.id)
     .maybeSingle();
 
   const event = (ticket?.events ?? null) as {
