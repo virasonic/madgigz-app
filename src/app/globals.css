@@ -53,6 +53,17 @@ body {
   padding-top: max(2.5rem, env(safe-area-inset-top));
 }
 
+/* Hide the scrollbar on a scroll container while keeping it scrollable. The reel
+   feed is a full-screen TikTok-style swipe; a visible scroll track on the right
+   (which Android Chrome/WebView shows on scroll) breaks the native illusion. */
+@utility no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
+  &::-webkit-scrollbar {
+    display: none; /* Chrome / Safari / Android WebView */
+  }
+}
+
 /* Rubber-band scrolling reveals the page behind the app in standalone mode,
    which reads as a rendering glitch rather than a gesture. */
 html {

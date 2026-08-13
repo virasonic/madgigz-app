@@ -434,7 +434,7 @@ export default function FeedClient({
             <div
               ref={forYouScrollRef}
               onScroll={handleFeedScroll}
-              className="h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-y-contain"
+              className="no-scrollbar h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-y-contain"
             >
               {forYouFeed.map((entry, index) => (
                 // Mobile: the card fills the viewport (unchanged). Desktop: centre
