@@ -4,7 +4,7 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { uploadContentMedia } from "@/lib/content-upload";
-import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
+import { maxBytesForMediaType, mediaTypeForFile } from "@/lib/media";
 import { EventItem } from "@/lib/types";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
@@ -42,12 +42,14 @@ export default function AddContentModal({
     const selected = event.target.files?.[0];
     if (!selected) return;
 
-    if (!mediaTypeForFile(selected)) {
+    const mt = mediaTypeForFile(selected);
+    if (!mt) {
       setError(t("addContent.errorChooseMedia"));
       return;
     }
-    if (selected.size > MAX_CONTENT_FILE_BYTES) {
-      setError(t("addContent.errorTooLarge"));
+    const cap = maxBytesForMediaType(mt);
+    if (selected.size > cap) {
+      setError(t("addContent.errorTooLarge", { mb: Math.round(cap / (1024 * 1024)) }));
       return;
     }
 

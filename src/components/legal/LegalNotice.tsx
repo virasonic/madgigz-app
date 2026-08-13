@@ -45,7 +45,13 @@ export function LegalNotice({
 // documents, side by side.
 export function LegalLinksRow({ className }: { className?: string }) {
   const { t, locale } = useT();
-  const keys: LegalDocKey[] = ["terms", "organiserTerms", "privacy"];
+  const keys: LegalDocKey[] = [
+    "terms",
+    "organiserTerms",
+    "privacy",
+    "legalNotice",
+    "cookiePolicy",
+  ];
   return (
     <div className={className}>
       {keys.map((key, i) => (

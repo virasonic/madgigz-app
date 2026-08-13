@@ -35,6 +35,8 @@ export const en = {
     termsOfService: "Terms of Service",
     organiserTerms: "Organiser Terms",
     privacyPolicy: "Privacy Policy",
+    legalNotice: "Legal Notice",
+    cookiePolicy: "Cookie Policy",
   },
 
   nav: {
@@ -480,7 +482,7 @@ export const en = {
 
   addContent: {
     errorChooseMedia: "Choose a photo or video",
-    errorTooLarge: "Choose a smaller file (under 50MB)",
+    errorTooLarge: "Choose a smaller file (under {mb}MB)",
     errorAddShow: "Add a show first",
     errorAddMedia: "Add a photo or video to post",
     errorSignedIn: "You need to be signed in to post",

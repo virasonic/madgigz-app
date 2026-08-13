@@ -25,7 +25,9 @@
     "legal": {
       "termsOfService": "Terms of Service",
       "organiserTerms": "Organiser Terms",
-      "privacyPolicy": "Privacy Policy"
+      "privacyPolicy": "Privacy Policy",
+      "legalNotice": "Legal Notice",
+      "cookiePolicy": "Cookie Policy"
     },
     "nav": {
       "feed": "Feed",
@@ -418,7 +420,7 @@
     },
     "addContent": {
       "errorChooseMedia": "Choose a photo or video",
-      "errorTooLarge": "Choose a smaller file (under 50MB)",
+      "errorTooLarge": "Choose a smaller file (under {mb}MB)",
       "errorAddShow": "Add a show first",
       "errorAddMedia": "Add a photo or video to post",
       "errorSignedIn": "You need to be signed in to post",
@@ -608,7 +610,9 @@
     "legal": {
       "termsOfService": "Términos y Condiciones",
       "organiserTerms": "Condiciones para organizadores",
-      "privacyPolicy": "Política de privacidad"
+      "privacyPolicy": "Política de privacidad",
+      "legalNotice": "Aviso legal",
+      "cookiePolicy": "Política de cookies"
     },
     "nav": {
       "feed": "Feed",
@@ -1001,7 +1005,7 @@
     },
     "addContent": {
       "errorChooseMedia": "Elige una foto o un vídeo",
-      "errorTooLarge": "Elige un archivo más pequeño (menos de 50MB)",
+      "errorTooLarge": "Elige un archivo más pequeño (menos de {mb}MB)",
       "errorAddShow": "Añade un bolo primero",
       "errorAddMedia": "Añade una foto o un vídeo para publicar",
       "errorSignedIn": "Debes iniciar sesión para publicar",

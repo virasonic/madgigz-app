@@ -7,6 +7,8 @@ export const LEGAL_DOCS = {
   terms: { path: "/terms-of-service", labelKey: "legal.termsOfService" },
   organiserTerms: { path: "/organiser-terms", labelKey: "legal.organiserTerms" },
   privacy: { path: "/privacy", labelKey: "legal.privacyPolicy" },
+  legalNotice: { path: "/legal-notice", labelKey: "legal.legalNotice" },
+  cookiePolicy: { path: "/cookie-policy", labelKey: "legal.cookiePolicy" },
 } as const;
 
 export type LegalDocKey = keyof typeof LEGAL_DOCS;

@@ -14,7 +14,7 @@ import {
 } from "@/lib/supabase/queries";
 import { removeEventMedia } from "@/lib/supabase/storage";
 import { uploadContentMedia } from "@/lib/content-upload";
-import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
+import { maxBytesForMediaType, mediaTypeForFile } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/types";
 import { updateShow } from "@/app/(app)/profile/show-actions";
 import LineupEditor, { LineupEntry, lineupToEntries } from "@/components/artist/LineupEditor";
@@ -146,12 +146,14 @@ export default function ManageShowModal({
     const selected = event.target.files?.[0];
     if (!selected) return;
 
-    if (!mediaTypeForFile(selected)) {
+    const mt = mediaTypeForFile(selected);
+    if (!mt) {
       setError(t("addContent.errorChooseMedia"));
       return;
     }
-    if (selected.size > MAX_CONTENT_FILE_BYTES) {
-      setError(t("addContent.errorTooLarge"));
+    const cap = maxBytesForMediaType(mt);
+    if (selected.size > cap) {
+      setError(t("addContent.errorTooLarge", { mb: Math.round(cap / (1024 * 1024)) }));
       return;
     }
 

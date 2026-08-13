@@ -32,6 +32,8 @@ export const es: Messages = {
     termsOfService: "Términos y Condiciones",
     organiserTerms: "Condiciones para organizadores",
     privacyPolicy: "Política de privacidad",
+    legalNotice: "Aviso legal",
+    cookiePolicy: "Política de cookies",
   },
 
   nav: {
@@ -466,7 +468,7 @@ export const es: Messages = {
 
   addContent: {
     errorChooseMedia: "Elige una foto o un vídeo",
-    errorTooLarge: "Elige un archivo más pequeño (menos de 50MB)",
+    errorTooLarge: "Elige un archivo más pequeño (menos de {mb}MB)",
     errorAddShow: "Añade un bolo primero",
     errorAddMedia: "Añade una foto o un vídeo para publicar",
     errorSignedIn: "Debes iniciar sesión para publicar",
