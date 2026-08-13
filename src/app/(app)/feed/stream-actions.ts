@@ -64,6 +64,68 @@ export async function createStreamDirectUpload(): Promise<
 }
 
 /**
+ * Mints a Cloudflare Stream **resumable (TUS)** upload for a large video (#140).
+ * The basic direct_upload above caps at 200MB; TUS lifts that to 30GB and, being
+ * resumable, survives a dropped mobile connection mid-upload. We create the upload
+ * server-side (so the secret token never reaches the browser) with `direct_user`,
+ * and Cloudflare returns a one-time `Location` URL the client PATCHes chunks to
+ * with tus-js-client — no token needed client-side.
+ *
+ * Same return contract as createStreamDirectUpload: `null` (no token → Supabase
+ * fallback), `{ error }`, or `{ uploadURL, uid }` where uploadURL is the TUS
+ * endpoint and uid is content_posts.stream_uid.
+ *
+ * `uploadLength` is the exact file size in bytes (the TUS `Upload-Length`).
+ */
+export async function createStreamTusUpload(
+  uploadLength: number
+): Promise<StreamUpload | { error: string } | null> {
+  const token = process.env.CLOUDFLARE_STREAM_TOKEN;
+  if (!token) return null;
+
+  if (!Number.isInteger(uploadLength) || uploadLength <= 0) {
+    return { error: "Video upload could not start" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  // TUS metadata is comma-separated `key base64(value)` pairs. maxDurationSeconds
+  // keeps the reel-length cap (600s) the basic path already enforces.
+  const metadata = `maxDurationSeconds ${Buffer.from("600").toString("base64")}`;
+
+  try {
+    const res = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/stream?direct_user=true`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Tus-Resumable": "1.0.0",
+          "Upload-Length": String(uploadLength),
+          "Upload-Metadata": metadata,
+        },
+      }
+    );
+    // Success is 201 with the upload URL in the Location header and the video id
+    // in stream-media-id — the body is empty, unlike the JSON direct_upload API.
+    const location = res.headers.get("Location");
+    const uid = res.headers.get("stream-media-id");
+    if (res.status !== 201 || !location || !uid) {
+      console.error("Cloudflare TUS create failed:", res.status, await res.text().catch(() => ""));
+      return { error: "Video upload could not start" };
+    }
+    return { uploadURL: location, uid };
+  } catch (err) {
+    console.error("Cloudflare TUS create threw:", err);
+    return { error: "Video upload could not start" };
+  }
+}
+
+/**
  * Deletes the Cloudflare Stream video behind a reel the caller owns (#139),
  * called from the client when an artist deletes their post. The ownership check
  * — a content_post with this stream_uid AND artist_id = the caller — stops anyone

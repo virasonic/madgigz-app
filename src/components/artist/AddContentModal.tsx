@@ -31,6 +31,9 @@ export default function AddContentModal({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
   const [posting, setPosting] = useState(false);
+  // Percent for large (TUS) video uploads (#140); null for quick uploads that
+  // report no progress, where the button just says "Posting…".
+  const [progress, setProgress] = useState<number | null>(null);
 
   useEffect(() => {
     return () => {
@@ -90,12 +93,16 @@ export default function AddContentModal({
     // ManageShowModal via uploadContentMedia so the two posting paths can't drift.
     let media;
     try {
-      media = await uploadContentMedia(supabase, file, mediaType, `content/${showId}`);
+      media = await uploadContentMedia(supabase, file, mediaType, `content/${showId}`, (f) =>
+        setProgress(Math.round(f * 100))
+      );
     } catch {
       setPosting(false);
+      setProgress(null);
       setError(t("addContent.errorUpload"));
       return;
     }
+    setProgress(null);
 
     const { error: insertError } = await supabase.from("content_posts").insert({
       event_id: showId,
@@ -208,7 +215,11 @@ export default function AddContentModal({
             {error && <p className="text-sm text-danger">{error}</p>}
 
             <Button onClick={handlePost} disabled={posting}>
-              {posting ? t("addContent.posting") : t("addContent.post")}
+              {posting
+                ? progress !== null
+                  ? t("addContent.uploadingPercent", { pct: progress })
+                  : t("addContent.posting")
+                : t("addContent.post")}
             </Button>
           </div>
         )}

@@ -79,6 +79,8 @@ export default function ManageShowModal({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
   const [posting, setPosting] = useState(false);
+  // Percent for large (TUS) video uploads (#140); null for quick uploads.
+  const [progress, setProgress] = useState<number | null>(null);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | undefined>();
@@ -188,12 +190,16 @@ export default function ManageShowModal({
     try {
       // Shared with AddContentModal so video reliably goes to Cloudflare Stream
       // from here too (this path used to upload straight to Supabase — #138).
-      media = await uploadContentMedia(supabase, file, mediaType, `content/${show.id}`);
+      media = await uploadContentMedia(supabase, file, mediaType, `content/${show.id}`, (f) =>
+        setProgress(Math.round(f * 100))
+      );
     } catch {
       setPosting(false);
+      setProgress(null);
       setError(t("addContent.errorUpload"));
       return;
     }
+    setProgress(null);
 
     const { error: insertError } = await supabase.from("content_posts").insert({
       event_id: show.id,
@@ -775,7 +781,11 @@ export default function ManageShowModal({
               />
               {error && <p className="text-sm text-danger">{error}</p>}
               <Button onClick={handlePost} disabled={posting}>
-                {posting ? t("addContent.posting") : t("addContent.post")}
+                {posting
+                  ? progress !== null
+                    ? t("addContent.uploadingPercent", { pct: progress })
+                    : t("addContent.posting")
+                  : t("addContent.post")}
               </Button>
             </div>
 

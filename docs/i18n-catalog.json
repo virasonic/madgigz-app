@@ -435,6 +435,7 @@
       "tapToAdd": "Add a photo or video",
       "captionPlaceholder": "Add a caption (optional)...",
       "posting": "Posting...",
+      "uploadingPercent": "Uploading {pct}%",
       "post": "Post"
     },
     "addShow": {
@@ -1022,6 +1023,7 @@
       "tapToAdd": "Añade una foto o vídeo",
       "captionPlaceholder": "Añade un pie de foto (opcional)...",
       "posting": "Publicando...",
+      "uploadingPercent": "Subiendo {pct}%",
       "post": "Publicar"
     },
     "addShow": {

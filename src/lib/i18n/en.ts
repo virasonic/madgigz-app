@@ -498,6 +498,7 @@ export const en = {
     tapToAdd: "Add a photo or video",
     captionPlaceholder: "Add a caption (optional)...",
     posting: "Posting...",
+    uploadingPercent: "Uploading {pct}%",
     post: "Post",
   },
 

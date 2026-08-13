@@ -484,6 +484,7 @@ export const es: Messages = {
     tapToAdd: "Añade una foto o vídeo",
     captionPlaceholder: "Añade un pie de foto (opcional)...",
     posting: "Publicando...",
+    uploadingPercent: "Subiendo {pct}%",
     post: "Publicar",
   },
 
