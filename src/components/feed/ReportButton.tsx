@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { reportContent } from "@/app/(app)/feed/report-actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
@@ -43,13 +44,19 @@ export default function ReportButton({ contentPostId }: { contentPostId: string 
         <FlagIcon />
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60"
-          onClick={() => setOpen(false)}
-        >
+      {/* Portalled to <body> so it escapes the reel card's stacking context and
+          paints above the bottom nav — otherwise the sheet is trapped below the
+          nav and its submit button hides behind the tab bar (#report bug). Safe
+          for SSR: `open` is always false on the server, so document.body is never
+          touched during render. */}
+      {open &&
+        createPortal(
           <div
-            className="w-full max-w-md rounded-t-3xl bg-surface p-6 pb-10"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60"
+            onClick={() => setOpen(false)}
+          >
+          <div
+            className="w-full max-w-md rounded-t-3xl bg-surface p-6 pb-[calc(2.5rem+env(safe-area-inset-bottom))]"
             style={sheetStyle}
             onClick={(e) => e.stopPropagation()}
           >
@@ -108,8 +115,9 @@ export default function ReportButton({ contentPostId }: { contentPostId: string 
               </>
             )}
           </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }
