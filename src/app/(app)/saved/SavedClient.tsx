@@ -40,6 +40,7 @@ interface SavedClientProps {
   initialEvents: EventItem[];
   initialSavedIds: string[];
   initialTickets: Ticket[];
+  appleWalletEnabled: boolean;
 }
 
 export default function SavedClient({
@@ -47,6 +48,7 @@ export default function SavedClient({
   initialEvents,
   initialSavedIds,
   initialTickets,
+  appleWalletEnabled,
 }: SavedClientProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
@@ -328,6 +330,7 @@ export default function SavedClient({
           key={activeTicket.ticket.id}
           ticket={activeTicket.ticket}
           event={activeTicket.event}
+          walletEnabled={appleWalletEnabled}
           onClose={() => setActiveTicket(null)}
         />
       )}

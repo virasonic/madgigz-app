@@ -116,6 +116,7 @@
       "qrAlt": "Ticket QR code",
       "generating": "Generating code...",
       "showAtDoor": "Show this code at the door. If it can't be scanned, give the code above to staff.",
+      "addToWallet": "Add to Apple Wallet",
       "refundedTitle": "This ticket was refunded",
       "refundedBody": "The payment has been returned to your original payment method - it can take a few days to appear on your statement. This ticket is no longer valid for entry."
     },
@@ -704,6 +705,7 @@
       "qrAlt": "Código QR de la entrada",
       "generating": "Generando código...",
       "showAtDoor": "Muestra este código en la entrada. Si no se puede escanear, dale el código de arriba al personal.",
+      "addToWallet": "Añadir a Apple Wallet",
       "refundedTitle": "Esta entrada fue reembolsada",
       "refundedBody": "El pago se ha devuelto a tu método de pago original; puede tardar unos días en aparecer en tu extracto. Esta entrada ya no es válida para entrar."
     },

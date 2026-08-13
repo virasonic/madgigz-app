@@ -6,6 +6,7 @@ import {
   fetchSavedEventIds,
   fetchTickets,
 } from "@/lib/supabase/queries";
+import { isAppleWalletConfigured } from "@/lib/apple-wallet-config";
 import SavedClient from "./SavedClient";
 
 export default async function SavedPage() {
@@ -25,6 +26,7 @@ export default async function SavedPage() {
       initialEvents={events}
       initialSavedIds={savedIds}
       initialTickets={tickets}
+      appleWalletEnabled={isAppleWalletConfigured()}
     />
   );
 }

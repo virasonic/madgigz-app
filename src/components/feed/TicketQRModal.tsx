@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { EventItem, Ticket } from "@/lib/types";
 import { mapsUrl } from "@/lib/site";
+import { openExternal } from "@/lib/native";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
@@ -11,6 +12,8 @@ import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 interface TicketQRModalProps {
   ticket: Ticket;
   event: EventItem;
+  /** Apple Wallet configured on the server (#129) — shows the "Add to Wallet" button. */
+  walletEnabled?: boolean;
   onClose: () => void;
 }
 
@@ -23,7 +26,7 @@ function formatDate(iso: string, dl: string) {
   });
 }
 
-export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalProps) {
+export default function TicketQRModal({ ticket, event, walletEnabled, onClose }: TicketQRModalProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
   const [qrSrc, setQrSrc] = useState<string | null>(null);
@@ -101,6 +104,22 @@ export default function TicketQRModal({ ticket, event, onClose }: TicketQRModalP
             </div>
 
             <p className="mt-5 text-center text-xs text-muted">{t("ticket.showAtDoor")}</p>
+
+            {/* Opens the signed .pkpass in the system browser (SFSafariViewController
+                in the native shell), which presents iOS's Add-to-Wallet sheet — a
+                WKWebView can't. Only shown when the server has the signing cert. */}
+            {walletEnabled && (
+              <button
+                type="button"
+                onClick={() => openExternal(`${window.location.origin}/api/tickets/${ticket.id}/pass`)}
+                className="mx-auto mt-4 flex items-center justify-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-heading text-white"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M17 1H7a3 3 0 0 0-3 3v16a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V4a3 3 0 0 0-3-3ZM7 3h10a1 1 0 0 1 1 1v9H6V4a1 1 0 0 1 1-1Zm5 17a1.3 1.3 0 1 1 0-2.6 1.3 1.3 0 0 1 0 2.6Z" />
+                </svg>
+                {t("ticket.addToWallet")}
+              </button>
+            )}
           </>
         )}
       </div>
