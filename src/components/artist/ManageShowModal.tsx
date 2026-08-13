@@ -12,7 +12,8 @@ import {
   ShowBuyer,
   ShowTicketCounts,
 } from "@/lib/supabase/queries";
-import { removeEventMedia, uploadEventMedia } from "@/lib/supabase/storage";
+import { removeEventMedia } from "@/lib/supabase/storage";
+import { uploadContentMedia } from "@/lib/content-upload";
 import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/types";
 import { updateShow } from "@/app/(app)/profile/show-actions";
@@ -180,7 +181,16 @@ export default function ManageShowModal({
       return;
     }
 
-    const mediaUrl = await uploadEventMedia(supabase, file, `content/${show.id}`);
+    let media;
+    try {
+      // Shared with AddContentModal so video reliably goes to Cloudflare Stream
+      // from here too (this path used to upload straight to Supabase — #138).
+      media = await uploadContentMedia(supabase, file, mediaType, `content/${show.id}`);
+    } catch {
+      setPosting(false);
+      setError(t("addContent.errorUpload"));
+      return;
+    }
 
     const { error: insertError } = await supabase.from("content_posts").insert({
       event_id: show.id,
@@ -188,8 +198,9 @@ export default function ManageShowModal({
       artist_name: artistName,
       show_title: show.title,
       caption: caption.trim(),
-      media_url: mediaUrl,
+      media_url: media.mediaUrl,
       media_type: mediaType,
+      ...(media.streamUid ? { stream_uid: media.streamUid } : {}),
     });
 
     setPosting(false);

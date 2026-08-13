@@ -3,8 +3,7 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
-import { uploadEventMedia } from "@/lib/supabase/storage";
-import { createStreamDirectUpload } from "@/app/(app)/feed/stream-actions";
+import { uploadContentMedia } from "@/lib/content-upload";
 import { MAX_CONTENT_FILE_BYTES, mediaTypeForFile } from "@/lib/media";
 import { EventItem } from "@/lib/types";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -85,49 +84,15 @@ export default function AddContentModal({
       return;
     }
 
-    // Video → Cloudflare Stream (#138): transcode + adaptive HLS + CDN + a real
-    // thumbnail, and the file uploads straight to Cloudflare (never our server).
-    // Everything else — images, or video when Stream isn't configured / errors —
-    // keeps the original Supabase-Storage path, so posting never hard-fails on
-    // the video route.
-    let mediaUrl: string | null = null;
-    let streamUid: string | null = null;
-
-    if (mediaType === "video") {
-      const upload = await createStreamDirectUpload();
-      if (upload && "uploadURL" in upload) {
-        // TEMP DIAG (#138): wrapped so a thrown fetch (CORS / network in the
-        // webview) surfaces instead of silently killing the post.
-        try {
-          const form = new FormData();
-          form.append("file", file);
-          const res = await fetch(upload.uploadURL, { method: "POST", body: form });
-          if (!res.ok) {
-            const body = await res.text().catch(() => "");
-            setPosting(false);
-            setError(`[diag] upload HTTP ${res.status}: ${body.slice(0, 120)}`);
-            return;
-          }
-          streamUid = upload.uid;
-        } catch (e) {
-          setPosting(false);
-          setError(`[diag] upload threw: ${String(e).slice(0, 140)}`);
-          return;
-        }
-      } else if (upload && "error" in upload) {
-        // TEMP DIAG (#138): Cloudflare rejected minting an upload URL — show why
-        // instead of silently falling back, so we can read the real reason.
-        setPosting(false);
-        setError(upload.error);
-        return;
-      } else {
-        // TEMP DIAG (#138): upload === null → the server has no token at runtime.
-        setPosting(false);
-        setError("[diag] Stream not configured on server (no token reaching it)");
-        return;
-      }
-    } else {
-      mediaUrl = await uploadEventMedia(supabase, file, `content/${showId}`);
+    // Video → Cloudflare Stream (when configured), images → Supabase. Shared with
+    // ManageShowModal via uploadContentMedia so the two posting paths can't drift.
+    let media;
+    try {
+      media = await uploadContentMedia(supabase, file, mediaType, `content/${showId}`);
+    } catch {
+      setPosting(false);
+      setError(t("addContent.errorUpload"));
+      return;
     }
 
     const { error: insertError } = await supabase.from("content_posts").insert({
@@ -136,12 +101,9 @@ export default function AddContentModal({
       artist_name: artistName,
       show_title: show.title,
       caption: caption.trim(),
-      media_url: mediaUrl,
+      media_url: media.mediaUrl,
       media_type: mediaType,
-      // Only sent when we actually have one, so the insert stays valid before
-      // addendum_035 adds the column (the Stream path can't run until the token
-      // is set, which is done AFTER the migration — see #138).
-      ...(streamUid ? { stream_uid: streamUid } : {}),
+      ...(media.streamUid ? { stream_uid: media.streamUid } : {}),
     });
 
     setPosting(false);
