@@ -78,10 +78,14 @@ export async function GET(
   });
   if (!pass) return new Response("Wallet not configured", { status: 404 });
 
+  // NOT `attachment`: an attachment disposition makes the in-app Safari
+  // (SFSafariViewController) try to *download* the file instead of presenting the
+  // "Add to Apple Wallet" sheet. `inline` + the pkpass MIME lets iOS recognise it
+  // as an installable pass (#129).
   return new Response(new Uint8Array(pass), {
     headers: {
       "Content-Type": "application/vnd.apple.pkpass",
-      "Content-Disposition": 'attachment; filename="madgigz-ticket.pkpass"',
+      "Content-Disposition": 'inline; filename="madgigz-ticket.pkpass"',
       "Cache-Control": "no-store",
     },
   });
