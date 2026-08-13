@@ -684,6 +684,8 @@ export interface AdminUserDetail {
   totalSpentCents: number;
   showsCreated: number;
   followingCount: number;
+  /** Events this person has liked/saved (#58). */
+  likedCount: number;
   recentTickets: {
     id: string;
     eventTitle: string;
@@ -722,15 +724,17 @@ export async function fetchUserDetail(
 
   const { data: authUser } = await admin.auth.admin.getUserById(userId);
 
-  const [{ data: tickets }, { count: showsCreated }, { count: followingCount }] = await Promise.all([
-    admin
-      .from("tickets")
-      .select("id, quantity, price_paid, refunded, checked_in_at, purchased_at, events(title, event_date)")
-      .eq("user_id", userId)
-      .order("purchased_at", { ascending: false }),
-    admin.from("events").select("id", { count: "exact", head: true }).eq("artist_id", userId),
-    admin.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
-  ]);
+  const [{ data: tickets }, { count: showsCreated }, { count: followingCount }, { count: likedCount }] =
+    await Promise.all([
+      admin
+        .from("tickets")
+        .select("id, quantity, price_paid, refunded, checked_in_at, purchased_at, events(title, event_date)")
+        .eq("user_id", userId)
+        .order("purchased_at", { ascending: false }),
+      admin.from("events").select("id", { count: "exact", head: true }).eq("artist_id", userId),
+      admin.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
+      admin.from("saved_events").select("event_id", { count: "exact", head: true }).eq("user_id", userId),
+    ]);
 
   type Row = {
     id: string;
@@ -787,6 +791,7 @@ export async function fetchUserDetail(
       .reduce((n, r) => n + toCents(Number(r.price_paid)), 0),
     showsCreated: showsCreated ?? 0,
     followingCount: followingCount ?? 0,
+    likedCount: likedCount ?? 0,
     recentTickets: rows.slice(0, 20).map((r) => ({
       id: r.id,
       eventTitle: r.events?.title ?? "Deleted event",

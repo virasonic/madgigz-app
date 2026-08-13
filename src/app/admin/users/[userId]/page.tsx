@@ -97,7 +97,7 @@ export default async function AdminUserDetailPage({
         <ActAsButton userId={userId} username={user.username} />
       )}
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <StatCard
           label="Tickets bought"
           value={String(user.ticketsBought)}
@@ -105,6 +105,7 @@ export default async function AdminUserDetailPage({
         />
         <StatCard label="Attended" value={String(user.ticketsAttended)} hint="Scanned at the door" />
         <StatCard label="Spent" value={formatEuros(user.totalSpentCents)} />
+        <StatCard label="Liked" value={String(user.likedCount)} hint="Events saved" />
         <StatCard
           label={isArtist ? "Shows created" : "Following"}
           value={String(isArtist ? user.showsCreated : user.followingCount)}
