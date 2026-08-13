@@ -1,0 +1,3 @@
+title,artist,venue,date,time,price,ticket_url,genre,age,description,image
+DELETE THIS ROW — it's an example,Example Artist,Sala But,2026-09-20,21:00,22,https://www.example.com/tickets,Indie,18+,Short description of the night (optional),
+Another example — replace me,Otra Banda,La Riviera,25/09/2026,20:30,18,https://dice.fm/event/replace-me,Rock,16+,,
