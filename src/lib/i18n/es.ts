@@ -625,6 +625,10 @@ export const es: Messages = {
     checkIn: "Validar",
     scanNext: "Escanear siguiente",
   },
+  orientation: {
+    title: "Gira tu teléfono",
+    body: "MadGigz funciona mejor en vertical: vuelve a girar el teléfono.",
+  },
 
   follow: {
     follow: "Seguir",

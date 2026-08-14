@@ -64,6 +64,26 @@ body {
   }
 }
 
+/* Portrait-only guard. The whole app is a mobile-first max-w-md column; turned
+   sideways on a phone it has nowhere to go and the layout breaks. A web app
+   can't force device rotation (only a native shell can), so LandscapeGuard
+   covers the screen with a "rotate back" prompt — shown only when a *short*
+   viewport goes landscape, so desktop and tablet (tall) are never affected. */
+.landscape-guard {
+  display: none;
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .landscape-guard {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--background);
+  }
+}
+
 /* Rubber-band scrolling reveals the page behind the app in standalone mode,
    which reads as a rendering glitch rather than a gesture. */
 html {

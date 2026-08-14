@@ -560,6 +560,10 @@
       "checkIn": "Check In",
       "scanNext": "Scan Next"
     },
+    "orientation": {
+      "title": "Rotate your phone",
+      "body": "MadGigz works best upright — turn your phone back to portrait."
+    },
     "follow": {
       "follow": "Follow",
       "following": "Following"
@@ -1150,6 +1154,10 @@
       "validTicket": "Entrada válida",
       "checkIn": "Validar",
       "scanNext": "Escanear siguiente"
+    },
+    "orientation": {
+      "title": "Gira tu teléfono",
+      "body": "MadGigz funciona mejor en vertical: vuelve a girar el teléfono."
     },
     "follow": {
       "follow": "Seguir",

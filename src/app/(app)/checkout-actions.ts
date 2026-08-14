@@ -52,6 +52,23 @@ export async function createCheckout(
 
   const admin = createAdminClient();
 
+  // You can't buy a ticket to your own show. The host (event.artistId) or any
+  // act tagged on the lineup (event_artists) is performing, not attending -
+  // selling them a paid seat is nonsense and, for the host, just charging
+  // themselves the fee. Checked server-side so it holds regardless of the UI.
+  if (event.artistId && event.artistId === user.id) {
+    return { error: "You can't buy a ticket to your own show" };
+  }
+  const { data: taggedSelf } = await admin
+    .from("event_artists")
+    .select("event_id")
+    .eq("event_id", event.id)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  if (taggedSelf) {
+    return { error: "You're in this line-up, so you can't buy a ticket to this show" };
+  }
+
   // The artist must be able to receive money before we take any. Read through
   // the admin client, not the buyer's: stripe_account_id is no longer granted
   // to authenticated (addendum_018), and a fan's session having any route to

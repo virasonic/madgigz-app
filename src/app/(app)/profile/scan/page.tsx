@@ -147,10 +147,22 @@ export default function ScanTicketsPage() {
   async function handleCheckIn() {
     if (result?.status !== "valid") return;
     const supabase = createClient();
-    await supabase
+    // Atomic: only stamp check-in if the ticket is still un-scanned. Two doors
+    // scanning the same ticket at once (or a re-tap) can't both admit someone -
+    // whoever writes first wins, and the loser gets zero rows back and flips to
+    // the duplicate warning instead of a false "checked in". Once stamped, the
+    // ticket drops out of My Tickets and shows under "Where you've been" (both
+    // key off checked_in_at).
+    const { data, error } = await supabase
       .from("tickets")
       .update({ checked_in_at: new Date().toISOString() })
-      .eq("id", result.ticket.id);
+      .eq("id", result.ticket.id)
+      .is("checked_in_at", null)
+      .select("id");
+    if (error || !data || data.length === 0) {
+      setResult({ ...result, status: "duplicate" });
+      return;
+    }
     setCheckedInJustNow(true);
   }
 

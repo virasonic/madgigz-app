@@ -639,6 +639,10 @@ export const en = {
     checkIn: "Check In",
     scanNext: "Scan Next",
   },
+  orientation: {
+    title: "Rotate your phone",
+    body: "MadGigz works best upright — turn your phone back to portrait.",
+  },
 
   follow: {
     follow: "Follow",

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import BottomNav from "@/components/ui/BottomNav";
 import SideNav from "@/components/ui/SideNav";
+import LandscapeGuard from "@/components/ui/LandscapeGuard";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { createClient } from "@/lib/supabase/server";
 import { fetchUnreadCount } from "@/lib/notifications";
@@ -45,6 +46,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // Desktop (lg+): the width cap lifts and the shell becomes a row — a
     // persistent SideNav beside a full-height content column (#105).
     <div className="pt-safe mx-auto flex h-screen w-full max-w-md flex-col bg-background lg:max-w-none lg:flex-row">
+      <LandscapeGuard />
       <SideNav
         role={profile?.role ?? "fan"}
         artistStatus={profile?.artist_status ?? null}
