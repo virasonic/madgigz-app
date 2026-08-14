@@ -127,14 +127,77 @@ Testing, only added test users can sign in with Google — a launch blocker.
 Non-sensitive scopes only, so no verification review is needed.
 
 ## Later: turning on real payments (the separate step)
-When ready for real money — and after the IVA/tax question (#97) is settled:
-- Swap Vercel's `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to the
-  **live** keys.
-- Register a **new webhook endpoint** in the Stripe **live** dashboard pointing
-  at `https://madgigz.aurasonic.es/api/stripe/webhook`, and put its signing
-  secret in `STRIPE_WEBHOOK_SECRET` (and the Connect one in
-  `STRIPE_WEBHOOK_SECRET_CONNECT`). Test-mode webhooks do **not** carry over — a
-  missing endpoint means money taken and no ticket issued.
-- Artists must complete **real** Stripe Connect onboarding; test onboarding
-  doesn't transfer.
-- Rotate per `docs/key-rotation.md` (the Stripe rows and this are the same work).
+
+**The code is mode-agnostic — nothing to build.** Every Stripe call keys off
+whichever `STRIPE_SECRET_KEY` is set; the same code that passes test-mode
+checkout runs live once the live keys + live webhooks are in place. `/api/health`
+reports `stripeMode` so you can confirm the flip from outside. Audited ready
+14 Aug 2026 (checkout = destination charge + application fee, atomic capacity
+hold, idempotent fulfilment; webhook = dual-secret verify, paid-status gate,
+async-method handling, seat release on expiry, `account.updated` payout sync).
+
+Do these in order — each fails quietly if skipped:
+
+**0. Settle tax first (#97).** Real money = IVA/invoicing obligations. Don't flip
+until the gestor has signed off. The 21% VAT on the *platform fee* is already
+computed and recorded per ticket (`application_fee_vat_cents`), but invoicing and
+reporting are #97.
+
+**1. Activate the Stripe account for live — (you).** Stripe → **Activate
+payments**: AuraSonic SL business details, representative ID, and the **IBAN** for
+payouts. Until the account is activated, live charges are rejected.
+
+**2. Enable Connect in live — (you).** Settings → **Connect** → complete the live
+platform profile (public name, support email, branding). Destination charges to
+artists need Connect live-enabled, separately from account activation.
+
+**3. Swap the keys in Vercel — (you), Production scope:**
+```
+STRIPE_SECRET_KEY = sk_live_…
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = pk_live_…
+```
+
+**4. Register the live webhooks — (you).** Test-mode endpoints do **not** carry
+over. Two deliveries, **both** pointing at
+`https://madgigz.aurasonic.es/api/stripe/webhook`:
+- **Platform events** ("Events on your account"): `checkout.session.completed`,
+  `checkout.session.async_payment_succeeded`, `checkout.session.expired`,
+  `checkout.session.async_payment_failed` → signing secret into
+  `STRIPE_WEBHOOK_SECRET`.
+- **Connect events** ("Events on **connected** accounts"): `account.updated` →
+  signing secret into `STRIPE_WEBHOOK_SECRET_CONNECT`.
+
+A missing endpoint means money taken and **no ticket issued** — fulfilment is
+webhook-driven.
+
+**5. Redeploy — (you).** Env changes only take effect on a new deployment.
+
+**6. Artists redo Connect onboarding for real — (you + artists).** Test
+onboarding doesn't transfer; each artist completes live KYC + bank before they
+can sell. `stripe_payouts_ready` flips automatically via the `account.updated`
+webhook.
+
+**7. Verify:** `/api/health` → `stripeMode: "live"`, `ok: true`, both webhook
+secrets `ok`. Then buy **one real low-value ticket** end-to-end (checkout →
+webhook fulfils → ticket + QR appears → the charge shows on the artist's
+connected account minus the fee), and run **one real refund** from admin.
+
+**8. Rotate** per `docs/key-rotation.md` (the Stripe rows are the same work).
+
+### Prove it in sandbox first (all mode-agnostic, so test-mode proves the code)
+- **Happy path:** paid checkout → `checkout.session.completed` → ticket + QR issued.
+- **Capacity:** two buyers race for the last seat (only one wins); an abandoned
+  checkout releases its held seat when it expires (~30 min).
+- **Free + house:** a free event / 100%-off code issues directly; a house show
+  takes no fee and makes no Connect transfer.
+- **Discounts:** a percent and a fixed code, re-validated server-side.
+- **Refunds:** full event cancel + per-ticket refund from admin → seat returns.
+- **Connect:** an artist completes test onboarding end-to-end →
+  `stripe_payouts_ready` flips → they can publish a paid show.
+
+### Worth weighing before launch — Bizum (#144)
+Checkout is **card-only** today (`payment_method_types: ["card"]` in
+`checkout-actions.ts`). **Bizum** is the dominant consumer payment method in
+Spain and would likely lift conversion for a Madrid audience; the webhook already
+handles async methods, so it's a small change (enable in Stripe → add `"bizum"`
+to the session). Tracked as #144.
