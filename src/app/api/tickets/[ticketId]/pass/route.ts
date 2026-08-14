@@ -51,7 +51,7 @@ export async function GET(
   const admin = adminClient();
   const { data: ticket } = await admin
     .from("tickets")
-    .select("id, quantity, refunded, events(title, venue, event_date, event_time, accent_color)")
+    .select("id, qr_secret, quantity, refunded, events(title, venue, event_date, event_time, accent_color)")
     .eq("id", ticketId)
     .maybeSingle();
 
@@ -69,6 +69,7 @@ export async function GET(
 
   const pass = await buildTicketPass({
     ticketId: ticket.id,
+    barcodeValue: (ticket.qr_secret as string | null) ?? ticket.id,
     eventTitle: event.title,
     venue: event.venue,
     dateISO: event.event_date,

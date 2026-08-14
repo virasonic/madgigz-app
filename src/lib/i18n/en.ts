@@ -98,6 +98,7 @@ export const en = {
     gigOne: "gig",
     gigMany: "gigs",
     removeLiked: "Remove from liked events",
+    transferPending: "Transfer pending",
   },
 
   ticket: {
@@ -142,6 +143,28 @@ export const en = {
     refundedTitle: "This ticket was refunded",
     refundedBody:
       "The payment has been returned to your original payment method - it can take a few days to appear on your statement. This ticket is no longer valid for entry.",
+    transfer: "Transfer ticket",
+    transferPendingTitle: "Transfer pending",
+    transferPendingBody:
+      "Share this link. Whoever opens it and taps Claim gets the ticket — and your copy stops working at the door.",
+    transferShare: "Share link",
+    transferCopied: "Link copied",
+    transferCancel: "Cancel",
+    transferWorking: "Working...",
+  },
+
+  claim: {
+    title: "You've been sent a ticket",
+    invalidBody: "This transfer link is no longer valid. It may have been claimed, cancelled, or the show has passed.",
+    goHome: "Go to MadGigz",
+    ownBody: "This is your own ticket — it's waiting for whoever you send the link to.",
+    viewTickets: "View my tickets",
+    signInBody: "Sign in or create a free MadGigz account to claim this ticket.",
+    signIn: "Sign in to claim",
+    createAccount: "New here? Create an account",
+    claimableBody: "Claim this ticket and it moves to your Tickets tab, with its own QR for the door.",
+    claim: "Claim ticket",
+    claiming: "Claiming...",
   },
 
   eventPage: {

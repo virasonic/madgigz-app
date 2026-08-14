@@ -24,6 +24,26 @@ function prefersNativeSheet() {
 // navigator.share hands over the OS sheet with every app the person actually
 // has installed, which is both more choice and less code than anything we
 // could build.
+// Share (or copy) an arbitrary URL through the same native-sheet/clipboard path
+// as shareEvent. Used by the ticket-transfer claim link (#145), which isn't an
+// event URL but wants identical behaviour on phone vs desktop.
+export async function shareUrl(url: string, title: string): Promise<ShareOutcome> {
+  if (prefersNativeSheet()) {
+    try {
+      await navigator.share({ title, url });
+      return "shared";
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return "cancelled";
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    return "copied";
+  } catch {
+    return "failed";
+  }
+}
+
 export async function shareEvent(event: EventItem): Promise<ShareOutcome> {
   const url = absoluteUrl(eventPath(event.id));
 

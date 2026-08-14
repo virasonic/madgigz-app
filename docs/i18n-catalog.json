@@ -81,7 +81,8 @@
       "gigsSummary": "{count} {gigs} you turned up to.",
       "gigOne": "gig",
       "gigMany": "gigs",
-      "removeLiked": "Remove from liked events"
+      "removeLiked": "Remove from liked events",
+      "transferPending": "Transfer pending"
     },
     "ticket": {
       "goingTitle": "You're going!",
@@ -118,7 +119,27 @@
       "showAtDoor": "Show this code at the door. If it can't be scanned, give the code above to staff.",
       "addToWallet": "Add to Wallet",
       "refundedTitle": "This ticket was refunded",
-      "refundedBody": "The payment has been returned to your original payment method - it can take a few days to appear on your statement. This ticket is no longer valid for entry."
+      "refundedBody": "The payment has been returned to your original payment method - it can take a few days to appear on your statement. This ticket is no longer valid for entry.",
+      "transfer": "Transfer ticket",
+      "transferPendingTitle": "Transfer pending",
+      "transferPendingBody": "Share this link. Whoever opens it and taps Claim gets the ticket — and your copy stops working at the door.",
+      "transferShare": "Share link",
+      "transferCopied": "Link copied",
+      "transferCancel": "Cancel",
+      "transferWorking": "Working..."
+    },
+    "claim": {
+      "title": "You've been sent a ticket",
+      "invalidBody": "This transfer link is no longer valid. It may have been claimed, cancelled, or the show has passed.",
+      "goHome": "Go to MadGigz",
+      "ownBody": "This is your own ticket — it's waiting for whoever you send the link to.",
+      "viewTickets": "View my tickets",
+      "signInBody": "Sign in or create a free MadGigz account to claim this ticket.",
+      "signIn": "Sign in to claim",
+      "createAccount": "New here? Create an account",
+      "claimableBody": "Claim this ticket and it moves to your Tickets tab, with its own QR for the door.",
+      "claim": "Claim ticket",
+      "claiming": "Claiming..."
     },
     "eventPage": {
       "homeAria": "MadGigz home",
@@ -676,7 +697,8 @@
       "gigsSummary": "{count} {gigs} a los que fuiste.",
       "gigOne": "bolo",
       "gigMany": "bolos",
-      "removeLiked": "Quitar de eventos guardados"
+      "removeLiked": "Quitar de eventos guardados",
+      "transferPending": "Transferencia pendiente"
     },
     "ticket": {
       "goingTitle": "¡Vas a ir!",
@@ -713,7 +735,27 @@
       "showAtDoor": "Muestra este código en la entrada. Si no se puede escanear, dale el código de arriba al personal.",
       "addToWallet": "Añadir a Wallet",
       "refundedTitle": "Esta entrada fue reembolsada",
-      "refundedBody": "El pago se ha devuelto a tu método de pago original; puede tardar unos días en aparecer en tu extracto. Esta entrada ya no es válida para entrar."
+      "refundedBody": "El pago se ha devuelto a tu método de pago original; puede tardar unos días en aparecer en tu extracto. Esta entrada ya no es válida para entrar.",
+      "transfer": "Transferir entrada",
+      "transferPendingTitle": "Transferencia pendiente",
+      "transferPendingBody": "Comparte este enlace. Quien lo abra y toque Reclamar se queda con la entrada, y tu copia dejará de funcionar en la puerta.",
+      "transferShare": "Compartir enlace",
+      "transferCopied": "Enlace copiado",
+      "transferCancel": "Cancelar",
+      "transferWorking": "Procesando..."
+    },
+    "claim": {
+      "title": "Te han enviado una entrada",
+      "invalidBody": "Este enlace de transferencia ya no es válido. Puede que se haya reclamado, cancelado, o que el evento ya haya pasado.",
+      "goHome": "Ir a MadGigz",
+      "ownBody": "Esta es tu propia entrada: está esperando a quien le envíes el enlace.",
+      "viewTickets": "Ver mis entradas",
+      "signInBody": "Inicia sesión o crea una cuenta gratuita de MadGigz para reclamar esta entrada.",
+      "signIn": "Inicia sesión para reclamar",
+      "createAccount": "¿Nuevo por aquí? Crea una cuenta",
+      "claimableBody": "Reclama esta entrada y pasará a tu pestaña de Entradas, con su propio QR para la puerta.",
+      "claim": "Reclamar entrada",
+      "claiming": "Reclamando..."
     },
     "eventPage": {
       "homeAria": "Inicio de MadGigz",

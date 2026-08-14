@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   fetchCurrentUser,
   fetchEvents,
+  fetchPendingTransfers,
   fetchSavedEventIds,
   fetchTickets,
 } from "@/lib/supabase/queries";
@@ -14,10 +15,11 @@ export default async function SavedPage() {
   const user = await fetchCurrentUser(supabase);
   if (!user) redirect("/");
 
-  const [events, savedIds, tickets] = await Promise.all([
+  const [events, savedIds, tickets, pendingTransfers] = await Promise.all([
     fetchEvents(supabase),
     fetchSavedEventIds(supabase, user.id),
     fetchTickets(supabase, user.id),
+    fetchPendingTransfers(supabase),
   ]);
 
   return (
@@ -26,6 +28,7 @@ export default async function SavedPage() {
       initialEvents={events}
       initialSavedIds={savedIds}
       initialTickets={tickets}
+      initialPendingTransfers={pendingTransfers}
       appleWalletEnabled={isAppleWalletConfigured()}
     />
   );

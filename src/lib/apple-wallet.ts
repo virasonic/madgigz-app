@@ -10,6 +10,13 @@ const decode = (b64: string) => Buffer.from(b64, "base64");
 
 export interface TicketPassInput {
   ticketId: string;
+  /**
+   * The value the QR barcode carries and the door scanner looks up — tickets'
+   * rotatable qr_secret (#145), which differs from ticketId so a transfer can
+   * invalidate the sender's pass. Falls back to ticketId if omitted (legacy /
+   * pre-addendum_037).
+   */
+  barcodeValue?: string;
   eventTitle: string;
   venue: string;
   dateISO: string; // event_date, YYYY-MM-DD
@@ -41,8 +48,9 @@ function formatDate(dateISO: string): string {
 
 /**
  * Returns the signed `.pkpass` bytes, or null when Wallet isn't configured. The
- * QR barcode carries the **ticket UUID** — the exact value the door scanner reads
- * from the in-app QR (`ticket.id`), so a Wallet pass scans identically.
+ * QR barcode carries the **qr_secret** — the exact value the door scanner reads
+ * from the in-app QR (#145) — so a Wallet pass scans identically and a transfer
+ * that rotates the secret invalidates both copies together.
  */
 export async function buildTicketPass(input: TicketPassInput): Promise<Buffer | null> {
   const cfg = appleWalletConfig();
@@ -106,7 +114,7 @@ export async function buildTicketPass(input: TicketPassInput): Promise<Buffer | 
 
   pass.setBarcodes({
     format: "PKBarcodeFormatQR",
-    message: input.ticketId,
+    message: input.barcodeValue ?? input.ticketId,
     messageEncoding: "iso-8859-1",
   });
 

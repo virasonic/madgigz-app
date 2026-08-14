@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { EventItem, Ticket } from "@/lib/types";
 import { mapsUrl } from "@/lib/site";
 import { openExternal } from "@/lib/native";
+import { shareUrl } from "@/lib/share";
 import { createWalletPassUrl } from "@/app/(app)/saved/wallet-actions";
+import { createTransfer, cancelTransfer } from "@/app/(app)/saved/transfer-actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
@@ -15,6 +17,10 @@ interface TicketQRModalProps {
   event: EventItem;
   /** Apple Wallet configured on the server (#129) — shows the "Add to Wallet" button. */
   walletEnabled?: boolean;
+  /** Claim token if this ticket already has a transfer link out (#145). */
+  pendingTransferToken?: string | null;
+  /** Keep the parent's pending-transfer map in sync when a link is created/cancelled. */
+  onTransferChange?: (ticketId: string, token: string | null) => void;
   onClose: () => void;
 }
 
@@ -31,12 +37,66 @@ function formatDate(iso: string, dl: string) {
   });
 }
 
-export default function TicketQRModal({ ticket, event, walletEnabled, onClose }: TicketQRModalProps) {
+export default function TicketQRModal({
+  ticket,
+  event,
+  walletEnabled,
+  pendingTransferToken,
+  onTransferChange,
+  onClose,
+}: TicketQRModalProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
   const [qrSrc, setQrSrc] = useState<string | null>(null);
   const [walletPending, setWalletPending] = useState(false);
+  const [transferToken, setTransferToken] = useState<string | null>(pendingTransferToken ?? null);
+  const [transferBusy, setTransferBusy] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const { handleProps, sheetStyle } = useDragToDismiss(onClose);
+
+  // A ticket can be handed on only while it's a live, un-used ticket to a show
+  // that hasn't happened — same rule the server enforces (#145).
+  const canTransfer = !ticket.refunded && !ticket.checkedInAt && event.date >= TODAY;
+  const claimUrl =
+    transferToken && typeof window !== "undefined"
+      ? `${window.location.origin}/claim/${transferToken}`
+      : null;
+
+  async function handleCreateTransfer() {
+    setTransferBusy(true);
+    setTransferError(null);
+    const result = await createTransfer(ticket.id);
+    setTransferBusy(false);
+    if ("error" in result) {
+      setTransferError(result.error);
+      return;
+    }
+    setTransferToken(result.token);
+    onTransferChange?.(ticket.id, result.token);
+  }
+
+  async function handleShareClaim() {
+    if (!claimUrl) return;
+    const outcome = await shareUrl(claimUrl, t("ticket.transfer"));
+    if (outcome === "copied") {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  async function handleCancelTransfer() {
+    setTransferBusy(true);
+    setTransferError(null);
+    const result = await cancelTransfer(ticket.id);
+    setTransferBusy(false);
+    if (result.error) {
+      setTransferError(result.error);
+      return;
+    }
+    setTransferToken(null);
+    onTransferChange?.(ticket.id, null);
+  }
 
   // Mints a signed pass URL via a server action (which runs in-app, where the
   // login exists) then opens it externally. The token authorises the request in
@@ -49,10 +109,15 @@ export default function TicketQRModal({ ticket, event, walletEnabled, onClose }:
     if ("url" in result) openExternal(`${window.location.origin}${result.url}`);
   }
 
+  // The barcode carries qr_secret — the rotatable value the door scanner looks up
+  // (#145) — falling back to the public id only in the pre-addendum_037 window
+  // where qr_secret doesn't exist yet.
+  const barcodeValue = ticket.qrSecret ?? ticket.id;
+
   useEffect(() => {
     if (ticket.refunded) return;
     let cancelled = false;
-    QRCode.toDataURL(ticket.id, { margin: 1, width: 320 }).then((url) => {
+    QRCode.toDataURL(barcodeValue, { margin: 1, width: 320 }).then((url) => {
       if (!cancelled) {
         setQrSrc(url);
       }
@@ -60,7 +125,7 @@ export default function TicketQRModal({ ticket, event, walletEnabled, onClose }:
     return () => {
       cancelled = true;
     };
-  }, [ticket.id, ticket.refunded]);
+  }, [barcodeValue, ticket.refunded]);
 
   return (
     <div
@@ -139,6 +204,64 @@ export default function TicketQRModal({ ticket, event, walletEnabled, onClose }:
                 </svg>
                 {t("ticket.addToWallet")}
               </button>
+            )}
+
+            {/* Transfer / gift this ticket to someone else (#145). Only while it's
+                a live, un-used ticket to an upcoming show. */}
+            {canTransfer && (
+              <div className="mt-6 border-t border-muted/15 pt-5">
+                {transferToken ? (
+                  <div className="rounded-2xl bg-background/40 p-4 text-center">
+                    <p className="font-heading text-sm text-foreground">
+                      {t("ticket.transferPendingTitle")}
+                    </p>
+                    <p className="mt-1 text-xs text-muted">{t("ticket.transferPendingBody")}</p>
+                    {claimUrl && (
+                      <p className="mt-3 break-all rounded-lg bg-surface px-3 py-2 font-mono text-[11px] text-muted">
+                        {claimUrl}
+                      </p>
+                    )}
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleShareClaim}
+                        className="flex-1 rounded-full bg-primary py-2 text-sm font-heading text-foreground"
+                      >
+                        {copied ? t("ticket.transferCopied") : t("ticket.transferShare")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelTransfer}
+                        disabled={transferBusy}
+                        className="flex-1 rounded-full border border-danger/40 py-2 text-sm font-heading text-danger disabled:opacity-50"
+                      >
+                        {transferBusy ? t("ticket.transferWorking") : t("ticket.transferCancel")}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCreateTransfer}
+                    disabled={transferBusy}
+                    className="flex w-full items-center justify-center gap-2 rounded-full border border-muted/30 py-3 text-sm font-heading text-foreground disabled:opacity-50"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path
+                        d="M4 12v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6M16 6l-4-4-4 4M12 2v13"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    {transferBusy ? t("ticket.transferWorking") : t("ticket.transfer")}
+                  </button>
+                )}
+                {transferError && (
+                  <p className="mt-2 text-center text-xs text-danger">{transferError}</p>
+                )}
+              </div>
             )}
           </>
         )}

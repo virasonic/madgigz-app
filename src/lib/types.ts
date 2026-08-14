@@ -120,6 +120,13 @@ export interface Ticket {
   checkedInAt: string | null;
   refunded: boolean;
   hiddenAt: string | null;
+  /**
+   * The value the QR/Wallet barcode carries and the door scanner looks up (#145).
+   * Distinct from `id` so a transfer can rotate it and kill the sender's old
+   * screenshot. Null only in the pre-addendum_037 degradation window, where the
+   * QR falls back to `id`.
+   */
+  qrSecret: string | null;
 }
 
 export interface AppUser {
@@ -293,6 +300,8 @@ export interface TicketRow {
   checked_in_at: string | null;
   refunded: boolean;
   hidden_at?: string | null;
+  // Absent until addendum_037 runs; the QR falls back to `id` meanwhile.
+  qr_secret?: string | null;
 }
 
 export function mapTicket(row: TicketRow): Ticket {
@@ -307,6 +316,7 @@ export function mapTicket(row: TicketRow): Ticket {
     checkedInAt: row.checked_in_at,
     refunded: row.refunded,
     hiddenAt: row.hidden_at ?? null,
+    qrSecret: row.qr_secret ?? null,
   };
 }
 

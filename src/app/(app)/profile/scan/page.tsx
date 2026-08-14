@@ -89,15 +89,29 @@ export default function ScanTicketsPage() {
       frameRef.current = requestAnimationFrame(scanLoop);
     }
 
-    async function handleDecoded(ticketId: string) {
+    async function handleDecoded(scanned: string) {
       pausedRef.current = true;
       const supabase = createClient();
 
-      const { data: ticketRow } = await supabase
+      // The QR carries qr_secret — the rotatable value transfers change (#145) —
+      // so look tickets up by it first. Fall back to the id for older QRs and for
+      // the pre-addendum_037 window where the column errors (data comes back
+      // null, and we fall through).
+      let ticketRow: TicketRow | null = null;
+      const bySecret = await supabase
         .from("tickets")
         .select("*")
-        .eq("id", ticketId)
+        .eq("qr_secret", scanned)
         .maybeSingle();
+      ticketRow = (bySecret.data as TicketRow | null) ?? null;
+      if (!ticketRow) {
+        const byId = await supabase
+          .from("tickets")
+          .select("*")
+          .eq("id", scanned)
+          .maybeSingle();
+        ticketRow = (byId.data as TicketRow | null) ?? null;
+      }
 
       if (!ticketRow) {
         setResult({ status: "invalid" });

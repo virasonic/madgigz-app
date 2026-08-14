@@ -93,6 +93,7 @@ export const es: Messages = {
     gigOne: "bolo",
     gigMany: "bolos",
     removeLiked: "Quitar de eventos guardados",
+    transferPending: "Transferencia pendiente",
   },
 
   ticket: {
@@ -136,6 +137,28 @@ export const es: Messages = {
     refundedTitle: "Esta entrada fue reembolsada",
     refundedBody:
       "El pago se ha devuelto a tu método de pago original; puede tardar unos días en aparecer en tu extracto. Esta entrada ya no es válida para entrar.",
+    transfer: "Transferir entrada",
+    transferPendingTitle: "Transferencia pendiente",
+    transferPendingBody:
+      "Comparte este enlace. Quien lo abra y toque Reclamar se queda con la entrada, y tu copia dejará de funcionar en la puerta.",
+    transferShare: "Compartir enlace",
+    transferCopied: "Enlace copiado",
+    transferCancel: "Cancelar",
+    transferWorking: "Procesando...",
+  },
+
+  claim: {
+    title: "Te han enviado una entrada",
+    invalidBody: "Este enlace de transferencia ya no es válido. Puede que se haya reclamado, cancelado, o que el evento ya haya pasado.",
+    goHome: "Ir a MadGigz",
+    ownBody: "Esta es tu propia entrada: está esperando a quien le envíes el enlace.",
+    viewTickets: "Ver mis entradas",
+    signInBody: "Inicia sesión o crea una cuenta gratuita de MadGigz para reclamar esta entrada.",
+    signIn: "Inicia sesión para reclamar",
+    createAccount: "¿Nuevo por aquí? Crea una cuenta",
+    claimableBody: "Reclama esta entrada y pasará a tu pestaña de Entradas, con su propio QR para la puerta.",
+    claim: "Reclamar entrada",
+    claiming: "Reclamando...",
   },
 
   eventPage: {

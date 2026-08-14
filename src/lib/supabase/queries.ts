@@ -301,6 +301,29 @@ export async function fetchTickets(
   return ((data as TicketRow[]) ?? []).map(mapTicket);
 }
 
+/**
+ * ticketId → claim token for the caller's own tickets that have a transfer
+ * link out (#145). Drives the "transfer pending" badge and the cancel button in
+ * the ticket sheet. RLS scopes the ticket_transfers rows to from_user_id, so
+ * this only ever returns the caller's own. Returns {} — degrading silently — if
+ * the table isn't there yet (42P01, addendum_037 not run) so the app works in
+ * the gap between deploy and migration.
+ */
+export async function fetchPendingTransfers(
+  supabase: SupabaseClient
+): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from("ticket_transfers")
+    .select("ticket_id, token")
+    .eq("status", "pending");
+  if (error) return {};
+  const map: Record<string, string> = {};
+  for (const row of (data ?? []) as { ticket_id: string; token: string }[]) {
+    map[row.ticket_id] = row.token;
+  }
+  return map;
+}
+
 export async function validateDiscountCode(
   supabase: SupabaseClient,
   code: string,

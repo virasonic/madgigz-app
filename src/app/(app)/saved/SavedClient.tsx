@@ -43,6 +43,8 @@ interface SavedClientProps {
   initialEvents: EventItem[];
   initialSavedIds: string[];
   initialTickets: Ticket[];
+  /** ticketId → claim token for tickets with a live transfer link (#145). */
+  initialPendingTransfers: Record<string, string>;
   appleWalletEnabled: boolean;
 }
 
@@ -51,6 +53,7 @@ export default function SavedClient({
   initialEvents,
   initialSavedIds,
   initialTickets,
+  initialPendingTransfers,
   appleWalletEnabled,
 }: SavedClientProps) {
   const { t, locale } = useT();
@@ -65,6 +68,8 @@ export default function SavedClient({
   );
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
+  const [pendingTransfers, setPendingTransfers] =
+    useState<Record<string, string>>(initialPendingTransfers);
   const [removingTicketId, setRemovingTicketId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | undefined>();
 
@@ -123,6 +128,17 @@ export default function SavedClient({
     if (!ok) {
       setSavedIds((ids) => (wasSaved ? [...ids, eventId] : ids.filter((id) => id !== eventId)));
     }
+  }
+
+  // Keep the pending-transfer map in step with links created/cancelled from the
+  // ticket sheet, so the badge and the sheet agree without a reload.
+  function handleTransferChange(ticketId: string, token: string | null) {
+    setPendingTransfers((current) => {
+      const next = { ...current };
+      if (token) next[ticketId] = token;
+      else delete next[ticketId];
+      return next;
+    });
   }
 
   async function handleRemoveRefunded(ticketId: string) {
@@ -241,6 +257,11 @@ export default function SavedClient({
                           ? t("savedPage.statusCheckedIn")
                           : t("savedPage.statusConfirmed")}
                     </span>
+                    {pendingTransfers[ticket.id] && !ticket.refunded && (
+                      <span className="shrink-0 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-heading uppercase text-accent">
+                        {t("savedPage.transferPending")}
+                      </span>
+                    )}
                   </div>
                   <p className="truncate text-xs text-muted">
                     {event.venue} · {formatDate(event.date, dl)} · {event.time}
@@ -338,6 +359,8 @@ export default function SavedClient({
           ticket={activeTicket.ticket}
           event={activeTicket.event}
           walletEnabled={appleWalletEnabled}
+          pendingTransferToken={pendingTransfers[activeTicket.ticket.id] ?? null}
+          onTransferChange={handleTransferChange}
           onClose={() => setActiveTicket(null)}
         />
       )}
