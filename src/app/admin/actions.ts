@@ -104,6 +104,11 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
     try {
       await stripe.refunds.create(
         {
+          // Refund only this seat's share (per-ticket rows, addendum 036). A
+          // pre-migration single row's price_paid is the whole order, so this is
+          // a full refund exactly as before. reverse_transfer / refund_
+          // application_fee reverse the transfer + fee proportionally to amount.
+          amount: Math.round(Number(ticket.price_paid) * 100),
           payment_intent: ticket.stripe_payment_intent_id,
           // Destination charges put the money in the artist's balance. Without
           // reverse_transfer the fan gets refunded out of MadGigz's balance
@@ -157,7 +162,7 @@ export async function refundTicket(
   const { data: ticket } = await admin
     .from("tickets")
     .select(
-      "id, event_id, quantity, refunded, checked_in_at, stripe_payment_intent_id, stripe_account_id"
+      "id, event_id, quantity, price_paid, refunded, checked_in_at, stripe_payment_intent_id, stripe_account_id"
     )
     .eq("id", ticketId)
     .single();
@@ -184,6 +189,11 @@ export async function refundTicket(
     try {
       await stripe.refunds.create(
         {
+          // Per-seat rows (addendum 036): refund just this ticket's price_paid.
+          // A pre-migration single row holds the whole order, so this stays a
+          // full refund. reverse_transfer / refund_application_fee act
+          // proportionally to amount.
+          amount: Math.round(Number(ticket.price_paid) * 100),
           payment_intent: ticket.stripe_payment_intent_id,
           // Funds sit in the artist's balance under destination charges -
           // without reverse_transfer the fan would be repaid out of MadGigz's
