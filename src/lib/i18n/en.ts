@@ -62,6 +62,8 @@ export const en = {
     getTickets: "Get Tickets",
     previousReel: "Previous",
     nextReel: "Next",
+    newArtist: "New artist",
+    viewProfile: "View profile",
   },
 
   // #90: the local-first identity. One city for now (Madrid); the name is
@@ -545,6 +547,23 @@ export const en = {
     tapToAdd: "Tap to add a photo or video",
     captionPlaceholder: "Say hi (optional)...",
     save: "Save intro reel",
+  },
+
+  tierEditor: {
+    title: "Price tiers",
+    subtitle: "Offer more than one ticket type (e.g. General and VIP). Leave empty for a single price.",
+    single: "Single price",
+    count: "{n} tiers",
+    namePlaceholder: "Name (e.g. General, VIP)",
+    price: "Price €",
+    capacity: "Capacity",
+    onSaleUntil: "On sale until (optional)",
+    sold: "Sold: {n}",
+    remove: "Remove",
+    addTier: "+ Add tier",
+    save: "Save tiers",
+    saving: "Saving...",
+    saved: "Saved",
   },
 
   addShow: {

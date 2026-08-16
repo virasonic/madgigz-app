@@ -260,6 +260,26 @@ export async function fetchArtistIntro(
   return mapContentPost(data as ContentPostRow);
 }
 
+/**
+ * Recent artist intro reels for the For You feed (#143 → discovery), newest
+ * first. These are the "meet a new artist" cards injected among the gig reels.
+ * Returns [] if the column/table isn't there yet (addendum_038 not run).
+ */
+export async function fetchIntroReels(
+  supabase: SupabaseClient,
+  limit = 10
+): Promise<ContentPost[]> {
+  const { data, error } = await supabase
+    .from("content_posts")
+    .select("*, profiles(artist_photo_url)")
+    .eq("is_intro", true)
+    .is("hidden_at", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return ((data as ContentPostRow[]) ?? []).map(mapContentPost);
+}
+
 export async function fetchShowContent(
   supabase: SupabaseClient,
   eventId: string

@@ -5,6 +5,7 @@ import {
   fetchCurrentUser,
   fetchEvents,
   fetchFollowedEventIds,
+  fetchIntroReels,
   fetchSavedEventIds,
   fetchShowsByArtist,
 } from "@/lib/supabase/queries";
@@ -17,12 +18,13 @@ export default async function FeedPage() {
   const user = await fetchCurrentUser(supabase);
   if (!user) redirect("/");
 
-  const [events, posts, shows, savedIds, followedEventIds] = await Promise.all([
+  const [events, posts, shows, savedIds, followedEventIds, intros] = await Promise.all([
     fetchEvents(supabase, { activeOnly: true, city: CURRENT_CITY }),
     fetchContentPosts(supabase),
     isArtistRole(user.role) ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
     fetchSavedEventIds(supabase, user.id),
     fetchFollowedEventIds(supabase, user.id),
+    fetchIntroReels(supabase),
   ]);
 
   return (
@@ -30,6 +32,7 @@ export default async function FeedPage() {
       user={user}
       initialEvents={events}
       initialPosts={posts}
+      initialIntros={intros}
       shows={shows}
       initialSavedIds={savedIds}
       followedEventIds={[...followedEventIds]}

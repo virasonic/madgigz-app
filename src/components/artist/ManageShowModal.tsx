@@ -3,6 +3,7 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import FeeBreakdown from "@/components/artist/FeeBreakdown";
+import ArtistTierEditor, { type ArtistTier } from "@/components/artist/ArtistTierEditor";
 import { removeSelfFromShow } from "@/app/(app)/profile/show-actions";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -129,6 +130,38 @@ export default function ManageShowModal({
     const supabase = createClient();
     fetchShowContent(supabase, show.id).then(setPosts);
     fetchShowTicketCounts(supabase, show.id).then(setTicketCounts);
+  }, [show.id]);
+
+  // Price tiers (#151) for this show, loaded for the editor. tiersVersion bumps
+  // after a save so the editor remounts with the freshly-saved rows (which now
+  // carry real ids — otherwise a second save would re-insert the new ones).
+  const [tiers, setTiers] = useState<ArtistTier[]>([]);
+  const [tiersVersion, setTiersVersion] = useState(0);
+  function loadTiers() {
+    const supabase = createClient();
+    supabase
+      .from("event_tiers")
+      .select("id, name, price, capacity, available_until, sold")
+      .eq("event_id", show.id)
+      .order("sort_order", { ascending: true })
+      .then(({ data, error }) => {
+        if (error || !data) return;
+        setTiers(
+          data.map((r) => ({
+            id: r.id as string,
+            name: r.name as string,
+            price: Number(r.price),
+            capacity: r.capacity as number,
+            availableUntil: (r.available_until as string | null) ?? null,
+            sold: r.sold as number,
+          }))
+        );
+        setTiersVersion((v) => v + 1);
+      });
+  }
+  useEffect(() => {
+    loadTiers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show.id]);
 
   useEffect(() => {
@@ -448,7 +481,15 @@ export default function ManageShowModal({
             {canManage && show.ticketing?.mode !== "external" && (
               <div className="flex flex-col gap-2">
                 <p className="text-sm text-muted">{t("manageShow.ticketPrice")}</p>
-                <FeeBreakdown priceEuros={show.price} />
+                {/* Single-price fee breakdown shows only when there are no tiers;
+                    with tiers the editor shows a breakdown per tier (#151). */}
+                {tiers.length === 0 && <FeeBreakdown priceEuros={show.price} />}
+                <ArtistTierEditor
+                  key={tiersVersion}
+                  eventId={show.id}
+                  initialTiers={tiers}
+                  onSaved={loadTiers}
+                />
               </div>
             )}
 

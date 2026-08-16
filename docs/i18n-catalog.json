@@ -50,7 +50,9 @@
       "artistContent": "Artist Content",
       "getTickets": "Get Tickets",
       "previousReel": "Previous",
-      "nextReel": "Next"
+      "nextReel": "Next",
+      "newArtist": "New artist",
+      "viewProfile": "View profile"
     },
     "city": {
       "youAreIn": "You're in {city}",
@@ -480,6 +482,22 @@
       "captionPlaceholder": "Say hi (optional)...",
       "save": "Save intro reel"
     },
+    "tierEditor": {
+      "title": "Price tiers",
+      "subtitle": "Offer more than one ticket type (e.g. General and VIP). Leave empty for a single price.",
+      "single": "Single price",
+      "count": "{n} tiers",
+      "namePlaceholder": "Name (e.g. General, VIP)",
+      "price": "Price €",
+      "capacity": "Capacity",
+      "onSaleUntil": "On sale until (optional)",
+      "sold": "Sold: {n}",
+      "remove": "Remove",
+      "addTier": "+ Add tier",
+      "save": "Save tiers",
+      "saving": "Saving...",
+      "saved": "Saved"
+    },
     "addShow": {
       "title": "Add a show",
       "cantSellTitle": "Before you start: you can't sell paid tickets yet",
@@ -684,7 +702,9 @@
       "artistContent": "Contenido de artista",
       "getTickets": "Comprar entradas",
       "previousReel": "Anterior",
-      "nextReel": "Siguiente"
+      "nextReel": "Siguiente",
+      "newArtist": "Artista nuevo",
+      "viewProfile": "Ver perfil"
     },
     "city": {
       "youAreIn": "Estás en {city}",
@@ -1113,6 +1133,22 @@
       "tapToAdd": "Toca para añadir una foto o vídeo",
       "captionPlaceholder": "Saluda (opcional)...",
       "save": "Guardar reel"
+    },
+    "tierEditor": {
+      "title": "Tipos de entrada",
+      "subtitle": "Ofrece más de un tipo de entrada (p. ej. General y VIP). Déjalo vacío para un precio único.",
+      "single": "Precio único",
+      "count": "{n} tipos",
+      "namePlaceholder": "Nombre (p. ej. General, VIP)",
+      "price": "Precio €",
+      "capacity": "Aforo",
+      "onSaleUntil": "A la venta hasta (opcional)",
+      "sold": "Vendidas: {n}",
+      "remove": "Quitar",
+      "addTier": "+ Añadir tipo",
+      "save": "Guardar tipos",
+      "saving": "Guardando...",
+      "saved": "Guardado"
     },
     "addShow": {
       "title": "Añadir un bolo",

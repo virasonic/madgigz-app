@@ -4,6 +4,37 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveVenue, syncEventArtists, syncEventGenres } from "@/lib/show-sync";
+import { applyEventTiers, type TierInput } from "@/lib/tiers-apply";
+
+export type { TierInput };
+
+// An artist manages the price tiers (#151) on their OWN show. Same shared write
+// as the admin panel; the only difference is the authorization check — the
+// event must belong to the caller. Not tagged acts: being on a bill never grants
+// management (mirrors updateShow).
+export async function saveArtistTiers(
+  eventId: string,
+  tiers: TierInput[]
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const admin = createAdminClient();
+  const { data: event } = await admin
+    .from("events")
+    .select("id, artist_id")
+    .eq("id", eventId)
+    .single();
+  if (!event) return { error: "Show not found" };
+  if (event.artist_id !== user.id) return { error: "Not your show" };
+
+  const result = await applyEventTiers(admin, eventId, tiers);
+  if (!result.error) revalidatePath("/profile");
+  return result;
+}
 
 export interface ShowEdits {
   description: string;

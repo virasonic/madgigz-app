@@ -59,6 +59,8 @@ export const es: Messages = {
     getTickets: "Comprar entradas",
     previousReel: "Anterior",
     nextReel: "Siguiente",
+    newArtist: "Artista nuevo",
+    viewProfile: "Ver perfil",
   },
 
   city: {
@@ -531,6 +533,23 @@ export const es: Messages = {
     tapToAdd: "Toca para añadir una foto o vídeo",
     captionPlaceholder: "Saluda (opcional)...",
     save: "Guardar reel",
+  },
+
+  tierEditor: {
+    title: "Tipos de entrada",
+    subtitle: "Ofrece más de un tipo de entrada (p. ej. General y VIP). Déjalo vacío para un precio único.",
+    single: "Precio único",
+    count: "{n} tipos",
+    namePlaceholder: "Nombre (p. ej. General, VIP)",
+    price: "Precio €",
+    capacity: "Aforo",
+    onSaleUntil: "A la venta hasta (opcional)",
+    sold: "Vendidas: {n}",
+    remove: "Quitar",
+    addTier: "+ Añadir tipo",
+    save: "Guardar tipos",
+    saving: "Guardando...",
+    saved: "Guardado",
   },
 
   addShow: {

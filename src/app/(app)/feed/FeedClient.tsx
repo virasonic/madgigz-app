@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import TicketModal from "@/components/feed/TicketModal";
 import ContentReelCard from "@/components/feed/ContentReelCard";
 import AnnouncementCard from "@/components/feed/AnnouncementCard";
+import FeedIntroCard from "@/components/feed/FeedIntroCard";
 import AddContentModal from "@/components/artist/AddContentModal";
 import { createClient } from "@/lib/supabase/client";
 import { fetchContentPosts, toggleSavedEvent } from "@/lib/supabase/queries";
@@ -38,7 +39,8 @@ function buildForYouFeed(
   allEvents: EventItem[],
   allPosts: ContentPost[],
   followed: Set<string>,
-  seenAnnouncements: Set<string>
+  seenAnnouncements: Set<string>,
+  intros: ContentPost[]
 ): FeedEntry[] {
   // Reversed: the query hands everything back newest-first, which is right for
   // artist reels and exactly wrong for a numbered explainer set - it met people
@@ -58,18 +60,23 @@ function buildForYouFeed(
     (a, b) => Number(followed.has(b.event.id)) - Number(followed.has(a.event.id))
   );
 
-  if (announcements.length === 0) return sorted;
+  const asEntry = (post: ContentPost): FeedEntry => ({ post, event: null });
+  // Artist intro reels (#143 → discovery): "meet a new artist" cards, newest
+  // first. Rendered via FeedIntroCard (they have no event). A handful lead the
+  // gigs so a browsing fan meets fresh local artists straight away — a stand-in
+  // for the eventual cold-start ranking (#142).
+  const introEntries = intros.map(asEntry);
+
+  if (announcements.length === 0) return [...introEntries, ...sorted];
 
   const unseen = announcements.filter((post) => !seenAnnouncements.has(post.id));
   const seen = announcements.filter((post) => seenAnnouncements.has(post.id));
-  const asEntry = (post: ContentPost): FeedEntry => ({ post, event: null });
 
-  // Nothing is dropped: a few unseen cards lead, the gigs come next, then any
-  // remaining unseen cards, then the ones already read. As artist content
-  // grows the reels naturally push the trailing block further down, and read
-  // cards drift to the very bottom on their own.
+  // Nothing is dropped: a few unseen cards lead, then discovery intros, then the
+  // gigs, then any remaining unseen cards, then the ones already read.
   return [
     ...unseen.slice(0, TOP_UNSEEN).map(asEntry),
+    ...introEntries,
     ...sorted,
     ...unseen.slice(TOP_UNSEEN).map(asEntry),
     ...seen.map(asEntry),
@@ -109,6 +116,8 @@ interface FeedClientProps {
   user: AppUser;
   initialEvents: EventItem[];
   initialPosts: ContentPost[];
+  /** Recent artist intro reels injected into For You for discovery (#143). */
+  initialIntros: ContentPost[];
   shows: EventItem[];
   initialSavedIds: string[];
   followedEventIds: string[];
@@ -118,6 +127,7 @@ export default function FeedClient({
   user,
   initialEvents,
   initialPosts,
+  initialIntros,
   shows,
   initialSavedIds,
   followedEventIds,
@@ -294,9 +304,14 @@ export default function FeedClient({
     [initialEvents, ticketModal.value]
   );
 
+  // Don't show an artist their own intro reel as a discovery card.
+  const discoveryIntros = useMemo(
+    () => initialIntros.filter((p) => p.artistId !== user.id),
+    [initialIntros, user.id]
+  );
   const forYouFeed = useMemo(
-    () => buildForYouFeed(initialEvents, allPosts, followed, seenAnnouncements),
-    [initialEvents, allPosts, followed, seenAnnouncements]
+    () => buildForYouFeed(initialEvents, allPosts, followed, seenAnnouncements, discoveryIntros),
+    [initialEvents, allPosts, followed, seenAnnouncements, discoveryIntros]
   );
   // groupByDay re-sorts by date, and Array.sort is stable, so pre-sorting
   // followed-first keeps the days in order while lifting followed artists
@@ -459,6 +474,13 @@ export default function FeedClient({
                       onOpen={() => ticketModal.open(entry.event!.id)}
                       liked={savedIds.includes(entry.event.id)}
                       onToggleLike={() => handleToggleLike(entry.event!.id)}
+                      preload={Math.abs(index - activeIndex) <= 1 ? "auto" : "none"}
+                    />
+                  ) : entry.post.isIntro ? (
+                    <FeedIntroCard
+                      post={entry.post}
+                      muted={reelsMuted}
+                      onToggleMute={() => setReelsMuted((v) => !v)}
                       preload={Math.abs(index - activeIndex) <= 1 ? "auto" : "none"}
                     />
                   ) : (
