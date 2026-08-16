@@ -20,6 +20,27 @@ import CityBadge from "@/components/ui/CityBadge";
 
 type Pane = "forYou" | "thisWeek";
 
+// Remember which reel the fan is on so returning from an artist profile (or any
+// sub-page) lands back on it rather than the top (#143 feedback). Keyed by the
+// reel's post id, not a raw scroll offset, so it survives the feed re-ordering
+// that the seen-announcements pass applies — and falls back to the top when the
+// saved reel is gone. sessionStorage: per-tab, cleared when the tab closes.
+const FEED_POS_KEY = "mg.feed.forYouPostId";
+function saveFeedPos(postId: string) {
+  try {
+    sessionStorage.setItem(FEED_POS_KEY, postId);
+  } catch {
+    // best-effort; a feed that can't remember its spot still works
+  }
+}
+function loadFeedPos(): string | null {
+  try {
+    return sessionStorage.getItem(FEED_POS_KEY);
+  } catch {
+    return null;
+  }
+}
+
 interface FeedEntry {
   post: ContentPost;
   /** Null for a MadGigz announcement - see addendum_028. */
@@ -165,6 +186,9 @@ export default function FeedClient({
   // height, so the index is scrollTop / clientHeight. rAF-throttled; only the
   // active reel ±1 get preload="auto", the rest stay "none" to spare egress.
   const [activeIndex, setActiveIndex] = useState(0);
+  // Latest built feed, read (not subscribed) inside the scroll handler so it can
+  // map the active index → post id without re-creating the handler every render.
+  const forYouFeedRef = useRef<FeedEntry[]>([]);
   const scrollTickRef = useRef(false);
   const handleFeedScroll = useCallback(() => {
     if (scrollTickRef.current) return;
@@ -175,6 +199,9 @@ export default function FeedClient({
       if (!el || el.clientHeight === 0) return;
       const idx = Math.round(el.scrollTop / el.clientHeight);
       setActiveIndex((prev) => (prev === idx ? prev : idx));
+      // Remember the reel in view so a round-trip to an artist profile returns here.
+      const entry = forYouFeedRef.current[idx];
+      if (entry) saveFeedPos(entry.post.id);
     });
   }, []);
 
@@ -280,17 +307,25 @@ export default function FeedClient({
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  // Once the seen-order is applied, land at the TOP of the feed rather than
-  // wherever the browser restored the snap container to on refresh. After a seen
-  // announcement drops to the bottom, that restored scroll position can sit
-  // mid-feed on an announcement - which is what "I spawn on the announcement"
-  // was. rAF so this runs after the browser's own scroll restoration.
+  // Once the seen-order is applied, position the feed explicitly (overriding the
+  // browser's own restore of the inner snap container). Land on the reel the fan
+  // last had in view — so a round-trip to an artist profile returns to their reel
+  // (#143 feedback) — or the TOP when there's no saved spot or it's since gone.
+  // Restoring by post id (not a raw scroll offset) keeps the old guard against
+  // landing mid-feed on a seen announcement that dropped to the bottom. rAF so it
+  // runs after the browser's own scroll restoration.
   useEffect(() => {
     if (!seenLoaded) return;
     const el = forYouScrollRef.current;
     if (!el) return;
-    const id = requestAnimationFrame(() => el.scrollTo({ top: 0 }));
-    return () => cancelAnimationFrame(id);
+    const savedId = loadFeedPos();
+    const idx = savedId ? forYouFeedRef.current.findIndex((e) => e.post.id === savedId) : -1;
+    const target = idx > 0 ? idx : 0;
+    const raf = requestAnimationFrame(() => {
+      el.scrollTo({ top: target * el.clientHeight });
+      if (target > 0) setActiveIndex(target);
+    });
+    return () => cancelAnimationFrame(raf);
   }, [seenLoaded]);
 
   const handleAnnouncementSeen = useCallback((id: string) => {
@@ -313,6 +348,9 @@ export default function FeedClient({
     () => buildForYouFeed(initialEvents, allPosts, followed, seenAnnouncements, discoveryIntros),
     [initialEvents, allPosts, followed, seenAnnouncements, discoveryIntros]
   );
+  // Keep the ref in step during render (cheap, and safe — it's a ref, not state)
+  // so the scroll handler and the restore effect see the current feed.
+  forYouFeedRef.current = forYouFeed;
   // groupByDay re-sorts by date, and Array.sort is stable, so pre-sorting
   // followed-first keeps the days in order while lifting followed artists
   // within each one. This Week is a schedule; it can't stop being chronological.

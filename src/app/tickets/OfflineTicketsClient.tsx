@@ -67,7 +67,11 @@ export default function OfflineTicketsClient() {
   }, [selected]);
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-md bg-background p-4 pt-8">
+    // pt-safe-page: this page sits outside the (app) shell, so it doesn't get
+    // the shell's notch padding — without this the heading slides under the
+    // iPhone camera/notch (fine on Samsung, which has no cutout there).
+    <div className="pt-safe-page mx-auto min-h-screen w-full max-w-md bg-background p-4">
+
       <div className="mb-1 flex items-center gap-2">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path

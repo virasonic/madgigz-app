@@ -588,7 +588,7 @@ export const es: Messages = {
     poster: "Cartel",
     posterAlt: "Vista previa del cartel",
     tapPoster: "Toca para subir un cartel",
-    accentColor: "Color de acento",
+    accentColor: "Color",
     swatchOrange: "Naranja",
     swatchMaroon: "Granate",
     swatchTeal: "Verde azulado",
