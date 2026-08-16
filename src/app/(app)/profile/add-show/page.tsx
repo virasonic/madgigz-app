@@ -6,8 +6,11 @@ import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import BackButton from "@/components/ui/BackButton";
-import FeeBreakdown from "@/components/artist/FeeBreakdown";
-import TierRowsEditor, { type TierRow, tierRowsToInput } from "@/components/artist/TierRowsEditor";
+import TierRowsEditor, {
+  type TierRow,
+  emptyTierRow,
+  tierRowsToInput,
+} from "@/components/artist/TierRowsEditor";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
 import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
 import GenrePicker from "@/components/artist/GenrePicker";
@@ -60,9 +63,10 @@ export default function AddShowPage() {
   const [description, setDescription] = useState("");
   const [accentColor, setAccentColor] = useState(ACCENT_SWATCHES[0].value);
   const [ticketingMode, setTicketingMode] = useState<TicketingMode>("internal");
-  // Optional price tiers (#151); when set they define the show's capacity/price.
-  // Not part of the localStorage draft (parity with the poster — re-add on restore).
-  const [tierRows, setTierRows] = useState<TierRow[]>([]);
+  // Ticket types (#151) — pricing for an internal show. Starts with one row (a
+  // single-price show is one type). Not in the localStorage draft (parity with
+  // the poster — re-add on restore).
+  const [tierRows, setTierRows] = useState<TierRow[]>([emptyTierRow()]);
   const [externalUrl, setExternalUrl] = useState("");
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
@@ -196,29 +200,45 @@ export default function AddShowPage() {
     const cleanedLineup = cleanedEntries.map((entry) => entry.name);
     if (cleanedLineup.length === 0) nextErrors.lineup = t("addShow.errLineup");
 
-    // price.trim() rather than !price, so "0" (a free event) is accepted.
+    const internal = ticketingMode === "internal";
     const priceNum = Number(price);
-    if (!price.trim() || Number.isNaN(priceNum) || priceNum < 0) {
-      nextErrors.price = t("addShow.errPrice");
-    }
+    let minTierPrice = 0;
 
     const capacityNum = Number(capacity);
     if (!capacity || Number.isNaN(capacityNum) || capacityNum < 1) {
       nextErrors.capacity = t("addShow.errCapacity");
     }
 
-    const maxPerOrderNum = Number(maxPerOrder);
-    if (!maxPerOrder || Number.isNaN(maxPerOrderNum) || maxPerOrderNum < 1 || maxPerOrderNum > 50) {
-      nextErrors.maxPerOrder = t("addShow.errMaxPerOrder");
-    }
-
-    // Paid internal ticketing needs somewhere to send the money; free events
-    // don't, so they're allowed through without a connected payout account.
-    if (ticketingMode === "internal" && priceNum > 0 && !user?.stripePayoutsReady) {
-      nextErrors.price = t("addShow.errPayout");
-    }
-
-    if (ticketingMode === "external") {
+    if (internal) {
+      // Pricing IS the ticket types now (#151): at least one, each with a name,
+      // a price and an availability; they can't sum to more than the room; a
+      // paid type needs a payout account (a fully free show doesn't).
+      const rowsOk =
+        tierRows.length > 0 &&
+        tierRows.every(
+          (r) =>
+            r.name.trim() &&
+            r.price.trim() &&
+            !Number.isNaN(Number(r.price)) &&
+            Number(r.price) >= 0 &&
+            Number(r.capacity) >= 1 &&
+            Number(r.maxPerOrder || "6") >= 1
+        );
+      if (!rowsOk) {
+        nextErrors.tiers = t("addShow.errTiers");
+      } else if (tierRows.reduce((s, r) => s + Number(r.capacity), 0) > capacityNum) {
+        nextErrors.tiers = t("addShow.errTiersOverCapacity");
+      } else {
+        minTierPrice = Math.min(...tierRows.map((r) => Number(r.price)));
+        if (minTierPrice > 0 && !user?.stripePayoutsReady) {
+          nextErrors.tiers = t("addShow.errPayout");
+        }
+      }
+    } else {
+      // External: a single price shown on the card, and a valid link.
+      if (!price.trim() || Number.isNaN(priceNum) || priceNum < 0) {
+        nextErrors.price = t("addShow.errPrice");
+      }
       try {
         void new URL(externalUrl);
       } catch {
@@ -247,13 +267,17 @@ export default function AddShowPage() {
       city: "Madrid",
       event_date: date,
       event_time: time,
-      price: priceNum,
+      // For a tiered (internal) show the cheapest type sets the "from" price;
+      // applyEventTiers re-derives it too. External keeps the single field.
+      price: internal ? minTierPrice : priceNum,
       currency: "EUR",
       accent_color: accentColor,
       category: "Live Music",
       image_url: imageUrl,
       capacity: capacityNum,
-      max_per_order: maxPerOrderNum,
+      // Event-level cap is vestigial for tiered shows (each type caps itself);
+      // keep a sane default. External shows don't use our checkout at all.
+      max_per_order: 6,
       description: description.trim(),
       lineup: cleanedLineup,
       doors: time,
@@ -370,7 +394,21 @@ export default function AddShowPage() {
           onChange={(e) => setTime(e.target.value)}
           error={errors.time}
         />
-        <div className="flex flex-col gap-2">
+        {/* Capacity first — the room total the ticket types allocate within. */}
+        <div className="flex flex-col gap-1.5">
+          <Input
+            label={t("addShow.capacity")}
+            type="number"
+            min={1}
+            value={capacity}
+            onChange={(e) => setCapacity(e.target.value)}
+            error={errors.capacity}
+          />
+          <p className="text-xs text-muted">{t("addShow.capacityHint")}</p>
+        </div>
+
+        {ticketingMode === "external" ? (
+          // Sold elsewhere: no ticket types, just the price shown on the card.
           <Input
             label={t("addShow.price")}
             type="number"
@@ -379,35 +417,13 @@ export default function AddShowPage() {
             onChange={(e) => setPrice(e.target.value)}
             error={errors.price}
           />
-          {ticketingMode === "internal" && <FeeBreakdown priceEuros={Number(price)} />}
-        </div>
-        <Input
-          label={t("addShow.capacity")}
-          type="number"
-          min={1}
-          value={capacity}
-          onChange={(e) => setCapacity(e.target.value)}
-          error={errors.capacity}
-        />
-        <div className="flex flex-col gap-1.5">
-          <Input
-            label={t("addShow.maxPerOrder")}
-            type="number"
-            min={1}
-            max={50}
-            value={maxPerOrder}
-            onChange={(e) => setMaxPerOrder(e.target.value)}
-            error={errors.maxPerOrder}
-          />
-          <p className="text-xs text-muted">{t("addShow.maxPerOrderHint")}</p>
-        </div>
-
-        {/* Optional price tiers (#151). Only for shows we sell — an external
-            link has no tiers here. When tiers are added they set the show's
-            capacity and "from" price. */}
-        {ticketingMode === "internal" && (
+        ) : (
+          // Pricing IS the ticket types (#151): at least one — a single-price
+          // show is one type. Each carries its price, availability and per-order
+          // cap; the cheapest sets the "from" price on cards.
           <div className="rounded-2xl border border-muted/15 p-3">
             <TierRowsEditor rows={tierRows} onChange={setTierRows} />
+            {errors.tiers && <p className="mt-2 text-sm text-danger">{errors.tiers}</p>}
           </div>
         )}
 

@@ -13,6 +13,7 @@ interface Row {
   name: string;
   price: string;
   capacity: string;
+  maxPerOrder: string;
   availableUntil: string; // datetime-local value ("" = no cutoff)
   sold: number;
 }
@@ -22,6 +23,7 @@ export interface TierManagerTier {
   name: string;
   price: number;
   capacity: number;
+  maxPerOrder: number;
   availableUntil: string | null;
   sold: number;
 }
@@ -32,6 +34,7 @@ function toRow(t: TierManagerTier): Row {
     name: t.name,
     price: String(t.price),
     capacity: String(t.capacity),
+    maxPerOrder: String(t.maxPerOrder),
     // ISO → the "YYYY-MM-DDTHH:mm" a datetime-local input wants (local time).
     availableUntil: t.availableUntil
       ? new Date(t.availableUntil).toISOString().slice(0, 16)
@@ -58,7 +61,7 @@ export default function TierManager({
   }
 
   function addRow() {
-    setRows((rs) => [...rs, { name: "", price: "", capacity: "", availableUntil: "", sold: 0 }]);
+    setRows((rs) => [...rs, { name: "", price: "", capacity: "", maxPerOrder: "6", availableUntil: "", sold: 0 }]);
     setSaved(false);
   }
 
@@ -75,6 +78,7 @@ export default function TierManager({
       name: r.name,
       price: Number(r.price),
       capacity: Number(r.capacity),
+      maxPerOrder: r.maxPerOrder ? Number(r.maxPerOrder) : undefined,
       availableUntil: r.availableUntil ? new Date(r.availableUntil).toISOString() : null,
       sortOrder: idx,
     }));
@@ -118,7 +122,14 @@ export default function TierManager({
               <input
                 value={r.capacity}
                 onChange={(e) => update(i, { capacity: e.target.value })}
-                placeholder="Capacity"
+                placeholder="Available"
+                inputMode="numeric"
+                className="w-24 rounded-lg border border-muted/20 bg-background px-3 py-2 text-sm text-foreground"
+              />
+              <input
+                value={r.maxPerOrder}
+                onChange={(e) => update(i, { maxPerOrder: e.target.value })}
+                placeholder="Max/order"
                 inputMode="numeric"
                 className="w-24 rounded-lg border border-muted/20 bg-background px-3 py-2 text-sm text-foreground"
               />

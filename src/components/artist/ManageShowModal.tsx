@@ -141,7 +141,7 @@ export default function ManageShowModal({
     const supabase = createClient();
     supabase
       .from("event_tiers")
-      .select("id, name, price, capacity, available_until, sold")
+      .select("id, name, price, capacity, max_per_order, available_until, sold")
       .eq("event_id", show.id)
       .order("sort_order", { ascending: true })
       .then(({ data, error }) => {
@@ -152,6 +152,7 @@ export default function ManageShowModal({
             name: r.name as string,
             price: Number(r.price),
             capacity: r.capacity as number,
+            maxPerOrder: (r.max_per_order as number | null) ?? 6,
             availableUntil: (r.available_until as string | null) ?? null,
             sold: r.sold as number,
           }))

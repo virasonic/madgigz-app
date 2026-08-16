@@ -14,13 +14,14 @@ export interface TierRow {
   id?: string;
   name: string;
   price: string;
-  capacity: string;
+  capacity: string; // how many of this type are available
+  maxPerOrder: string;
   availableUntil: string; // datetime-local value ("" = no cutoff)
   sold: number;
 }
 
 export function emptyTierRow(): TierRow {
-  return { name: "", price: "", capacity: "", availableUntil: "", sold: 0 };
+  return { name: "", price: "", capacity: "", maxPerOrder: "6", availableUntil: "", sold: 0 };
 }
 
 // ISO → the "YYYY-MM-DDTHH:mm" a datetime-local input wants.
@@ -29,6 +30,7 @@ export function tierToRow(t: {
   name: string;
   price: number;
   capacity: number;
+  maxPerOrder: number;
   availableUntil: string | null;
   sold: number;
 }): TierRow {
@@ -37,6 +39,7 @@ export function tierToRow(t: {
     name: t.name,
     price: String(t.price),
     capacity: String(t.capacity),
+    maxPerOrder: String(t.maxPerOrder),
     availableUntil: t.availableUntil ? new Date(t.availableUntil).toISOString().slice(0, 16) : "",
     sold: t.sold,
   };
@@ -48,6 +51,7 @@ export function tierRowsToInput(rows: TierRow[]): TierInput[] {
     name: r.name,
     price: Number(r.price),
     capacity: Number(r.capacity),
+    maxPerOrder: r.maxPerOrder ? Number(r.maxPerOrder) : undefined,
     availableUntil: r.availableUntil ? new Date(r.availableUntil).toISOString() : null,
     sortOrder: idx,
   }));
@@ -96,14 +100,21 @@ export default function TierRowsEditor({
               onChange={(e) => update(i, { price: e.target.value })}
               placeholder={t("tierEditor.price")}
               inputMode="decimal"
-              className="w-1/2 rounded-lg border border-muted/20 bg-background px-3 py-2 text-sm text-foreground"
+              className="w-1/3 rounded-lg border border-muted/20 bg-background px-3 py-2 text-sm text-foreground"
             />
             <input
               value={r.capacity}
               onChange={(e) => update(i, { capacity: e.target.value })}
-              placeholder={t("tierEditor.capacity")}
+              placeholder={t("tierEditor.available")}
               inputMode="numeric"
-              className="w-1/2 rounded-lg border border-muted/20 bg-background px-3 py-2 text-sm text-foreground"
+              className="w-1/3 rounded-lg border border-muted/20 bg-background px-3 py-2 text-sm text-foreground"
+            />
+            <input
+              value={r.maxPerOrder}
+              onChange={(e) => update(i, { maxPerOrder: e.target.value })}
+              placeholder={t("tierEditor.maxPerOrder")}
+              inputMode="numeric"
+              className="w-1/3 rounded-lg border border-muted/20 bg-background px-3 py-2 text-sm text-foreground"
             />
           </div>
           <label className="text-xs text-muted">{t("tierEditor.onSaleUntil")}</label>

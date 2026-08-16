@@ -19,6 +19,7 @@ export interface ArtistTier {
   name: string;
   price: number;
   capacity: number;
+  maxPerOrder: number;
   availableUntil: string | null;
   sold: number;
 }

@@ -95,6 +95,8 @@ export interface EventTier {
   sold: number;
   availableUntil: string | null;
   sortOrder: number;
+  /** Max of THIS type one order may buy (#151); defaults to 6 pre-addendum_040. */
+  maxPerOrder: number;
 }
 
 export interface EventTierRow {
@@ -106,6 +108,8 @@ export interface EventTierRow {
   sold: number;
   available_until: string | null;
   sort_order: number;
+  // Absent until addendum_040 runs; read as 6.
+  max_per_order?: number | null;
 }
 
 export function mapEventTier(row: EventTierRow): EventTier {
@@ -118,6 +122,7 @@ export function mapEventTier(row: EventTierRow): EventTier {
     sold: row.sold,
     availableUntil: row.available_until,
     sortOrder: row.sort_order,
+    maxPerOrder: row.max_per_order ?? 6,
   };
 }
 

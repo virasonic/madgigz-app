@@ -38,13 +38,9 @@ export async function createCheckout(
   if (!eventRow) return { error: "That event no longer exists" };
   const event = mapEvent(eventRow as EventRow);
 
-  // The per-order cap is enforced against the database value, not whatever the
-  // client sent - the stepper's limit is a convenience, not a control.
-  if (quantity > event.maxPerOrder) {
-    return {
-      error: `You can buy at most ${event.maxPerOrder} ${event.maxPerOrder === 1 ? "ticket" : "tickets"} per order for this event`,
-    };
-  }
+  // The per-order cap is checked below once we know whether a tier was chosen:
+  // a tiered show caps per ticket type (#151), a single-price show per event.
+  // Either way it's enforced against the database value, not the client's.
 
   if (!event.active || event.cancelled) return { error: "That event is no longer on sale" };
   if (event.ticketing?.mode === "external") {
@@ -92,6 +88,7 @@ export async function createCheckout(
 
   let unitPriceEuros = event.price;
   let selectedTierId: string | null = null;
+  let maxPerOrder = event.maxPerOrder;
   if (tiers.length > 0) {
     const tier = tierId ? tiers.find((t) => t.id === tierId) : null;
     if (!tier) return { error: "Choose a ticket type" };
@@ -100,6 +97,14 @@ export async function createCheckout(
     if (!tierIsAvailable(tier)) return { error: "That ticket type isn't available" };
     unitPriceEuros = tier.price;
     selectedTierId = tier.id;
+    maxPerOrder = tier.maxPerOrder;
+  }
+
+  // Per-order cap: the chosen type's for a tiered show, the event's otherwise.
+  if (quantity > maxPerOrder) {
+    return {
+      error: `You can buy at most ${maxPerOrder} ${maxPerOrder === 1 ? "ticket" : "tickets"} per order`,
+    };
   }
 
   // Price and discount both come from the database, never the client.

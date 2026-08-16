@@ -17,6 +17,8 @@ export interface TierInput {
   // ISO datetime string or null (no cutoff).
   availableUntil: string | null;
   sortOrder: number;
+  // Max of this type one order may buy; defaults to 6 when omitted.
+  maxPerOrder?: number;
 }
 
 export async function applyEventTiers(
@@ -25,10 +27,32 @@ export async function applyEventTiers(
   tiers: TierInput[]
 ): Promise<{ error: string | null }> {
   for (const t of tiers) {
-    if (!t.name.trim()) return { error: "Every tier needs a name." };
+    if (!t.name.trim()) return { error: "Every ticket type needs a name." };
     if (!Number.isFinite(t.price) || t.price < 0) return { error: `"${t.name}" has an invalid price.` };
     if (!Number.isInteger(t.capacity) || t.capacity < 1) {
-      return { error: `"${t.name}" needs a capacity of at least 1.` };
+      return { error: `"${t.name}" needs an availability of at least 1.` };
+    }
+    const mpo = t.maxPerOrder ?? 6;
+    if (!Number.isInteger(mpo) || mpo < 1) {
+      return { error: `"${t.name}" needs a max-per-order of at least 1.` };
+    }
+  }
+
+  // The room total (events.capacity) is the artist's own number and stays put —
+  // the ticket types allocate within it. Guard against types summing to more
+  // seats than the room holds.
+  const { data: eventRow } = await admin
+    .from("events")
+    .select("capacity")
+    .eq("id", eventId)
+    .single();
+  const roomCapacity = eventRow?.capacity ?? null;
+  if (roomCapacity !== null && tiers.length > 0) {
+    const totalAvailable = tiers.reduce((s, t) => s + t.capacity, 0);
+    if (totalAvailable > roomCapacity) {
+      return {
+        error: `Ticket types add up to ${totalAvailable}, more than the ${roomCapacity} capacity.`,
+      };
     }
   }
 
@@ -75,6 +99,7 @@ export async function applyEventTiers(
       capacity: t.capacity,
       available_until: t.availableUntil,
       sort_order: t.sortOrder,
+      max_per_order: t.maxPerOrder ?? 6,
     };
     if (t.id) {
       const { error } = await admin.from("event_tiers").update(row).eq("id", t.id);
@@ -85,12 +110,12 @@ export async function applyEventTiers(
     }
   }
 
-  // Keep the event aggregate in step — only when tiers exist (removing them all
-  // leaves the event on whatever single price it already had).
+  // events.price is the "from" price on cards, derived from the cheapest type.
+  // events.capacity is the artist's room total and is left untouched (validated
+  // above). Only meaningful when types exist.
   if (tiers.length > 0) {
-    const totalCapacity = tiers.reduce((s, t) => s + t.capacity, 0);
     const minPrice = Math.min(...tiers.map((t) => t.price));
-    await admin.from("events").update({ capacity: totalCapacity, price: minPrice }).eq("id", eventId);
+    await admin.from("events").update({ price: minPrice }).eq("id", eventId);
   }
 
   return { error: null };

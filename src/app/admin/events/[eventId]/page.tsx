@@ -46,7 +46,7 @@ export default async function AdminEventDetailPage({
   // → an empty editor, which the admin can start filling in.
   const { data: tierRows } = await admin
     .from("event_tiers")
-    .select("id, name, price, capacity, available_until, sold")
+    .select("id, name, price, capacity, max_per_order, available_until, sold")
     .eq("event_id", eventId)
     .order("sort_order", { ascending: true });
   const tiers: TierManagerTier[] = (tierRows ?? []).map((r) => ({
@@ -54,6 +54,7 @@ export default async function AdminEventDetailPage({
     name: r.name as string,
     price: Number(r.price),
     capacity: r.capacity as number,
+    maxPerOrder: (r.max_per_order as number | null) ?? 6,
     availableUntil: (r.available_until as string | null) ?? null,
     sold: r.sold as number,
   }));

@@ -121,8 +121,10 @@ export default function TicketModal({
     ? Math.max(selectedTier.capacity - selectedTier.sold, 0)
     : remaining;
   const sellableRemaining = tiered ? tierRemaining : remaining;
-  // Whichever runs out first: the organiser's per-order cap or the seats left.
-  const maxQuantity = Math.max(Math.min(sellableRemaining, event.maxPerOrder), 1);
+  // Whichever runs out first: the per-order cap (the chosen type's for a tiered
+  // show, the event's otherwise) or the seats left.
+  const perOrderCap = selectedTier ? selectedTier.maxPerOrder : event.maxPerOrder;
+  const maxQuantity = Math.max(Math.min(sellableRemaining, perOrderCap), 1);
   const tierUnavailable = tiered && (!selectedTier || !tierIsAvailable(selectedTier));
   const buyBlocked = soldOut || tierUnavailable;
 
