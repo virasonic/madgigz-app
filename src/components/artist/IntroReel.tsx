@@ -27,7 +27,11 @@ export default function IntroReel({ post }: { post: ContentPost }) {
         className="relative block aspect-[3/4] w-full overflow-hidden rounded-2xl bg-surface"
       >
         {posterUrl ? (
-          <Image src={posterUrl} alt={post.caption || ""} fill sizes="180px" className="object-cover" />
+          // Plain img, not next/Image: the poster frame for a video comes from
+          // Cloudflare Stream (customer-*.cloudflarestream.com), which isn't in
+          // next.config's image allowlist — next/Image would render blank.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={posterUrl} alt={post.caption || ""} className="absolute inset-0 h-full w-full object-cover" />
         ) : (
           <div className="absolute inset-0" />
         )}
