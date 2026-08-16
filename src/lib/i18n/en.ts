@@ -147,6 +147,7 @@ export const en = {
     refundedTitle: "This ticket was refunded",
     refundedBody:
       "The payment has been returned to your original payment method - it can take a few days to appear on your statement. This ticket is no longer valid for entry.",
+    refundPolicyNote: "Final sale — refunded automatically only if the show is cancelled.",
     transfer: "Transfer ticket",
     transferPendingTitle: "Transfer pending",
     transferPendingBody:

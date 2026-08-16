@@ -141,6 +141,7 @@ export const es: Messages = {
     refundedTitle: "Esta entrada fue reembolsada",
     refundedBody:
       "El pago se ha devuelto a tu método de pago original; puede tardar unos días en aparecer en tu extracto. Esta entrada ya no es válida para entrar.",
+    refundPolicyNote: "Venta final: solo se reembolsa automáticamente si se cancela el evento.",
     transfer: "Transferir entrada",
     transferPendingTitle: "Transferencia pendiente",
     transferPendingBody:

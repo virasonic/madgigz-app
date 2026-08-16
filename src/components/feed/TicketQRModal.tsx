@@ -263,6 +263,13 @@ export default function TicketQRModal({
                 )}
               </div>
             )}
+
+            {/* Restates the policy the buyer already saw at checkout (#146), now
+                on the ticket itself. No new policy — just makes it visible after
+                the purchase, not only before it. */}
+            <p className="mt-5 text-center text-[11px] text-muted">
+              {t("ticket.refundPolicyNote")}
+            </p>
           </>
         )}
       </div>
