@@ -144,13 +144,13 @@ export default function TierRowsEditor({
                 />
               </label>
             </div>
-            <label className="flex flex-col gap-1">
+            <label className="flex min-w-0 flex-col gap-1">
               <span className="text-[10px] uppercase tracking-wide text-muted">{t("tierEditor.onSaleUntil")}</span>
               <input
                 type="datetime-local"
                 value={r.availableUntil}
                 onChange={(e) => update(i, { availableUntil: e.target.value })}
-                className="w-full min-w-0 rounded-lg border border-muted/20 bg-background px-2 py-2 text-sm text-foreground"
+                className="w-full min-w-0 max-w-full rounded-lg border border-muted/20 bg-background px-2 py-2 text-sm text-foreground"
               />
             </label>
             <div className="flex items-center justify-between text-xs">

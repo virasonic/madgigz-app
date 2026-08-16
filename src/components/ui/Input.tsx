@@ -29,14 +29,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     }
 
     return (
-      <div className="flex flex-col gap-1.5">
+      // min-w-0 so a native date/time input's wide intrinsic size can't push
+      // this field past the phone column (flex children default to
+      // min-width:auto = content width, which those inputs make large).
+      <div className="flex min-w-0 flex-col gap-1.5">
         <label
           htmlFor={inputId}
           className="font-heading text-sm text-muted"
         >
           {label}
         </label>
-        <div className="relative">
+        <div className="relative min-w-0">
           <input
             ref={ref}
             id={inputId}

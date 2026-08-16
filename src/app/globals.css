@@ -101,3 +101,13 @@ body {
   overflow-x: hidden;
   max-width: 100%;
 }
+
+/* Native date/time/datetime-local inputs ship a wide intrinsic size on mobile
+   WebKit/Blink; without this they refuse to shrink and spill past the phone
+   column. Their wrappers also carry min-w-0 (see Input.tsx / TierRowsEditor). */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  min-width: 0;
+  max-width: 100%;
+}
