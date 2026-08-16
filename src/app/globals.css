@@ -108,6 +108,20 @@ body {
 input[type="date"],
 input[type="time"],
 input[type="datetime-local"] {
+  /* appearance:none strips the UA's forced intrinsic width so the box obeys its
+     container instead of spilling off the phone column; the value still shows
+     and tapping still opens the native picker. */
+  -webkit-appearance: none;
+  appearance: none;
   min-width: 0;
   max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Keep the calendar/clock affordance visible even with appearance:none. */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  opacity: 0.7;
 }
