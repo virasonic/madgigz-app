@@ -22,6 +22,15 @@ export default async function SavedPage() {
     fetchPendingTransfers(supabase),
   ]);
 
+  // Tier names for tickets bought at a specific type (#151), so a fan holding
+  // "General" and "VIP" can tell them apart. event_tiers is world-readable.
+  const tierIds = [...new Set(tickets.map((t) => t.tierId).filter((id): id is string => Boolean(id)))];
+  let tierNames: Record<string, string> = {};
+  if (tierIds.length > 0) {
+    const { data } = await supabase.from("event_tiers").select("id, name").in("id", tierIds);
+    tierNames = Object.fromEntries((data ?? []).map((r) => [r.id as string, r.name as string]));
+  }
+
   return (
     <SavedClient
       userId={user.id}
@@ -29,6 +38,7 @@ export default async function SavedPage() {
       initialSavedIds={savedIds}
       initialTickets={tickets}
       initialPendingTransfers={pendingTransfers}
+      tierNames={tierNames}
       appleWalletEnabled={isAppleWalletConfigured()}
     />
   );

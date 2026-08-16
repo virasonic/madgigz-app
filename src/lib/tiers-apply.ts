@@ -38,24 +38,10 @@ export async function applyEventTiers(
     }
   }
 
-  // The room total (events.capacity) is the artist's own number and stays put —
-  // the ticket types allocate within it. Guard against types summing to more
-  // seats than the room holds.
-  const { data: eventRow } = await admin
-    .from("events")
-    .select("capacity")
-    .eq("id", eventId)
-    .single();
-  const roomCapacity = eventRow?.capacity ?? null;
-  if (roomCapacity !== null && tiers.length > 0) {
-    const totalAvailable = tiers.reduce((s, t) => s + t.capacity, 0);
-    if (totalAvailable > roomCapacity) {
-      return {
-        error: `Ticket types add up to ${totalAvailable}, more than the ${roomCapacity} capacity.`,
-      };
-    }
-  }
-
+  // Types may oversubscribe the room on purpose (#151): 100 General + 20 VIP
+  // against a 100-cap room is fine because the reservation enforces the shared
+  // total cap at buy time — the mix floats up to capacity. So no "types must sum
+  // to capacity" check here; a type's Available is just its own ceiling.
   const { data: existingRows, error: readError } = await admin
     .from("event_tiers")
     .select("id, sold")

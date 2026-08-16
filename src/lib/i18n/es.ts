@@ -522,6 +522,8 @@ export const es: Messages = {
   },
 
   introReel: {
+    label: "Intro",
+    open: "Ver reel de presentación",
     sectionTitle: "Reel de presentación",
     addTitle: "Añade un reel de presentación",
     addHint: "Un clip corto de \"este soy yo\": aparece en tu perfil aunque no tengas bolo.",

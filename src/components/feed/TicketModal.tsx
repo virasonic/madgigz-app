@@ -120,7 +120,9 @@ export default function TicketModal({
   const tierRemaining = selectedTier
     ? Math.max(selectedTier.capacity - selectedTier.sold, 0)
     : remaining;
-  const sellableRemaining = tiered ? tierRemaining : remaining;
+  // Types share the room pool (#151), so the seats actually buyable is the
+  // smaller of this type's own remaining and the room's remaining.
+  const sellableRemaining = tiered ? Math.min(tierRemaining, remaining) : remaining;
   // Whichever runs out first: the per-order cap (the chosen type's for a tiered
   // show, the event's otherwise) or the seats left.
   const perOrderCap = selectedTier ? selectedTier.maxPerOrder : event.maxPerOrder;
@@ -302,10 +304,12 @@ export default function TicketModal({
                   <div className="flex flex-col gap-2">
                     <span className="font-heading text-sm text-muted">{t("ticket.chooseTier")}</span>
                     {tiers.map((tr) => {
-                      const available = tierIsAvailable(tr);
+                      // Unavailable if the type is exhausted/closed OR the shared
+                      // room is full (#151).
+                      const available = tierIsAvailable(tr) && !soldOut;
                       const selected = tr.id === selectedTierId;
                       const subline = !available
-                        ? tr.sold >= tr.capacity
+                        ? soldOut || tr.sold >= tr.capacity
                           ? t("ticket.tierSoldOut")
                           : t("ticket.tierClosed")
                         : tr.availableUntil

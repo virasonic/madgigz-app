@@ -73,8 +73,22 @@ export default async function PublicArtistProfilePage({
         </div>
       </div>
 
-      {artist.artistBio && (
-        <p className="mt-4 text-sm leading-relaxed text-foreground/90">{artist.artistBio}</p>
+      {/* Intro reel (#143) sits as a poster-sized thumbnail beside the bio, so
+          it's discoverable without pushing the shows below the fold — tap it to
+          watch full-screen. Falls back to a full-width bio when there's no reel. */}
+      {intro ? (
+        <div className="mt-4 flex gap-4">
+          <div className="w-28 shrink-0">
+            <IntroReel post={intro} />
+          </div>
+          {artist.artistBio && (
+            <p className="flex-1 text-sm leading-relaxed text-foreground/90">{artist.artistBio}</p>
+          )}
+        </div>
+      ) : (
+        artist.artistBio && (
+          <p className="mt-4 text-sm leading-relaxed text-foreground/90">{artist.artistBio}</p>
+        )
       )}
 
       <div className="mt-4">
@@ -85,14 +99,6 @@ export default async function PublicArtistProfilePage({
       </div>
 
       <SocialLinks source={artist} className="mt-4" />
-
-      {/* Intro reel pinned above the shows (#143): discovery starts with a face
-          and a sound, and it's here even when the artist has no show to promote. */}
-      {intro && (
-        <div className="mt-6">
-          <IntroReel post={intro} />
-        </div>
-      )}
 
       <ArtistShowsGrid
         userId={currentUser.id}

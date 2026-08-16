@@ -45,6 +45,8 @@ interface SavedClientProps {
   initialTickets: Ticket[];
   /** ticketId → claim token for tickets with a live transfer link (#145). */
   initialPendingTransfers: Record<string, string>;
+  /** tierId → tier name, for tickets bought at a specific type (#151). */
+  tierNames: Record<string, string>;
   appleWalletEnabled: boolean;
 }
 
@@ -54,6 +56,7 @@ export default function SavedClient({
   initialSavedIds,
   initialTickets,
   initialPendingTransfers,
+  tierNames,
   appleWalletEnabled,
 }: SavedClientProps) {
   const { t, locale } = useT();
@@ -257,6 +260,11 @@ export default function SavedClient({
                           ? t("savedPage.statusCheckedIn")
                           : t("savedPage.statusConfirmed")}
                     </span>
+                    {ticket.tierId && tierNames[ticket.tierId] && (
+                      <span className="shrink-0 rounded-full bg-muted/20 px-2 py-0.5 text-[10px] font-heading uppercase text-foreground">
+                        {tierNames[ticket.tierId]}
+                      </span>
+                    )}
                     {pendingTransfers[ticket.id] && !ticket.refunded && (
                       <span className="shrink-0 rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-heading uppercase text-accent">
                         {t("savedPage.transferPending")}
@@ -360,6 +368,7 @@ export default function SavedClient({
           event={activeTicket.event}
           walletEnabled={appleWalletEnabled}
           pendingTransferToken={pendingTransfers[activeTicket.ticket.id] ?? null}
+          tierName={activeTicket.ticket.tierId ? tierNames[activeTicket.ticket.tierId] : undefined}
           onTransferChange={handleTransferChange}
           onClose={() => setActiveTicket(null)}
         />

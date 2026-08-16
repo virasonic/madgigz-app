@@ -536,6 +536,8 @@ export const en = {
   },
 
   introReel: {
+    label: "Intro",
+    open: "Watch intro reel",
     sectionTitle: "Intro reel",
     addTitle: "Add an intro reel",
     addHint: "A short \"this is me\" clip — shows on your profile even without a gig.",

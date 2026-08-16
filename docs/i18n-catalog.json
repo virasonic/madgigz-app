@@ -470,6 +470,8 @@
       "post": "Post"
     },
     "introReel": {
+      "label": "Intro",
+      "open": "Watch intro reel",
       "sectionTitle": "Intro reel",
       "addTitle": "Add an intro reel",
       "addHint": "A short \"this is me\" clip — shows on your profile even without a gig.",
@@ -1127,6 +1129,8 @@
       "post": "Publicar"
     },
     "introReel": {
+      "label": "Intro",
+      "open": "Ver reel de presentación",
       "sectionTitle": "Reel de presentación",
       "addTitle": "Añade un reel de presentación",
       "addHint": "Un clip corto de \"este soy yo\": aparece en tu perfil aunque no tengas bolo.",

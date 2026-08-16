@@ -19,6 +19,8 @@ interface TicketQRModalProps {
   walletEnabled?: boolean;
   /** Claim token if this ticket already has a transfer link out (#145). */
   pendingTransferToken?: string | null;
+  /** The ticket type name (#151), shown on the pass when the show has types. */
+  tierName?: string;
   /** Keep the parent's pending-transfer map in sync when a link is created/cancelled. */
   onTransferChange?: (ticketId: string, token: string | null) => void;
   onClose: () => void;
@@ -42,6 +44,7 @@ export default function TicketQRModal({
   event,
   walletEnabled,
   pendingTransferToken,
+  tierName,
   onTransferChange,
   onClose,
 }: TicketQRModalProps) {
@@ -162,6 +165,14 @@ export default function TicketQRModal({
           <p className="mt-1 text-sm text-muted">
             {ticket.quantity} {ticket.quantity === 1 ? t("ticket.one") : t("ticket.many")}
           </p>
+          {tierName && (
+            <span
+              className="mt-2 inline-block rounded-full px-3 py-1 text-xs font-heading uppercase tracking-wide text-foreground"
+              style={{ backgroundColor: event.accentColor }}
+            >
+              {tierName}
+            </span>
+          )}
         </div>
 
         {ticket.refunded ? (

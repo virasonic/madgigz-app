@@ -498,7 +498,9 @@ export default function ProfileClient({
             </div>
             {intro ? (
               <>
-                <IntroReel post={intro} />
+                <div className="w-32">
+                  <IntroReel post={intro} />
+                </div>
                 <button
                   type="button"
                   onClick={() => setIntroModalOpen(true)}

@@ -6,15 +6,63 @@ import { ContentPost } from "@/lib/types";
 import { streamHlsUrl, streamThumbnailUrl } from "@/lib/cloudflare-stream";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
-// The artist's pinned introduction reel (#143), shown on their profile. Unlike
-// ContentReelCard this carries no event chrome (no title/price/get-tickets) — it
-// is just "this is me, this is my sound": a contained 9:16 clip that autoplays
-// muted when scrolled into view, tap to unmute. Reuses the Cloudflare Stream HLS
-// playback the feed uses, so a Stream reel plays here identically.
+// The artist's pinned introduction reel (#143), shown on their profile as a
+// small POSTER-sized thumbnail (same footprint as a show poster) so it sits
+// beside the bio and never pushes the shows below the fold. Tapping it opens the
+// clip full-screen. Reuses the Cloudflare Stream HLS playback the feed uses.
 export default function IntroReel({ post }: { post: ContentPost }) {
   const { t } = useT();
+  const [open, setOpen] = useState(false);
+
+  const streamUid = post.mediaType === "video" ? post.streamUid ?? null : null;
+  const isVideo = post.mediaType === "video" && (Boolean(post.videoUrl) || Boolean(streamUid));
+  const posterUrl = streamUid ? streamThumbnailUrl(streamUid) : post.image;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={t("introReel.open")}
+        className="relative block aspect-[3/4] w-full overflow-hidden rounded-2xl bg-surface"
+      >
+        {posterUrl ? (
+          <Image src={posterUrl} alt={post.caption || ""} fill sizes="180px" className="object-cover" />
+        ) : (
+          <div className="absolute inset-0" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        {/* Play affordance so it reads as a clip to open, not a static image. */}
+        <span className="absolute inset-0 flex items-center justify-center">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-foreground backdrop-blur-sm">
+            {isVideo ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </span>
+        </span>
+        <span className="absolute bottom-2 left-2 right-2 truncate text-left text-[11px] font-heading uppercase tracking-wide text-foreground">
+          {t("introReel.label")}
+        </span>
+      </button>
+
+      {open && <IntroReelViewer post={post} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+// Full-screen player, opened from the thumbnail. Autoplays with sound (a
+// deliberate tap opened it), tap to mute, tap the backdrop or the close button
+// to dismiss.
+function IntroReelViewer({ post, onClose }: { post: ContentPost; onClose: () => void }) {
+  const { t } = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
 
   const streamUid = post.mediaType === "video" ? post.streamUid ?? null : null;
   const showVideo = post.mediaType === "video" && (Boolean(post.videoUrl) || Boolean(streamUid));
@@ -24,7 +72,6 @@ export default function IntroReel({ post }: { post: ContentPost }) {
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !showVideo) return;
-
     let destroyed = false;
     let hls: import("hls.js").default | undefined;
 
@@ -32,6 +79,7 @@ export default function IntroReel({ post }: { post: ContentPost }) {
       const src = streamHlsUrl(streamUid);
       if (video.canPlayType("application/vnd.apple.mpegurl")) {
         video.src = src;
+        video.play().catch(() => {});
       } else {
         void (async () => {
           const Hls = (await import("hls.js")).default;
@@ -40,80 +88,60 @@ export default function IntroReel({ post }: { post: ContentPost }) {
             hls = new Hls();
             hls.loadSource(src);
             hls.attachMedia(videoRef.current);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => videoRef.current?.play().catch(() => {}));
           } else {
             videoRef.current.src = src;
+            videoRef.current.play().catch(() => {});
           }
         })();
       }
+    } else {
+      video.play().catch(() => {});
     }
-
-    // Play only while on screen — a profile can hold the intro alongside a list
-    // of shows, so it shouldn't stream until the fan actually looks at it (#101).
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const active = entry.isIntersecting && entry.intersectionRatio >= 0.5;
-        if (active) video.play().catch(() => {});
-        else {
-          video.pause();
-          video.currentTime = 0;
-        }
-      },
-      { threshold: [0, 0.5, 1] }
-    );
-    observer.observe(video);
 
     return () => {
       destroyed = true;
-      observer.disconnect();
       hls?.destroy();
     };
   }, [streamUid, showVideo]);
 
   return (
-    <div className="relative mx-auto aspect-[9/16] max-h-[70vh] w-full overflow-hidden rounded-3xl bg-surface">
-      {showVideo ? (
-        <video
-          ref={videoRef}
-          src={directSrc}
-          poster={posterUrl}
-          preload="none"
-          className="absolute inset-0 h-full w-full object-cover"
-          muted={muted}
-          loop
-          playsInline
-          onClick={() => setMuted((m) => !m)}
-        />
-      ) : (
-        <Image src={post.image} alt={post.caption || ""} fill sizes="480px" className="object-cover" />
-      )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
+      <div
+        className="relative aspect-[9/16] max-h-[90vh] w-full max-w-sm overflow-hidden rounded-3xl bg-surface"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {showVideo ? (
+          <video
+            ref={videoRef}
+            src={directSrc}
+            poster={posterUrl}
+            className="absolute inset-0 h-full w-full object-cover"
+            muted={muted}
+            loop
+            playsInline
+            onClick={() => setMuted((m) => !m)}
+          />
+        ) : (
+          <Image src={post.image} alt={post.caption || ""} fill sizes="384px" className="object-cover" />
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
 
-      {showVideo && (
         <button
           type="button"
-          onClick={() => setMuted((m) => !m)}
-          aria-label={muted ? t("feed.unmute") : t("feed.mute")}
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-foreground backdrop-blur-md"
+          onClick={onClose}
+          aria-label={t("common.close")}
+          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-foreground backdrop-blur-md"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor" />
-            {muted ? (
-              <path d="m16 9 5 6M21 9l-5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            ) : (
-              <path
-                d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            )}
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
         </button>
-      )}
 
-      {post.caption && (
-        <p className="absolute bottom-0 left-0 right-0 p-4 text-sm text-foreground">{post.caption}</p>
-      )}
+        {post.caption && (
+          <p className="absolute bottom-0 left-0 right-0 p-4 text-sm text-foreground">{post.caption}</p>
+        )}
+      </div>
     </div>
   );
 }

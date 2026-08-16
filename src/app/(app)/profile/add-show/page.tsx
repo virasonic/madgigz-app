@@ -226,9 +226,9 @@ export default function AddShowPage() {
         );
       if (!rowsOk) {
         nextErrors.tiers = t("addShow.errTiers");
-      } else if (tierRows.reduce((s, r) => s + Number(r.capacity), 0) > capacityNum) {
-        nextErrors.tiers = t("addShow.errTiersOverCapacity");
       } else {
+        // Types may each be available up to the room cap (they share it) — no
+        // "sum ≤ capacity" check; the shared total is enforced at checkout.
         minTierPrice = Math.min(...tierRows.map((r) => Number(r.price)));
         if (minTierPrice > 0 && !user?.stripePayoutsReady) {
           nextErrors.tiers = t("addShow.errPayout");
