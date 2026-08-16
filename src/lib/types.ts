@@ -75,6 +75,57 @@ export interface EventItem {
   cancelled: boolean;
   maxPerOrder: number;
   ticketing?: Ticketing;
+  /**
+   * Price tiers for this show (#151). Empty/absent = a single-price event
+   * (events.price). Populated by fetchEventTiers where the fan needs to choose
+   * (the ticket sheet, checkout), not by mapEvent.
+   */
+  tiers?: EventTier[];
+}
+
+// A single price option on a show (#151): its own price, sold-cap and optional
+// on-sale-until cutoff. Availability is derived, not stored — soldOut / expired
+// are computed for display; the server re-checks both atomically at reservation.
+export interface EventTier {
+  id: string;
+  eventId: string;
+  name: string;
+  price: number;
+  capacity: number;
+  sold: number;
+  availableUntil: string | null;
+  sortOrder: number;
+}
+
+export interface EventTierRow {
+  id: string;
+  event_id: string;
+  name: string;
+  price: number;
+  capacity: number;
+  sold: number;
+  available_until: string | null;
+  sort_order: number;
+}
+
+export function mapEventTier(row: EventTierRow): EventTier {
+  return {
+    id: row.id,
+    eventId: row.event_id,
+    name: row.name,
+    price: Number(row.price),
+    capacity: row.capacity,
+    sold: row.sold,
+    availableUntil: row.available_until,
+    sortOrder: row.sort_order,
+  };
+}
+
+// A tier a fan can actually buy right now: not sold out, not past its cutoff.
+export function tierIsAvailable(tier: EventTier, now: Date = new Date()): boolean {
+  if (tier.sold >= tier.capacity) return false;
+  if (tier.availableUntil && new Date(tier.availableUntil) <= now) return false;
+  return true;
 }
 
 export interface ContentPost {
@@ -133,6 +184,8 @@ export interface Ticket {
    * QR falls back to `id`.
    */
   qrSecret: string | null;
+  /** The price tier this seat was bought at (#151); null for single-price shows. */
+  tierId: string | null;
 }
 
 export interface AppUser {
@@ -311,6 +364,8 @@ export interface TicketRow {
   hidden_at?: string | null;
   // Absent until addendum_037 runs; the QR falls back to `id` meanwhile.
   qr_secret?: string | null;
+  // Absent until addendum_039 runs; null for single-price shows.
+  tier_id?: string | null;
 }
 
 export function mapTicket(row: TicketRow): Ticket {
@@ -326,6 +381,7 @@ export function mapTicket(row: TicketRow): Ticket {
     refunded: row.refunded,
     hiddenAt: row.hidden_at ?? null,
     qrSecret: row.qr_secret ?? null,
+    tierId: row.tier_id ?? null,
   };
 }
 

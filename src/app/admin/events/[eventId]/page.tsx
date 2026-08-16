@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { adminClient, fetchEventDetail, requireAdmin } from "@/lib/supabase/admin-queries";
 import { formatEuros } from "@/lib/pricing";
 import RefundButton from "../../billing/RefundButton";
+import TierManager, { type TierManagerTier } from "./TierManager";
 
 function StatCard({
   label,
@@ -40,6 +41,23 @@ export default async function AdminEventDetailPage({
   const { event, stats, orders, discountUsage, dailySales } = detail;
   const soldPercent = event.capacity > 0 ? Math.round((stats.ticketsSold / event.capacity) * 100) : 0;
   const maxDayRevenue = Math.max(1, ...dailySales.map((d) => d.revenueCents));
+
+  // Price tiers (#151). Null tierRows (missing table pre-addendum_039, or none)
+  // → an empty editor, which the admin can start filling in.
+  const { data: tierRows } = await admin
+    .from("event_tiers")
+    .select("id, name, price, capacity, available_until, sold")
+    .eq("event_id", eventId)
+    .order("sort_order", { ascending: true });
+  const tiers: TierManagerTier[] = (tierRows ?? []).map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+    price: Number(r.price),
+    capacity: r.capacity as number,
+    availableUntil: (r.available_until as string | null) ?? null,
+    sold: r.sold as number,
+  }));
+  const isExternal = event.ticketing?.mode === "external";
 
   return (
     <div className="flex flex-col gap-6">
@@ -102,6 +120,8 @@ export default async function AdminEventDetailPage({
           hint={event.price === 0 ? "free event" : `€${event.price.toFixed(2)} / ticket`}
         />
       </div>
+
+      {!isExternal && <TierManager eventId={eventId} initialTiers={tiers} />}
 
       <div className="rounded-2xl bg-surface p-5">
         <h2 className="mb-4 font-heading text-lg text-foreground">Sales by day</h2>

@@ -15,7 +15,14 @@ async function releaseCapacity(session: Stripe.Checkout.Session) {
   if (!eventId || !quantity) return;
 
   const admin = createAdminClient();
-  await admin.rpc("release_event_capacity", { p_event_id: eventId, p_quantity: quantity });
+  // A tiered checkout held its seats against the tier (#151), so give them back
+  // there — the tier release also decrements the event aggregate.
+  const tierId = session.metadata?.tier_id;
+  if (tierId) {
+    await admin.rpc("release_tier_capacity", { p_tier_id: tierId, p_quantity: quantity });
+  } else {
+    await admin.rpc("release_event_capacity", { p_event_id: eventId, p_quantity: quantity });
+  }
 }
 
 // Stripe delivers platform events (checkout.session.*) and connected-account

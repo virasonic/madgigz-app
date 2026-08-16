@@ -47,7 +47,7 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
     // checked_in_at: someone who was scanned through the door got what they
     // paid for, so cancelling the show doesn't quietly refund them too.
     .select(
-      "id, quantity, price_paid, refunded, checked_in_at, stripe_payment_intent_id, stripe_account_id"
+      "id, quantity, price_paid, refunded, checked_in_at, stripe_payment_intent_id, stripe_account_id, tier_id"
     )
     .eq("event_id", eventId);
 
@@ -93,10 +93,19 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
     // Free tickets took no money, so there's nothing to send back.
     if (!ticket.stripe_payment_intent_id) {
       await admin.from("tickets").update({ refunded: true }).eq("id", ticket.id);
-      await admin.rpc("release_event_capacity", {
-        p_event_id: eventId,
-        p_quantity: ticket.quantity,
-      });
+      // A tiered ticket (#151) gives its seat back to the tier (which also
+      // decrements the event aggregate); a single-price ticket to the event.
+      if (ticket.tier_id) {
+        await admin.rpc("release_tier_capacity", {
+          p_tier_id: ticket.tier_id,
+          p_quantity: ticket.quantity,
+        });
+      } else {
+        await admin.rpc("release_event_capacity", {
+          p_event_id: eventId,
+          p_quantity: ticket.quantity,
+        });
+      }
       refunded += 1;
       continue;
     }
@@ -126,10 +135,19 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
       );
 
       await admin.from("tickets").update({ refunded: true }).eq("id", ticket.id);
-      await admin.rpc("release_event_capacity", {
-        p_event_id: eventId,
-        p_quantity: ticket.quantity,
-      });
+      // A tiered ticket (#151) gives its seat back to the tier (which also
+      // decrements the event aggregate); a single-price ticket to the event.
+      if (ticket.tier_id) {
+        await admin.rpc("release_tier_capacity", {
+          p_tier_id: ticket.tier_id,
+          p_quantity: ticket.quantity,
+        });
+      } else {
+        await admin.rpc("release_event_capacity", {
+          p_event_id: eventId,
+          p_quantity: ticket.quantity,
+        });
+      }
       refunded += 1;
     } catch (error) {
       failed += 1;
@@ -162,7 +180,7 @@ export async function refundTicket(
   const { data: ticket } = await admin
     .from("tickets")
     .select(
-      "id, event_id, quantity, price_paid, refunded, checked_in_at, stripe_payment_intent_id, stripe_account_id"
+      "id, event_id, quantity, price_paid, refunded, checked_in_at, stripe_payment_intent_id, stripe_account_id, tier_id"
     )
     .eq("id", ticketId)
     .single();
@@ -219,10 +237,17 @@ export async function refundTicket(
   // someone who walked in would put a seat that was physically occupied back
   // on sale.
   if (!ticket.checked_in_at) {
-    await admin.rpc("release_event_capacity", {
-      p_event_id: ticket.event_id,
-      p_quantity: ticket.quantity,
-    });
+    if (ticket.tier_id) {
+      await admin.rpc("release_tier_capacity", {
+        p_tier_id: ticket.tier_id,
+        p_quantity: ticket.quantity,
+      });
+    } else {
+      await admin.rpc("release_event_capacity", {
+        p_event_id: ticket.event_id,
+        p_quantity: ticket.quantity,
+      });
+    }
   }
 
   revalidatePath("/admin/billing");

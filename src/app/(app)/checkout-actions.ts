@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
 import { applyDiscount, validateDiscountCode } from "@/lib/supabase/queries";
 import { breakdownFor, formatEuros, toCents } from "@/lib/pricing";
-import { EventRow, mapEvent } from "@/lib/types";
+import { EventRow, EventTierRow, mapEvent, mapEventTier, tierIsAvailable } from "@/lib/types";
 
 export interface CheckoutResult {
   url?: string;
@@ -21,7 +21,8 @@ export interface CheckoutResult {
 export async function createCheckout(
   eventId: string,
   quantity: number,
-  promoCode: string | null
+  promoCode: string | null,
+  tierId: string | null = null
 ): Promise<CheckoutResult> {
   const supabase = await createClient();
   const {
@@ -79,20 +80,42 @@ export async function createCheckout(
     .eq("id", event.artistId ?? "")
     .maybeSingle();
 
+  // Price tiers (#151): if the show has tiers, the fan must pick one, and its
+  // price — not events.price — is the source of truth for the charge. Read
+  // through the admin client so a missing table (pre-addendum_039) cleanly falls
+  // back to the single price instead of erroring.
+  const { data: tierRows, error: tiersError } = await admin
+    .from("event_tiers")
+    .select("*")
+    .eq("event_id", event.id);
+  const tiers = tiersError ? [] : ((tierRows as EventTierRow[]) ?? []).map(mapEventTier);
+
+  let unitPriceEuros = event.price;
+  let selectedTierId: string | null = null;
+  if (tiers.length > 0) {
+    const tier = tierId ? tiers.find((t) => t.id === tierId) : null;
+    if (!tier) return { error: "Choose a ticket type" };
+    // Availability is re-checked here AND atomically at reservation below — this
+    // gives a clean message, the reservation is what actually prevents oversell.
+    if (!tierIsAvailable(tier)) return { error: "That ticket type isn't available" };
+    unitPriceEuros = tier.price;
+    selectedTierId = tier.id;
+  }
+
   // Price and discount both come from the database, never the client.
   const discount = promoCode ? await validateDiscountCode(supabase, promoCode, event.id) : null;
   if (promoCode && !discount) return { error: "That code isn't valid for this event" };
 
-  const subtotalEuros = event.price * quantity;
+  const subtotalEuros = unitPriceEuros * quantity;
   const totalEuros = applyDiscount(subtotalEuros, discount);
   const totalCents = toCents(totalEuros);
 
   // Claim capacity before taking money, atomically - two fans racing for the
-  // last seat can't both win.
-  const { data: reserved, error: reserveError } = await admin.rpc("reserve_event_capacity", {
-    p_event_id: event.id,
-    p_quantity: quantity,
-  });
+  // last seat can't both win. A tiered show reserves against the chosen tier
+  // (which also bumps events.sold); a single-price show against the event.
+  const { data: reserved, error: reserveError } = selectedTierId
+    ? await admin.rpc("reserve_tier_capacity", { p_tier_id: selectedTierId, p_quantity: quantity })
+    : await admin.rpc("reserve_event_capacity", { p_event_id: event.id, p_quantity: quantity });
   if (reserveError) {
     console.error("Capacity reservation failed:", reserveError);
     return { error: "Couldn't hold your tickets. Please try again." };
@@ -100,7 +123,11 @@ export async function createCheckout(
   if (!reserved) return { error: "Not enough tickets left" };
 
   async function release() {
-    await admin.rpc("release_event_capacity", { p_event_id: event.id, p_quantity: quantity });
+    if (selectedTierId) {
+      await admin.rpc("release_tier_capacity", { p_tier_id: selectedTierId, p_quantity: quantity });
+    } else {
+      await admin.rpc("release_event_capacity", { p_event_id: event.id, p_quantity: quantity });
+    }
   }
 
   // Stripe rejects zero-amount sessions, so free tickets (a free event, or a
@@ -118,6 +145,7 @@ export async function createCheckout(
       p_application_fee_cents: 0,
       p_stripe_account_id: null,
       p_application_fee_vat_cents: 0,
+      p_tier_id: selectedTierId,
     });
 
     if (error) {
@@ -196,6 +224,7 @@ export async function createCheckout(
         application_fee_cents: String(feeCents),
         application_fee_vat_cents: String(feeVatCents),
         stripe_account_id: houseRun ? "" : artist!.stripe_account_id,
+        tier_id: selectedTierId ?? "",
       },
     });
 
@@ -218,7 +247,8 @@ export async function createCheckout(
 export async function previewPromoCode(
   eventId: string,
   quantity: number,
-  promoCode: string
+  promoCode: string,
+  tierId: string | null = null
 ): Promise<{ totalEuros?: number; label?: string; error?: string }> {
   const supabase = await createClient();
   const { data: eventRow } = await supabase
@@ -231,7 +261,19 @@ export async function previewPromoCode(
   const discount = await validateDiscountCode(supabase, promoCode, eventId);
   if (!discount) return { error: "That code isn't valid for this event" };
 
-  const totalEuros = applyDiscount(Number(eventRow.price) * quantity, discount);
+  // A tiered show prices off the chosen tier, not events.price.
+  let unitPrice = Number(eventRow.price);
+  if (tierId) {
+    const { data: tierRow } = await supabase
+      .from("event_tiers")
+      .select("price")
+      .eq("id", tierId)
+      .eq("event_id", eventId)
+      .maybeSingle();
+    if (tierRow) unitPrice = Number(tierRow.price);
+  }
+
+  const totalEuros = applyDiscount(unitPrice * quantity, discount);
   return {
     totalEuros,
     label:

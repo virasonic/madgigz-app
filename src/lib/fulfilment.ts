@@ -34,6 +34,7 @@ export async function fulfilCheckoutSession(session: Stripe.Checkout.Session) {
     p_application_fee_cents: Number(meta.application_fee_cents ?? 0),
     p_stripe_account_id: meta.stripe_account_id || null,
     p_application_fee_vat_cents: Number(meta.application_fee_vat_cents ?? 0),
+    p_tier_id: meta.tier_id || null,
   });
 
   if (error) throw error;

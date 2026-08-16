@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import { LegalNotice } from "@/components/legal/LegalNotice";
 import { createCheckout, previewPromoCode } from "@/app/(app)/checkout-actions";
-import { EventItem } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import { EventItem, EventTier, EventTierRow, mapEventTier, tierIsAvailable } from "@/lib/types";
 import ShareEventButton from "./ShareEventButton";
 import LikeButton from "./LikeButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -65,6 +66,38 @@ export default function TicketModal({
   const [promoError, setPromoError] = useState<string | undefined>();
   const [checkingPromo, setCheckingPromo] = useState(false);
 
+  // Price tiers (#151). Loaded on open — event_tiers is world-readable, so the
+  // browser client reads them directly. Empty = a single-price show, and the
+  // whole picker below simply doesn't render. Default the selection to the first
+  // still-available tier.
+  const [tiers, setTiers] = useState<EventTier[]>([]);
+  const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .from("event_tiers")
+      .select("*")
+      .eq("event_id", event.id)
+      .order("sort_order", { ascending: true })
+      .order("price", { ascending: true })
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        const rows = (data as EventTierRow[]).map(mapEventTier);
+        setTiers(rows);
+        const firstAvailable = rows.find((tr) => tierIsAvailable(tr)) ?? rows[0] ?? null;
+        setSelectedTierId(firstAvailable?.id ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [event.id]);
+
+  const tiered = tiers.length > 0;
+  const selectedTier = tiered ? (tiers.find((tr) => tr.id === selectedTierId) ?? null) : null;
+  const unitPrice = selectedTier ? selectedTier.price : event.price;
+
   // The sold count is the one number here that goes stale while the sheet sits
   // open - other people are buying the same show. Subscribe to this event's row
   // so the bar, "Almost gone" and the sold-out lock stay honest (#101). Seeded
@@ -80,11 +113,28 @@ export default function TicketModal({
   const remaining = Math.max(capacity - sold, 0);
   const soldOut = remaining <= 0;
   const almostGone = !soldOut && soldPercent >= 90;
-  // Whichever runs out first: the organiser's per-order cap or the seats left.
-  const maxQuantity = Math.max(Math.min(remaining, event.maxPerOrder), 1);
 
-  const subtotal = event.price * quantity;
-  const total = soldOut ? 0 : (discountedTotal ?? subtotal);
+  // With tiers, the seats that matter for the stepper and the buy button are the
+  // chosen tier's, not the event aggregate. A tier that's sold out or past its
+  // cutoff blocks the buy even if other tiers (and the event) still have room.
+  const tierRemaining = selectedTier
+    ? Math.max(selectedTier.capacity - selectedTier.sold, 0)
+    : remaining;
+  const sellableRemaining = tiered ? tierRemaining : remaining;
+  // Whichever runs out first: the organiser's per-order cap or the seats left.
+  const maxQuantity = Math.max(Math.min(sellableRemaining, event.maxPerOrder), 1);
+  const tierUnavailable = tiered && (!selectedTier || !tierIsAvailable(selectedTier));
+  const buyBlocked = soldOut || tierUnavailable;
+
+  const subtotal = unitPrice * quantity;
+  const total = buyBlocked ? 0 : (discountedTotal ?? subtotal);
+
+  function selectTier(id: string) {
+    setSelectedTierId(id);
+    setQuantity(1);
+    setPromoLabel(null);
+    setDiscountedTotal(null);
+  }
 
   const externalUrl = event.ticketing?.mode === "external" ? event.ticketing.url : undefined;
   let externalHost = t("ticket.externalHostFallback");
@@ -101,7 +151,7 @@ export default function TicketModal({
     setCheckingPromo(true);
     setPromoError(undefined);
 
-    const result = await previewPromoCode(event.id, quantity, promoCode);
+    const result = await previewPromoCode(event.id, quantity, promoCode, selectedTierId);
     setCheckingPromo(false);
 
     if (result.error || result.totalEuros === undefined) {
@@ -121,7 +171,7 @@ export default function TicketModal({
     setBuying(true);
     setBuyError(undefined);
 
-    const result = await createCheckout(event.id, quantity, promoCode.trim() || null);
+    const result = await createCheckout(event.id, quantity, promoCode.trim() || null, selectedTierId);
 
     if (result.error) {
       setBuying(false);
@@ -244,6 +294,50 @@ export default function TicketModal({
               </div>
             ) : tab === "tickets" ? (
               <div className="mt-6 flex flex-col gap-6">
+                {/* Price tiers (#151): pick one before choosing a quantity.
+                    Sold-out / past-cutoff tiers are shown but disabled. */}
+                {tiered && (
+                  <div className="flex flex-col gap-2">
+                    <span className="font-heading text-sm text-muted">{t("ticket.chooseTier")}</span>
+                    {tiers.map((tr) => {
+                      const available = tierIsAvailable(tr);
+                      const selected = tr.id === selectedTierId;
+                      const subline = !available
+                        ? tr.sold >= tr.capacity
+                          ? t("ticket.tierSoldOut")
+                          : t("ticket.tierClosed")
+                        : tr.availableUntil
+                          ? t("ticket.tierUntil", {
+                              date: new Date(tr.availableUntil).toLocaleDateString(dl, {
+                                day: "numeric",
+                                month: "short",
+                                timeZone: "UTC",
+                              }),
+                            })
+                          : null;
+                      return (
+                        <button
+                          key={tr.id}
+                          type="button"
+                          onClick={() => available && selectTier(tr.id)}
+                          disabled={!available}
+                          className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors ${
+                            selected ? "border-primary bg-primary/10" : "border-muted/20 bg-background"
+                          } disabled:opacity-40`}
+                        >
+                          <span className="min-w-0">
+                            <span className="block font-heading text-sm text-foreground">{tr.name}</span>
+                            {subline && <span className="block text-xs text-muted">{subline}</span>}
+                          </span>
+                          <span className="shrink-0 font-display text-foreground">
+                            €{tr.price.toFixed(2)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <span className="font-heading text-sm text-muted">{t("ticket.quantity")}</span>
                   <div className="flex items-center gap-4">
@@ -253,13 +347,13 @@ export default function TicketModal({
                         setPromoLabel(null);
                         setDiscountedTotal(null);
                       }}
-                      disabled={soldOut}
+                      disabled={buyBlocked}
                       className="flex h-9 w-9 items-center justify-center rounded-full border border-muted/30 text-foreground disabled:opacity-30"
                     >
                       −
                     </button>
                     <span className="w-4 text-center font-display text-lg text-foreground">
-                      {soldOut ? 0 : quantity}
+                      {buyBlocked ? 0 : quantity}
                     </span>
                     <button
                       onClick={() => {
@@ -267,7 +361,7 @@ export default function TicketModal({
                         setPromoLabel(null);
                         setDiscountedTotal(null);
                       }}
-                      disabled={soldOut}
+                      disabled={buyBlocked}
                       className="flex h-9 w-9 items-center justify-center rounded-full border border-muted/30 text-foreground disabled:opacity-30"
                     >
                       +
@@ -293,7 +387,7 @@ export default function TicketModal({
                   )}
                 </div>
 
-                {!soldOut && (
+                {!buyBlocked && (
                   <div className="flex flex-col gap-1.5">
                     <span className="font-heading text-sm text-muted">{t("ticket.promoCode")}</span>
                     <div className="flex gap-2">
@@ -330,14 +424,14 @@ export default function TicketModal({
                 {/* Auto-detected from the Stripe key, so it shows for the
                     test-mode soft launch and vanishes the moment live keys are
                     set. Only for paid tickets - free ones never touch Stripe. */}
-                {isTestMode && !soldOut && total > 0 && (
+                {isTestMode && !buyBlocked && total > 0 && (
                   <div className="rounded-2xl bg-accent-dark/20 px-4 py-3 text-xs leading-relaxed text-foreground">
                     {t("ticket.testMode")}
                   </div>
                 )}
 
-                <Button onClick={handleBuy} disabled={soldOut || buying}>
-                  {soldOut
+                <Button onClick={handleBuy} disabled={buyBlocked || buying}>
+                  {buyBlocked
                     ? t("ticket.buySoldOut")
                     : buying
                       ? t("ticket.buyStarting")
@@ -349,7 +443,7 @@ export default function TicketModal({
                 {/* Visible, not tapped-for: a fan deciding whether to buy needs
                     this before they pay, not tucked behind an icon they'd have
                     no reason to tap. */}
-                {!soldOut && (
+                {!buyBlocked && (
                   <LegalNotice
                     messageKey="ticket.finalSale"
                     className="-mt-3 text-center text-[11px] text-muted"
