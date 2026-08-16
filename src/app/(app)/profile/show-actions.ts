@@ -131,6 +131,9 @@ export async function finaliseNewShow(
     venueId: string | null;
     genreIds: string[];
     taggedArtistIds: string[];
+    // Price tiers set on the create form (#151); applied to the just-created
+    // event here, so a show can ship tiered from the start.
+    tiers?: TierInput[];
   }
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
@@ -166,6 +169,11 @@ export async function finaliseNewShow(
 
   const tagError = await syncEventArtists(admin, eventId, user.id, input.taggedArtistIds);
   if (tagError) return { error: tagError };
+
+  if (input.tiers && input.tiers.length > 0) {
+    const tierResult = await applyEventTiers(admin, eventId, input.tiers);
+    if (tierResult.error) return tierResult;
+  }
 
   revalidatePath("/profile");
   revalidatePath("/explore");

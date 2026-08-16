@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import BackButton from "@/components/ui/BackButton";
 import FeeBreakdown from "@/components/artist/FeeBreakdown";
+import TierRowsEditor, { type TierRow, tierRowsToInput } from "@/components/artist/TierRowsEditor";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
 import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
 import GenrePicker from "@/components/artist/GenrePicker";
@@ -59,6 +60,9 @@ export default function AddShowPage() {
   const [description, setDescription] = useState("");
   const [accentColor, setAccentColor] = useState(ACCENT_SWATCHES[0].value);
   const [ticketingMode, setTicketingMode] = useState<TicketingMode>("internal");
+  // Optional price tiers (#151); when set they define the show's capacity/price.
+  // Not part of the localStorage draft (parity with the poster — re-add on restore).
+  const [tierRows, setTierRows] = useState<TierRow[]>([]);
   const [externalUrl, setExternalUrl] = useState("");
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
@@ -279,6 +283,7 @@ export default function AddShowPage() {
       venueId: venue.venueId,
       genreIds,
       taggedArtistIds: taggedIds,
+      tiers: tierRows.length > 0 ? tierRowsToInput(tierRows) : undefined,
     });
     if (finaliseError) {
       setSubmitting(false);
@@ -396,6 +401,15 @@ export default function AddShowPage() {
           />
           <p className="text-xs text-muted">{t("addShow.maxPerOrderHint")}</p>
         </div>
+
+        {/* Optional price tiers (#151). Only for shows we sell — an external
+            link has no tiers here. When tiers are added they set the show's
+            capacity and "from" price. */}
+        {ticketingMode === "internal" && (
+          <div className="rounded-2xl border border-muted/15 p-3">
+            <TierRowsEditor rows={tierRows} onChange={setTierRows} />
+          </div>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <span className="font-heading text-sm text-muted">{t("addShow.poster")}</span>
