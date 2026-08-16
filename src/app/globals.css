@@ -87,6 +87,17 @@ body {
 /* Rubber-band scrolling reveals the page behind the app in standalone mode,
    which reads as a rendering glitch rather than a gesture. */
 html {
-  overscroll-behavior-y: none;
+  /* No rubber-band on either axis. A phone column must never pan sideways —
+     that horizontal drag is the #1 tell that a web app isn't native. */
+  overscroll-behavior: none;
   background: var(--background);
+}
+
+/* Belt-and-braces against sideways panning: nothing at the document level may
+   scroll horizontally, whatever a child's width ends up being. The app shell's
+   scroll area also clips overflow-x (see (app)/layout.tsx). */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
 }

@@ -55,7 +55,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {impersonating && <ImpersonationBanner username={impersonating} />}
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        {/* no-scrollbar: hide the scroll indicator app-wide (the feed already
+            hid its own). overflow-x-hidden + overscroll-x-none stop any sideways
+            pan — a native phone screen never moves horizontally. */}
+        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-x-none">
+          {children}
+        </div>
         <BottomNav role={profile?.role ?? "fan"} userId={user.id} unreadCount={unreadCount} />
       </div>
     </div>
