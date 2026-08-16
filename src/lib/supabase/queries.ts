@@ -233,7 +233,31 @@ export async function fetchContentPosts(supabase: SupabaseClient): Promise<Conte
     // the table for the report trail.
     .is("hidden_at", null)
     .order("created_at", { ascending: false });
-  return ((data as ContentPostRow[]) ?? []).map(mapContentPost);
+  // Intro reels (#143) live on the artist's profile, not in For You. Filtered in
+  // JS rather than the query so a pre-addendum_038 DB (no is_intro column) still
+  // returns the feed instead of erroring; isIntro reads false there anyway.
+  return ((data as ContentPostRow[]) ?? []).map(mapContentPost).filter((p) => !p.isIntro);
+}
+
+/**
+ * The artist's pinned introduction reel (#143), or null if they haven't set one.
+ * Returns null — degrading silently — if the column doesn't exist yet
+ * (addendum_038 not run) so the profile still renders in the deploy→migration
+ * gap.
+ */
+export async function fetchArtistIntro(
+  supabase: SupabaseClient,
+  artistId: string
+): Promise<ContentPost | null> {
+  const { data, error } = await supabase
+    .from("content_posts")
+    .select("*, profiles(artist_photo_url)")
+    .eq("artist_id", artistId)
+    .eq("is_intro", true)
+    .is("hidden_at", null)
+    .maybeSingle();
+  if (error || !data) return null;
+  return mapContentPost(data as ContentPostRow);
 }
 
 export async function fetchShowContent(

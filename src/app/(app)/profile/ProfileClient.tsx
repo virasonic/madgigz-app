@@ -10,8 +10,11 @@ import { buildSocialLinks } from "@/lib/socials";
 import Button from "@/components/ui/Button";
 import ManageShowModal from "@/components/artist/ManageShowModal";
 import PayoutCard from "@/components/artist/PayoutCard";
+import IntroReel from "@/components/artist/IntroReel";
+import IntroReelModal from "@/components/artist/IntroReelModal";
+import { removeIntroReel } from "./intro-actions";
 import { createClient } from "@/lib/supabase/client";
-import { AppUser, EventItem } from "@/lib/types";
+import { AppUser, ContentPost, EventItem } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
 import DeleteAccountDialog from "@/components/account/DeleteAccountDialog";
 import FeedbackDialog from "@/components/account/FeedbackDialog";
@@ -229,6 +232,8 @@ interface ProfileClientProps {
   taggedShows: EventItem[];
   attendedEvents: EventItem[];
   unreadCount: number;
+  /** The artist's pinned intro reel (#143), or null. Null for fans. */
+  initialIntro: ContentPost | null;
 }
 
 export default function ProfileClient({
@@ -239,6 +244,7 @@ export default function ProfileClient({
   taggedShows,
   attendedEvents,
   unreadCount,
+  initialIntro,
 }: ProfileClientProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
@@ -255,6 +261,17 @@ export default function ProfileClient({
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [hiddenOpen, setHiddenOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // Artist intro reel (#143): local so add/replace/remove reflect immediately.
+  const [intro, setIntro] = useState<ContentPost | null>(initialIntro);
+  const [introModalOpen, setIntroModalOpen] = useState(false);
+  const [introRemoving, setIntroRemoving] = useState(false);
+
+  async function handleRemoveIntro() {
+    setIntroRemoving(true);
+    const result = await removeIntroReel();
+    setIntroRemoving(false);
+    if (!result.error) setIntro(null);
+  }
 
   // Admins keep their own badge - they get the artist tools below, but
   // labelling the account "Artist" would misreport what it actually is.
@@ -461,6 +478,47 @@ export default function ProfileClient({
             </Link>
           </div>
 
+          {/* Intro reel (#143): a "this is me" clip the artist can set even with
+              no show to promote, so their profile is never empty. */}
+          <div className="mb-6">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-heading text-sm uppercase tracking-wide text-muted">
+                {t("introReel.sectionTitle")}
+              </h2>
+              {intro && (
+                <button
+                  type="button"
+                  onClick={handleRemoveIntro}
+                  disabled={introRemoving}
+                  className="text-xs font-heading text-danger disabled:opacity-50"
+                >
+                  {introRemoving ? t("introReel.removing") : t("introReel.remove")}
+                </button>
+              )}
+            </div>
+            {intro ? (
+              <>
+                <IntroReel post={intro} />
+                <button
+                  type="button"
+                  onClick={() => setIntroModalOpen(true)}
+                  className="mt-3 w-full rounded-full border border-muted/30 py-2.5 text-sm font-heading text-foreground"
+                >
+                  {t("introReel.replace")}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIntroModalOpen(true)}
+                className="flex w-full flex-col items-center gap-1 rounded-2xl border border-dashed border-muted/30 px-4 py-6 text-center"
+              >
+                <span className="font-heading text-sm text-foreground">{t("introReel.addTitle")}</span>
+                <span className="text-xs text-muted">{t("introReel.addHint")}</span>
+              </button>
+            )}
+          </div>
+
           {/* Followers is back: #60 gave it something real to count. A zero
               here now means nobody has followed yet, which is true, rather
               than meaning the feature doesn't exist. */}
@@ -629,6 +687,12 @@ export default function ProfileClient({
         />
       )}
       {feedbackOpen && <FeedbackDialog onClose={() => setFeedbackOpen(false)} />}
+      {introModalOpen && (
+        <IntroReelModal
+          onClose={() => setIntroModalOpen(false)}
+          onSaved={(post) => setIntro(post)}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
+  fetchArtistIntro,
   fetchArtistProfile,
   fetchCurrentUser,
   fetchFollowedArtistIds,
@@ -9,6 +10,7 @@ import {
   fetchTaggedShows,
 } from "@/lib/supabase/queries";
 import FollowButton from "@/components/artist/FollowButton";
+import IntroReel from "@/components/artist/IntroReel";
 import Avatar from "@/components/ui/Avatar";
 import SocialLinks from "@/components/ui/SocialLinks";
 import ArtistShowsGrid from "./ArtistShowsGrid";
@@ -28,12 +30,13 @@ export default async function PublicArtistProfilePage({
   // (Add Show, Settings, hidden shows) instead of the stripped-down public one.
   if (artistId === currentUser.id) redirect("/profile");
 
-  const [artist, shows, taggedShows, savedIds, followedIds] = await Promise.all([
+  const [artist, shows, taggedShows, savedIds, followedIds, intro] = await Promise.all([
     fetchArtistProfile(supabase, artistId),
     fetchShowsByArtist(supabase, artistId),
     fetchTaggedShows(supabase, artistId),
     fetchSavedEventIds(supabase, currentUser.id),
     fetchFollowedArtistIds(supabase, currentUser.id),
+    fetchArtistIntro(supabase, artistId),
   ]);
 
   if (!artist) notFound();
@@ -82,6 +85,14 @@ export default async function PublicArtistProfilePage({
       </div>
 
       <SocialLinks source={artist} className="mt-4" />
+
+      {/* Intro reel pinned above the shows (#143): discovery starts with a face
+          and a sound, and it's here even when the artist has no show to promote. */}
+      {intro && (
+        <div className="mt-6">
+          <IntroReel post={intro} />
+        </div>
+      )}
 
       <ArtistShowsGrid
         userId={currentUser.id}

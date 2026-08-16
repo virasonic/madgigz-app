@@ -514,6 +514,20 @@ export const es: Messages = {
     post: "Publicar",
   },
 
+  introReel: {
+    sectionTitle: "Reel de presentación",
+    addTitle: "Añade un reel de presentación",
+    addHint: "Un clip corto de \"este soy yo\": aparece en tu perfil aunque no tengas bolo.",
+    replace: "Cambiar reel de presentación",
+    remove: "Quitar",
+    removing: "Quitando...",
+    title: "Tu reel de presentación",
+    subtitle: "Preséntate: una cara y un sonido, no una biografía.",
+    tapToAdd: "Toca para añadir una foto o vídeo",
+    captionPlaceholder: "Saluda (opcional)...",
+    save: "Guardar reel",
+  },
+
   addShow: {
     title: "Añadir un bolo",
     cantSellTitle: "Antes de empezar: aún no puedes vender entradas de pago",

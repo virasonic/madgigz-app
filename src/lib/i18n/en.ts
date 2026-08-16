@@ -528,6 +528,20 @@ export const en = {
     post: "Post",
   },
 
+  introReel: {
+    sectionTitle: "Intro reel",
+    addTitle: "Add an intro reel",
+    addHint: "A short \"this is me\" clip — shows on your profile even without a gig.",
+    replace: "Replace intro reel",
+    remove: "Remove",
+    removing: "Removing...",
+    title: "Your intro reel",
+    subtitle: "Introduce yourself — a face and a sound, not a bio.",
+    tapToAdd: "Tap to add a photo or video",
+    captionPlaceholder: "Say hi (optional)...",
+    save: "Save intro reel",
+  },
+
   addShow: {
     title: "Add a show",
     cantSellTitle: "Before you start: you can't sell paid tickets yet",

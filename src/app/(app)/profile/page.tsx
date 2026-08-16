@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
+  fetchArtistIntro,
   fetchAttendedEvents,
   fetchCurrentUser,
   fetchSavedEventIds,
@@ -17,16 +18,18 @@ export default async function ProfilePage() {
   const user = await fetchCurrentUser(supabase);
   if (!user) redirect("/");
 
-  const [savedIds, tickets, shows, taggedShows, attendedEvents, unreadCount] = await Promise.all([
-    fetchSavedEventIds(supabase, user.id),
-    fetchTickets(supabase, user.id),
-    isArtistRole(user.role) ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
-    isArtistRole(user.role) ? fetchTaggedShows(supabase, user.id) : Promise.resolve([]),
-    // The poster wall (#116) is a fan surface; artists/admins get their own tools
-    // in place of the fan stats, so there's no need to run this for them.
-    user.role === "fan" ? fetchAttendedEvents(supabase, user.id) : Promise.resolve([]),
-    fetchUnreadCount(supabase, user.id),
-  ]);
+  const [savedIds, tickets, shows, taggedShows, attendedEvents, unreadCount, intro] =
+    await Promise.all([
+      fetchSavedEventIds(supabase, user.id),
+      fetchTickets(supabase, user.id),
+      isArtistRole(user.role) ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
+      isArtistRole(user.role) ? fetchTaggedShows(supabase, user.id) : Promise.resolve([]),
+      // The poster wall (#116) is a fan surface; artists/admins get their own tools
+      // in place of the fan stats, so there's no need to run this for them.
+      user.role === "fan" ? fetchAttendedEvents(supabase, user.id) : Promise.resolve([]),
+      fetchUnreadCount(supabase, user.id),
+      isArtistRole(user.role) ? fetchArtistIntro(supabase, user.id) : Promise.resolve(null),
+    ]);
 
   // Scanned at the door, not "the date has passed". A ticket bought and never
   // used isn't a gig you attended, and this number sits on the same screen as
@@ -45,6 +48,7 @@ export default async function ProfilePage() {
       taggedShows={taggedShows}
       attendedEvents={attendedEvents}
       unreadCount={unreadCount}
+      initialIntro={intro}
     />
   );
 }

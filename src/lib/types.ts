@@ -107,6 +107,12 @@ export interface ContentPost {
   /** Text announcements only (addendum_029): rendered on the brand template. */
   headline?: string | null;
   accentColor?: string | null;
+  /**
+   * The artist's pinned introduction reel (#143, addendum_038). Kept out of the
+   * feed and shown on the artist's profile. Undefined/false in the pre-migration
+   * window (the column may not exist yet).
+   */
+  isIntro?: boolean;
 }
 
 export interface Ticket {
@@ -262,6 +268,8 @@ export interface ContentPostRow {
   stream_uid?: string | null;
   headline?: string | null;
   accent_color?: string | null;
+  // Undefined until addendum_038 runs; mapContentPost reads it as false.
+  is_intro?: boolean | null;
   /**
    * Embedded from the artist_id -> profiles FK (#123). Present only when the
    * query asks for it (fetchContentPosts/fetchShowContent do; the admin
@@ -286,6 +294,7 @@ export function mapContentPost(row: ContentPostRow): ContentPost {
     streamUid: row.stream_uid ?? null,
     headline: row.headline ?? null,
     accentColor: row.accent_color ?? null,
+    isIntro: row.is_intro ?? false,
   };
 }
 
