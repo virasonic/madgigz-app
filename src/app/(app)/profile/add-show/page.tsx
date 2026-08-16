@@ -383,20 +383,24 @@ export default function AddShowPage() {
           <span className="font-heading text-sm text-muted">{t("addShow.genres")}</span>
           <GenrePicker genres={allGenres} selectedIds={genreIds} onChange={setGenreIds} />
         </div>
-        <Input
-          label={t("addShow.date")}
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          error={errors.date}
-        />
-        <Input
-          label={t("addShow.time")}
-          type="time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          error={errors.time}
-        />
+        {/* Date + Time are short values — side by side at half width each so
+            they read as an app form, not full-width web fields. */}
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label={t("addShow.date")}
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            error={errors.date}
+          />
+          <Input
+            label={t("addShow.time")}
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            error={errors.time}
+          />
+        </div>
         {/* Capacity first — the room total the ticket types allocate within. */}
         <div className="flex flex-col gap-1.5">
           <Input
