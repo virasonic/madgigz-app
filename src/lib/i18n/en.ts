@@ -562,6 +562,8 @@ export const en = {
     available: "Available",
     maxPerOrder: "Max/order",
     onSaleUntil: "On sale until (optional)",
+    youKeep: "You keep {amount}/ticket",
+    freeType: "Free",
     sold: "Sold: {n}",
     remove: "Remove",
     addTier: "+ Add tier",

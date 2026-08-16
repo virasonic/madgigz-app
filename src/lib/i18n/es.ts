@@ -548,6 +548,8 @@ export const es: Messages = {
     available: "Disponibles",
     maxPerOrder: "Máx/pedido",
     onSaleUntil: "A la venta hasta (opcional)",
+    youKeep: "Te quedas {amount}/entrada",
+    freeType: "Gratis",
     sold: "Vendidas: {n}",
     remove: "Quitar",
     addTier: "+ Añadir tipo",

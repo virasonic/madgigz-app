@@ -9,6 +9,7 @@ import BackButton from "@/components/ui/BackButton";
 import TierRowsEditor, {
   type TierRow,
   emptyTierRow,
+  tierRowIsBlank,
   tierRowsToInput,
 } from "@/components/artist/TierRowsEditor";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
@@ -210,12 +211,14 @@ export default function AddShowPage() {
     }
 
     if (internal) {
-      // Pricing IS the ticket types now (#151): at least one, each with a name,
-      // a price and an availability; they can't sum to more than the room; a
-      // paid type needs a payout account (a fully free show doesn't).
+      // Pricing IS the ticket types now (#151): at least one filled-in type,
+      // each with a name, a price and an availability. Wholly blank rows are
+      // ignored (a stray empty row shouldn't block). A paid type needs a payout
+      // account; a fully free show doesn't.
+      const filled = tierRows.filter((r) => !tierRowIsBlank(r));
       const rowsOk =
-        tierRows.length > 0 &&
-        tierRows.every(
+        filled.length > 0 &&
+        filled.every(
           (r) =>
             r.name.trim() &&
             r.price.trim() &&
@@ -229,7 +232,7 @@ export default function AddShowPage() {
       } else {
         // Types may each be available up to the room cap (they share it) — no
         // "sum ≤ capacity" check; the shared total is enforced at checkout.
-        minTierPrice = Math.min(...tierRows.map((r) => Number(r.price)));
+        minTierPrice = Math.min(...filled.map((r) => Number(r.price)));
         if (minTierPrice > 0 && !user?.stripePayoutsReady) {
           nextErrors.tiers = t("addShow.errPayout");
         }
