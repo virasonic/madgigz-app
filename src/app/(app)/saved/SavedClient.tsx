@@ -1,12 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import TicketModal from "@/components/feed/TicketModal";
 import TicketQRModal from "@/components/feed/TicketQRModal";
 import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem, Ticket } from "@/lib/types";
+import { saveOfflineTickets, type OfflineTicket } from "@/lib/offline-tickets";
 import { hideRefundedTicket } from "./actions";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -118,6 +120,31 @@ export default function SavedClient({
     [allTicketRows]
   );
 
+  // Mirror the user's own usable tickets into localStorage so /tickets can show
+  // the QR with no connection (#129). Only non-refunded tickets to shows that
+  // haven't happened — a refunded or past ticket has no door to open. Refreshed
+  // every time this page loads online, so the cache tracks transfers/refunds.
+  useEffect(() => {
+    const offline: OfflineTicket[] = allTicketRows
+      .filter(({ ticket, event }) => !ticket.refunded && event.date >= TODAY)
+      .map(({ ticket, event }) => ({
+        id: ticket.id,
+        barcode: ticket.qrSecret ?? ticket.id,
+        title: event.title,
+        venue: event.venue,
+        venueAddress: event.venueAddress ?? null,
+        date: event.date,
+        time: event.time,
+        quantity: ticket.quantity,
+        tierName: ticket.tierId ? (tierNames[ticket.tierId] ?? null) : null,
+        accentColor: event.accentColor,
+      }));
+    saveOfflineTickets(userId, offline);
+    // Warm the service-worker cache for the offline page so it's replayable with
+    // no network later (the SW caches this GET; see public/sw.js).
+    fetch("/tickets").catch(() => {});
+  }, [allTicketRows, tierNames, userId]);
+
   // A real toggle rather than unsave-only. From this list it always unsaves -
   // everything here is saved by definition - but the ticket sheet opened from
   // it has a like button too, and that has to be able to put one back.
@@ -196,6 +223,25 @@ export default function SavedClient({
           {t("savedPage.likedEvents")}
         </button>
       </div>
+
+      {subTab === "tickets" && (
+        <Link
+          href="/tickets"
+          prefetch
+          className="mb-3 flex items-center justify-center gap-1.5 text-xs text-muted underline underline-offset-4"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 3v10m0 0 4-4m-4 4-4-4M5 17v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          {t("savedPage.availableOffline")}
+        </Link>
+      )}
 
       {subTab === "events" ? (
         savedEvents.length === 0 ? (

@@ -101,6 +101,16 @@ export const en = {
     gigMany: "gigs",
     removeLiked: "Remove from liked events",
     transferPending: "Transfer pending",
+    availableOffline: "Open your tickets offline",
+  },
+
+  offlineTickets: {
+    title: "Your tickets",
+    subtitle: "Saved on this device so they open with no signal.",
+    syncedAt: "Saved for offline · last updated {when}",
+    empty: "Open your tickets while you have signal once, and they'll be saved here to use offline.",
+    goToTickets: "Go to my tickets",
+    tapToShow: "Tap to show QR",
   },
 
   ticket: {

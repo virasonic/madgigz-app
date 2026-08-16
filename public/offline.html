@@ -59,6 +59,12 @@
       button:active {
         transform: scale(0.97);
       }
+      a.tickets {
+        color: #54c3bd;
+        text-decoration: underline;
+        text-underline-offset: 4px;
+        font-size: 0.95rem;
+      }
     </style>
   </head>
   <body>
@@ -74,5 +80,6 @@
     <h1>You&rsquo;re offline</h1>
     <p>MadGigz needs a connection to load live gigs and tickets. Check your network and try again.</p>
     <button onclick="location.reload()">Try again</button>
+    <a class="tickets" href="/tickets">Open your saved tickets &rarr;</a>
   </body>
 </html>

@@ -96,6 +96,16 @@ export const es: Messages = {
     gigMany: "bolos",
     removeLiked: "Quitar de eventos guardados",
     transferPending: "Transferencia pendiente",
+    availableOffline: "Abre tus entradas sin conexión",
+  },
+
+  offlineTickets: {
+    title: "Tus entradas",
+    subtitle: "Guardadas en este dispositivo para abrirlas sin señal.",
+    syncedAt: "Guardadas sin conexión · actualizado {when}",
+    empty: "Abre tus entradas una vez con señal y se guardarán aquí para usarlas sin conexión.",
+    goToTickets: "Ir a mis entradas",
+    tapToShow: "Toca para mostrar el QR",
   },
 
   ticket: {

@@ -42,6 +42,31 @@ self.addEventListener("fetch", (event) => {
   // Never touch cross-origin: Supabase reads/writes, Stripe, remote images.
   if (url.origin !== self.location.origin) return;
 
+  // The offline ticket wallet (#129). Unlike the rest of the app this route is
+  // NOT per-user HTML — it fetches nothing on the server and reads the ticket
+  // data from localStorage on the client — so it is safe to cache and replay
+  // with no network. Network-first (so it updates when online) with a cache
+  // fallback, which is what makes a ticket openable at a signal-dead venue.
+  if (url.pathname === "/tickets") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        // ignoreVary: the warming fetch() and a real navigation send different
+        // headers (RSC/router hints), and Next may echo them in Vary — without
+        // this the offline navigation wouldn't match the cached copy.
+        .catch(() =>
+          caches
+            .match(request, { ignoreVary: true })
+            .then((cached) => cached || caches.match(OFFLINE_URL))
+        )
+    );
+    return;
+  }
+
   // Page loads: try the network, fall back to the offline page only if offline.
   // The live HTML is never cached (it is per-user and dynamic).
   if (request.mode === "navigate") {

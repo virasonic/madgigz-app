@@ -14,6 +14,7 @@ import IntroReel from "@/components/artist/IntroReel";
 import IntroReelModal from "@/components/artist/IntroReelModal";
 import { removeIntroReel } from "./intro-actions";
 import { createClient } from "@/lib/supabase/client";
+import { clearOfflineTickets } from "@/lib/offline-tickets";
 import { AppUser, ContentPost, EventItem } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
 import DeleteAccountDialog from "@/components/account/DeleteAccountDialog";
@@ -298,6 +299,9 @@ export default function ProfileClient({
   async function handleLogOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
+    // Don't leave this account's offline tickets on the device for the next
+    // person to sign in (#129).
+    clearOfflineTickets();
     router.replace("/");
     router.refresh();
   }
