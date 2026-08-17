@@ -307,27 +307,6 @@ export default function FeedClient({
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  // Once the seen-order is applied, position the feed explicitly (overriding the
-  // browser's own restore of the inner snap container). Land on the reel the fan
-  // last had in view — so a round-trip to an artist profile returns to their reel
-  // (#143 feedback) — or the TOP when there's no saved spot or it's since gone.
-  // Restoring by post id (not a raw scroll offset) keeps the old guard against
-  // landing mid-feed on a seen announcement that dropped to the bottom. rAF so it
-  // runs after the browser's own scroll restoration.
-  useEffect(() => {
-    if (!seenLoaded) return;
-    const el = forYouScrollRef.current;
-    if (!el) return;
-    const savedId = loadFeedPos();
-    const idx = savedId ? forYouFeedRef.current.findIndex((e) => e.post.id === savedId) : -1;
-    const target = idx > 0 ? idx : 0;
-    const raf = requestAnimationFrame(() => {
-      el.scrollTo({ top: target * el.clientHeight });
-      if (target > 0) setActiveIndex(target);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [seenLoaded]);
-
   const handleAnnouncementSeen = useCallback((id: string) => {
     markAnnouncementSeen(id);
   }, []);
@@ -348,9 +327,37 @@ export default function FeedClient({
     () => buildForYouFeed(initialEvents, allPosts, followed, seenAnnouncements, discoveryIntros),
     [initialEvents, allPosts, followed, seenAnnouncements, discoveryIntros]
   );
-  // Keep the ref in step during render (cheap, and safe — it's a ref, not state)
-  // so the scroll handler and the restore effect see the current feed.
-  forYouFeedRef.current = forYouFeed;
+
+  // Mirror the built feed into a ref after each commit (never during render) so
+  // the scroll handler can map index → post id without being recreated.
+  useEffect(() => {
+    forYouFeedRef.current = forYouFeed;
+  });
+
+  // Once the seen-order is applied, position the feed explicitly (overriding the
+  // browser's own restore of the inner snap container). Land on the reel the fan
+  // last had in view — so a round-trip to an artist profile returns to their reel
+  // (#143 feedback) — or the TOP when there's no saved spot or it's since gone.
+  // Restoring by post id (not a raw scroll offset) keeps the old guard against
+  // landing mid-feed on a seen announcement that dropped to the bottom. A ref
+  // guard makes it run once (the feed is in deps only so the lookup sees the
+  // seen-ordered list, not to re-fire on every feed change). rAF so it runs
+  // after the browser's own scroll restoration.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (!seenLoaded || restoredRef.current) return;
+    const el = forYouScrollRef.current;
+    if (!el) return;
+    restoredRef.current = true;
+    const savedId = loadFeedPos();
+    const idx = savedId ? forYouFeed.findIndex((e) => e.post.id === savedId) : -1;
+    const target = idx > 0 ? idx : 0;
+    const raf = requestAnimationFrame(() => {
+      el.scrollTo({ top: target * el.clientHeight });
+      if (target > 0) setActiveIndex(target);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [seenLoaded, forYouFeed]);
   // groupByDay re-sorts by date, and Array.sort is stable, so pre-sorting
   // followed-first keeps the days in order while lifting followed artists
   // within each one. This Week is a schedule; it can't stop being chronological.

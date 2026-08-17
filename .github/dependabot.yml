@@ -1,0 +1,28 @@
+# Dependabot keeps dependencies current and, more importantly, flags library
+# versions with known security advisories so they can be patched promptly.
+# It opens PRs against `main`; review, let CI run, then merge.
+version: 2
+updates:
+  # App dependencies (package.json / package-lock.json).
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    # Batch the low-risk churn into single PRs so routine minor/patch bumps don't
+    # drown out the ones that matter. A major bump still gets its own PR.
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    labels:
+      - "dependencies"
+
+  # The GitHub Actions used by the CI workflow below.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"

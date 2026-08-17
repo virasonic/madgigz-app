@@ -54,19 +54,24 @@ export default function OfflineTicketsClient() {
   const [qrSrc, setQrSrc] = useState<string | null>(null);
 
   useEffect(() => {
+    // Reading localStorage on mount is a legitimate external-system sync, not a
+    // cascading render — same accepted pattern as the feed's seen-announcements
+    // read. The lint rule can't tell them apart, so disable it narrowly here.
+    /* eslint-disable react-hooks/set-state-in-effect -- one-shot localStorage read on mount */
     const store = loadOfflineTickets();
     if (store) {
       setTickets(store.tickets);
       setSavedAt(store.savedAt);
     }
     setLoaded(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
+  // Generate the QR from the selected ticket's barcode. No synchronous reset in
+  // the effect body (the "clear" happens in the tap handler, where setState is
+  // fine); this effect only ever setState inside the async `.then`.
   useEffect(() => {
-    if (!selected) {
-      setQrSrc(null);
-      return;
-    }
+    if (!selected) return;
     let cancelled = false;
     QRCode.toDataURL(selected.barcode, { margin: 1, width: 320 }).then((url) => {
       if (!cancelled) setQrSrc(url);
@@ -130,7 +135,13 @@ export default function OfflineTicketsClient() {
           {tickets.map((ticket) => (
             <button
               key={ticket.id}
-              onClick={() => setSelected(ticket)}
+              onClick={() => {
+                // Clear last QR so the sheet shows "generating" instead of the
+                // previous ticket's code while this one renders (in a handler,
+                // so it's not a setState-in-effect).
+                setQrSrc(null);
+                setSelected(ticket);
+              }}
               className="rounded-2xl bg-surface p-3 text-left"
             >
               <div className="flex items-center gap-2">

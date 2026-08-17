@@ -133,6 +133,21 @@ After changing any strings, regenerate the review artefacts so they don't drift:
 
 # Verify what you ship
 
+`npm run check` is the Done-criterion gate: `tsc --noEmit && eslint && vitest run
+&& knip`. Run it before declaring a change done — it is stricter than `next
+build`, which quietly tolerates lint rules (`react-hooks/*`) that the standalone
+ESLint errors on. **CI** (`.github/workflows/ci.yml`) runs the env-free subset
+(tests + knip + lint) on every push/PR; `tsc` and the full build aren't
+duplicated there because Vercel type-checks on every deploy and `tsc` needs
+Next's generated route types. **Dependabot** (`.github/dependabot.yml`) opens
+weekly dependency-update PRs against `main` — let CI run, then merge.
+
+**Unit tests** (Vitest, `*.test.ts`) are pinned hard where a wrong number is
+costly: `vitest.config.mts` scopes 95% coverage to `src/lib/pricing.ts` (the
+fee/VAT/floor math and the euros⇄cents boundary). Add a module to that `include`
+list only when "correct" is non-obvious and the blast radius is real — don't
+chase whole-repo coverage.
+
 If a change is observable in the browser, run the dev server and check it before
 declaring it done — don't ask the user to verify what you can. Three adversarial
 probes in `scripts/` (`security-probe.mjs`, `probe-artist-side.mjs`,
