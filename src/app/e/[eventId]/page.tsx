@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchEventById, fetchEventGenreNames } from "@/lib/supabase/queries";
 import { absoluteUrl, eventPath, mapsUrl } from "@/lib/site";
 import PublicEventActions from "./PublicEventActions";
+import BackButton from "@/components/ui/BackButton";
 import { getServerT } from "@/lib/i18n/server";
 import { dateLocale } from "@/lib/dates";
 
@@ -89,7 +90,12 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <header className="pt-safe-page flex items-center justify-between px-5 pb-4">
+      <header className="pt-safe-page flex items-center gap-3 px-5 pb-4">
+        {/* Signed-in fans reach this from a notification, Explore or a reel, so
+            they need a way back (#feedback). A logged-out stranger arriving on a
+            shared link has no in-app history — the wordmark home link is their
+            affordance instead. */}
+        {signedIn && <BackButton />}
         <Link href="/" aria-label={t("eventPage.homeAria")}>
           <Image
             src="/logos/madgigz-wordmark.png"
@@ -101,7 +107,7 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
           />
         </Link>
         {!signedIn && (
-          <Link href="/signin" className="font-heading text-sm text-accent">
+          <Link href="/signin" className="ml-auto font-heading text-sm text-accent">
             {t("common.signIn")}
           </Link>
         )}
