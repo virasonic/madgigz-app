@@ -2,6 +2,7 @@
 
 import { breakdownFor, formatEuros, toCents } from "@/lib/pricing";
 import type { TierInput } from "@/lib/tiers-apply";
+import InfoTip from "@/components/ui/InfoTip";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
 // Controlled price-tier row editor (#151). Presentational only — it owns no
@@ -98,10 +99,11 @@ export default function TierRowsEditor({
 
       {rows.map((r, i) => {
         const priceNum = Number(r.price);
-        const net =
+        const bd =
           r.price.trim() && !Number.isNaN(priceNum) && priceNum > 0
-            ? formatEuros(breakdownFor(toCents(priceNum)).artistReceivesCents)
+            ? breakdownFor(toCents(priceNum))
             : null;
+        const net = bd ? formatEuros(bd.artistReceivesCents) : null;
         return (
           <div key={r.id ?? `new-${i}`} className="flex flex-col gap-2 rounded-2xl border border-muted/20 p-3">
             <input
@@ -154,8 +156,18 @@ export default function TierRowsEditor({
               />
             </label>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted">
+              <span className="flex items-center gap-1.5 text-muted">
                 {net ? t("tierEditor.youKeep", { amount: net }) : t("tierEditor.freeType")}
+                {bd && (
+                  <InfoTip
+                    text={t("tierEditor.breakdownTip", {
+                      fans: formatEuros(bd.fanPaysCents),
+                      fee: formatEuros(bd.feeBaseCents),
+                      vat: formatEuros(bd.feeVatCents),
+                      net: net ?? "",
+                    })}
+                  />
+                )}
                 {r.sold > 0 && ` · ${t("tierEditor.sold", { n: r.sold })}`}
               </span>
               <button

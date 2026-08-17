@@ -137,6 +137,9 @@ export default function ManageShowModal({
   // carry real ids — otherwise a second save would re-insert the new ones).
   const [tiers, setTiers] = useState<ArtistTier[]>([]);
   const [tiersVersion, setTiersVersion] = useState(0);
+  // Pricing shows a read-only fee breakdown by default (one card per tier), and
+  // only reveals the editable rows on Edit (#151 feedback).
+  const [editingPrice, setEditingPrice] = useState(false);
   function loadTiers() {
     const supabase = createClient();
     supabase
@@ -481,16 +484,50 @@ export default function ManageShowModal({
 
             {canManage && show.ticketing?.mode !== "external" && (
               <div className="flex flex-col gap-2">
-                <p className="text-sm text-muted">{t("manageShow.ticketPrice")}</p>
-                {/* Single-price fee breakdown shows only when there are no tiers;
-                    with tiers the editor shows a breakdown per tier (#151). */}
-                {tiers.length === 0 && <FeeBreakdown priceEuros={show.price} />}
-                <ArtistTierEditor
-                  key={tiersVersion}
-                  eventId={show.id}
-                  initialTiers={tiers}
-                  onSaved={loadTiers}
-                />
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted">{t("manageShow.ticketPrice")}</p>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPrice((v) => !v)}
+                    className="font-heading text-xs text-accent"
+                  >
+                    {editingPrice ? t("common.cancel") : t("common.edit")}
+                  </button>
+                </div>
+                {/* View (default): the fee breakdown card(s) — one per tier when
+                    tiered, a single card otherwise. Edit: the row editor (#151
+                    feedback). A save (or Cancel) drops back to the view. */}
+                {editingPrice ? (
+                  <ArtistTierEditor
+                    key={tiersVersion}
+                    eventId={show.id}
+                    initialTiers={tiers}
+                    onSaved={() => {
+                      loadTiers();
+                      setEditingPrice(false);
+                    }}
+                  />
+                ) : tiers.length === 0 ? (
+                  <FeeBreakdown priceEuros={show.price} />
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {tiers.map((tier) => (
+                      <div key={tier.id} className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-heading uppercase tracking-wide text-foreground">
+                            {tier.name}
+                          </span>
+                          <span className="text-muted">
+                            {t("manageShow.tierAvailable", {
+                              n: Math.max(tier.capacity - tier.sold, 0),
+                            })}
+                          </span>
+                        </div>
+                        <FeeBreakdown priceEuros={tier.price} />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
