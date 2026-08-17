@@ -12,15 +12,25 @@
 //
 // The one job this adds beyond installability is a graceful offline screen.
 
-const CACHE = "madgigz-v1";
+const CACHE = "madgigz-v2";
 const OFFLINE_URL = "/offline.html";
+// The offline ticket wallet (#129) — reads from localStorage, so it renders with
+// no network. This is where the app lands when launched offline.
+const OFFLINE_TICKETS_URL = "/tickets";
 const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
+      .then((cache) =>
+        cache
+          .addAll(PRECACHE)
+          // Best-effort precache of the offline ticket page so the app can open
+          // to it on the very first offline launch. Non-atomic (its own catch)
+          // so a hiccup fetching it never fails the whole SW install.
+          .then(() => cache.add(OFFLINE_TICKETS_URL).catch(() => {}))
+      )
       .then(() => self.skipWaiting())
   );
 });
@@ -67,10 +77,19 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Page loads: try the network, fall back to the offline page only if offline.
-  // The live HTML is never cached (it is per-user and dynamic).
+  // Page loads: try the network, and when it's gone send them to their cached
+  // tickets rather than a dead "you're offline" screen (#129) — launching the
+  // app with no connection lands on the offline ticket wallet, which reads from
+  // localStorage. The static offline page is only the last resort (tickets page
+  // not cached yet). The live per-user HTML is still never cached.
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+    event.respondWith(
+      fetch(request).catch(() =>
+        caches
+          .match(OFFLINE_TICKETS_URL, { ignoreVary: true })
+          .then((cached) => cached || caches.match(OFFLINE_URL))
+      )
+    );
     return;
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { loadOfflineTickets, type OfflineTicket } from "@/lib/offline-tickets";
@@ -34,6 +35,15 @@ function formatSyncedAt(iso: string, dl: string) {
 export default function OfflineTicketsClient() {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
+  const router = useRouter();
+
+  // Go back where they came from (usually the Tickets tab); if this page was the
+  // entry point — e.g. the app was launched offline straight onto it — there's no
+  // history, so head into the app instead.
+  function handleBack() {
+    if (typeof window !== "undefined" && window.history.length > 1) router.back();
+    else router.push("/feed");
+  }
 
   // localStorage is only readable on the client, so start empty and hydrate in an
   // effect. `loaded` distinguishes "still reading" from "read, and it was empty".
@@ -73,6 +83,21 @@ export default function OfflineTicketsClient() {
     <div className="pt-safe-page mx-auto min-h-screen w-full max-w-md bg-background p-4">
 
       <div className="mb-1 flex items-center gap-2">
+        <button
+          onClick={handleBack}
+          aria-label={t("common.back")}
+          className="-ml-1.5 shrink-0 rounded-full p-1.5 text-muted hover:text-foreground"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M15 19l-7-7 7-7"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path
             d="M3.375 5.25c-.62 0-1.125.504-1.125 1.125v3.026a3 3 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a3 3 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z"
