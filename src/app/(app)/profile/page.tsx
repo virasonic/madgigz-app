@@ -12,13 +12,14 @@ import {
 import ProfileClient from "./ProfileClient";
 import { isArtistRole } from "@/lib/roles";
 import { fetchUnreadCount } from "@/lib/notifications";
+import { hasFiscalIdentity } from "@/lib/fiscal-server";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
   const user = await fetchCurrentUser(supabase);
   if (!user) redirect("/");
 
-  const [savedIds, tickets, shows, taggedShows, attendedEvents, unreadCount, intro] =
+  const [savedIds, tickets, shows, taggedShows, attendedEvents, unreadCount, intro, fiscalProvided] =
     await Promise.all([
       fetchSavedEventIds(supabase, user.id),
       fetchTickets(supabase, user.id),
@@ -29,6 +30,8 @@ export default async function ProfilePage() {
       user.role === "fan" ? fetchAttendedEvents(supabase, user.id) : Promise.resolve([]),
       fetchUnreadCount(supabase, user.id),
       isArtistRole(user.role) ? fetchArtistIntro(supabase, user.id) : Promise.resolve(null),
+      // Fiscal details (#97) are an organiser concern; fans never see the card.
+      isArtistRole(user.role) ? hasFiscalIdentity(user.id) : Promise.resolve(false),
     ]);
 
   // Scanned at the door, not "the date has passed". A ticket bought and never
@@ -49,6 +52,7 @@ export default async function ProfilePage() {
       attendedEvents={attendedEvents}
       unreadCount={unreadCount}
       initialIntro={intro}
+      fiscalProvided={fiscalProvided}
     />
   );
 }

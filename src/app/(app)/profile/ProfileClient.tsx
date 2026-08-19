@@ -10,6 +10,7 @@ import { buildSocialLinks } from "@/lib/socials";
 import Button from "@/components/ui/Button";
 import ManageShowModal from "@/components/artist/ManageShowModal";
 import PayoutCard from "@/components/artist/PayoutCard";
+import FiscalIdentityCard from "@/components/artist/FiscalIdentityCard";
 import IntroReel from "@/components/artist/IntroReel";
 import IntroReelModal from "@/components/artist/IntroReelModal";
 import { removeIntroReel } from "./intro-actions";
@@ -79,6 +80,7 @@ function SettingsSheet({
   onDeleteAccount,
   payoutConnected,
   payoutReady,
+  fiscalProvided,
   isArtist,
 }: {
   onClose: () => void;
@@ -87,6 +89,7 @@ function SettingsSheet({
   onDeleteAccount: () => void;
   payoutConnected: boolean;
   payoutReady: boolean;
+  fiscalProvided: boolean;
   isArtist: boolean;
 }) {
   const { t, locale, setLocale } = useT();
@@ -138,6 +141,7 @@ function SettingsSheet({
           </div>
 
           {isArtist && <PayoutCard connected={payoutConnected} ready={payoutReady} />}
+          {isArtist && <FiscalIdentityCard provided={fiscalProvided} />}
           {isArtist &&
             comingSoonRows.map((row) => (
               <div
@@ -235,6 +239,8 @@ interface ProfileClientProps {
   unreadCount: number;
   /** The artist's pinned intro reel (#143), or null. Null for fans. */
   initialIntro: ContentPost | null;
+  /** Whether the organiser has fiscal details on file (#97). False for fans. */
+  fiscalProvided: boolean;
 }
 
 export default function ProfileClient({
@@ -246,6 +252,7 @@ export default function ProfileClient({
   attendedEvents,
   unreadCount,
   initialIntro,
+  fiscalProvided,
 }: ProfileClientProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
@@ -689,6 +696,7 @@ export default function ProfileClient({
           }}
           payoutConnected={user.stripeAccountConnected}
           payoutReady={user.stripePayoutsReady}
+          fiscalProvided={fiscalProvided}
           isArtist={artistTools}
         />
       )}

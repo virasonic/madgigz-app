@@ -2911,3 +2911,14 @@ end;
 $$;
 
 revoke all on function public.reserve_tier_capacity(uuid, integer) from public, anon, authenticated;
+
+
+-- ############# addendum_042_fiscal_identity.sql #############
+
+alter table public.profiles
+  add column if not exists fiscal_legal_name  text,
+  add column if not exists fiscal_id          text,
+  add column if not exists fiscal_id_type     text,
+  add column if not exists fiscal_country     text,
+  add column if not exists fiscal_address     text,
+  add column if not exists fiscal_provided_at timestamptz;

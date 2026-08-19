@@ -1,6 +1,7 @@
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import { stripe } from "@/lib/stripe";
 import { formatEuros } from "@/lib/pricing";
+import { getFiscalIdentity, type StoredFiscalIdentity } from "@/lib/fiscal-server";
 import ReleaseButton from "./ReleaseButton";
 
 // Money can only be judged releasable against the calendar, so each artist's
@@ -16,6 +17,7 @@ interface PayoutRow {
   upcoming: string[];
   past: string[];
   balanceError: string | null;
+  fiscal: StoredFiscalIdentity | null;
 }
 
 export default async function AdminPayoutsPage() {
@@ -50,6 +52,9 @@ export default async function AdminPayoutsPage() {
     }
 
     const live = (events ?? []).filter((e) => !e.cancelled);
+    // Tax details (#97) — the lawyer requires them on file before a payout, and
+    // they're what a monthly commission invoice is raised against.
+    const fiscal = await getFiscalIdentity(artist.id);
     rows.push({
       profileId: artist.id,
       name: artist.artist_name ?? artist.username,
@@ -58,6 +63,7 @@ export default async function AdminPayoutsPage() {
       upcoming: live.filter((e) => e.event_date >= TODAY).map((e) => `${e.title} (${e.event_date})`),
       past: live.filter((e) => e.event_date < TODAY).map((e) => `${e.title} (${e.event_date})`),
       balanceError,
+      fiscal,
     });
   }
 
@@ -124,6 +130,24 @@ export default async function AdminPayoutsPage() {
                     ))
                   )}
                 </div>
+              </div>
+
+              <div className="mt-3 rounded-xl bg-background p-3 text-xs">
+                {row.fiscal ? (
+                  <>
+                    <p className="text-muted">Tax details (for invoicing)</p>
+                    <p className="text-foreground">
+                      {row.fiscal.legalName} · {row.fiscal.fiscalIdType.toUpperCase()}{" "}
+                      {row.fiscal.fiscalId}
+                      {row.fiscal.country ? ` · ${row.fiscal.country}` : ""}
+                    </p>
+                    {row.fiscal.address && <p className="text-muted">{row.fiscal.address}</p>}
+                  </>
+                ) : (
+                  <p className="text-danger">
+                    ⚠ No tax details on file — collect before releasing (required by law).
+                  </p>
+                )}
               </div>
             </div>
           ))}
