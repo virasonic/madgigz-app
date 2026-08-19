@@ -11,6 +11,12 @@ const config: CapacitorConfig = {
   appId: "es.aurasonic.madgigz",
   appName: "MadGigz",
   webDir: "capacitor-shell",
+  // The WKWebView's own canvas colour, shown for the instant between the splash
+  // hiding and the first web paint. Match the app's near-black so there is never
+  // a white or black flash there.
+  backgroundColor: "#0a0807",
+  ios: { backgroundColor: "#0a0807" },
+  android: { backgroundColor: "#0a0807" },
   server: {
     url: "https://madgigz.aurasonic.es",
     // Third-party domains the WKWebView may navigate to IN-APP instead of kicking
@@ -23,7 +29,16 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 1000,
+      // DON'T auto-hide on a timer. This is a remote-URL shell, so first paint
+      // depends on the network + SSR + auth and regularly takes longer than any
+      // fixed duration — a timer hides the native splash while the WebView is
+      // still blank, which is the "black between the two logos" gap. Instead the
+      // web app hands off explicitly: NativeBridge calls SplashScreen.hide() once
+      // React is up (by then the SSR'd BootSplash mark has already painted), so
+      // the native splash lifts straight onto the web splash with no black frame.
+      // The offline fallback (capacitor-shell/index.html) also calls hide(), so a
+      // no-network launch can't leave the splash stuck.
+      launchAutoHide: false,
       backgroundColor: "#0a0807",
       showSpinner: false,
     },

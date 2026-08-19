@@ -45,5 +45,12 @@
       <h1>MadGigz</h1>
       <p>Can't reach MadGigz right now.<br />Check your connection and reopen the app.</p>
     </div>
+    <script>
+      // Backstop for launchAutoHide:false — if the app launches offline and lands
+      // on this fallback (no React app to hand off), hide the native splash here
+      // so it can't stay stuck over this message. Capacitor injects the bridge
+      // into locally-served pages too, so the plugin is available.
+      window.Capacitor?.Plugins?.SplashScreen?.hide?.();
+    </script>
   </body>
 </html>
