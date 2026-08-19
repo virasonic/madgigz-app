@@ -7,9 +7,22 @@ import type { FiscalIdentity, FiscalIdType } from "@/lib/fiscal";
 // here. Kept out of the "use server" action file so a server component (the
 // profile page, the admin payouts page) can call the read directly.
 
-// 42703 = column missing, i.e. addendum_042 hasn't been run yet. Degrade to
-// "nothing on file" rather than throwing, per the ship-code-before-SQL rule.
-const MISSING_COLUMN = "42703";
+// The column may be absent (addendum_042 not run) or present-but-not-yet-in
+// PostgREST's schema cache (just run, cache still warming). PostgREST reports
+// these differently depending on read vs write:
+//   42703    — Postgres "column does not exist" (surfaces on SELECT)
+//   PGRST204 — "column not found in the schema cache" (surfaces on write)
+//   PGRST205 — table/relation not found in the schema cache
+// All three mean "not ready yet", so degrade to "nothing on file" / a clear
+// try-again rather than a generic failure. Per the ship-code-before-SQL rule.
+const NOT_READY_CODES = new Set(["42703", "PGRST204", "PGRST205"]);
+
+function isNotReady(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code && NOT_READY_CODES.has(error.code)) return true;
+  // Some PostgREST versions omit the code and only set the message.
+  return /schema cache|does not exist/i.test(error.message ?? "");
+}
 
 const COLUMNS =
   "fiscal_legal_name, fiscal_id, fiscal_id_type, fiscal_country, fiscal_address, fiscal_provided_at";
@@ -27,7 +40,7 @@ export async function getFiscalIdentity(userId: string): Promise<StoredFiscalIde
     .single();
 
   if (error) {
-    if (error.code === MISSING_COLUMN) return null;
+    if (isNotReady(error)) return null;
     console.error("getFiscalIdentity failed:", error);
     return null;
   }
@@ -75,8 +88,8 @@ export async function storeFiscalIdentity(
     .eq("id", userId);
 
   if (error) {
-    if (error.code === MISSING_COLUMN) {
-      console.error("storeFiscalIdentity: run addendum_042", error);
+    if (isNotReady(error)) {
+      console.error("storeFiscalIdentity: addendum_042 not ready (run it / reload schema)", error);
       return { error: "missingMigration" };
     }
     console.error("storeFiscalIdentity failed:", error);
