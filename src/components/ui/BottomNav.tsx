@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Role } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -29,6 +30,22 @@ export default function BottomNav({
   // (and clears) without a reload as notifications arrive or are read (#101).
   const liveUnread = useLiveUnreadCount(userId, unreadCount);
 
+  // The shell is h-screen (100vh, the *large* viewport that ignores the on-screen
+  // keyboard), so when a field like Explore's search is focused, mobile browsers
+  // scroll the whole column up to reveal it — dragging this bottom bar into
+  // mid-screen. Hide it while the keyboard is open (visual viewport much shorter
+  // than the layout viewport), the way native apps do. useState+useEffect, not
+  // useSyncExternalStore (which broke here); setState only fires from the resize
+  // event, never synchronously in the effect body.
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => setKeyboardOpen(vv.height < window.innerHeight - 120);
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
+
   const items: NavItem[] = [
     { href: "/feed", label: t("nav.feed"), icon: FeedIcon },
     { href: "/explore", label: t("nav.explore"), icon: ExploreIcon },
@@ -44,7 +61,11 @@ export default function BottomNav({
     // pb-safe keeps the tabs above the iPhone home indicator when installed to
     // the home screen, where there's no browser chrome to sit behind. Hidden on
     // desktop (lg+), where SideNav takes over (#105).
-    <nav className="pb-safe sticky bottom-0 z-20 flex border-t border-muted/15 bg-background/95 backdrop-blur lg:hidden">
+    <nav
+      className={`pb-safe sticky bottom-0 z-20 flex border-t border-muted/15 bg-background/95 backdrop-blur lg:hidden ${
+        keyboardOpen ? "hidden" : ""
+      }`}
+    >
       {items.map((item) => {
         const active = pathname === item.href;
         return (
