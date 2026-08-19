@@ -23,13 +23,18 @@ export interface CheckoutResult {
 //
 // Sanitised hard rather than cleverly, because Stripe rejects the entire
 // session on an invalid suffix - that would take down every paid checkout, not
-// just the descriptor. Accents fold to ASCII (Spanish line-ups are full of
-// them) and anything outside letters, digits and spaces is dropped.
+// just the descriptor. Verified against the live API: "*", "<" and ">" are
+// refused outright, and a suffix with no Latin character ("2026", or whitespace
+// once a name like "1-800" is stripped) is refused too - hence the final test
+// rather than just trimming. Accents are accepted by Stripe but folded anyway,
+// since card statements themselves mangle non-ASCII.
 //
-// Budget: Stripe caps the platform prefix plus this suffix at 22 characters
-// combined, joined with "* ". 10 here leaves room for a prefix of up to 10,
-// which "MADGIGZ" (7) clears comfortably. Raise the prefix beyond that and this
-// needs to come down to match.
+// Length is NOT an error case: Stripe silently truncates the combined
+// "prefix* suffix" to 22 characters. So the risk here is a suffix that gets cut
+// to nothing, not a failed charge. 10 leaves the whole suffix visible behind a
+// prefix of up to 10 - "MADGIGZ" (7) clears it. Behind a long prefix the suffix
+// just disappears into the truncation, which is why the platform descriptor
+// needs to stay short for this to be worth anything.
 const DESCRIPTOR_SUFFIX_MAX = 10;
 
 function statementDescriptorSuffix(name: string | null): string | undefined {
