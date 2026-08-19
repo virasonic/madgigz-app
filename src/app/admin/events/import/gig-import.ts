@@ -5,6 +5,7 @@ import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import { fetchGenres } from "@/lib/supabase/queries";
 import { resolveVenue, syncEventGenres } from "@/lib/show-sync";
 import { dedupKey, parseGigText } from "./gig-import-parse";
+import { rehostPoster } from "./rehost-poster";
 
 // Bulk gig importer (#111). One paste of many rows becomes many external-ticketing
 // events, so the app fills with real Madrid gigs without the one-at-a-time New Show
@@ -115,6 +116,14 @@ export async function runGigImport(text: string, commit: boolean): Promise<Impor
       .map((g) => genreByName.get(g.trim().toLowerCase()))
       .filter((id): id is string => Boolean(id));
 
+    // Re-host the poster onto our own storage (#118) so it's ours and renders
+    // without allow-listing each source. Falls back to the original URL if the
+    // fetch/upload fails, so a poster is never silently lost.
+    let imageUrl: string | null = gig.image || null;
+    if (imageUrl) {
+      imageUrl = (await rehostPoster(admin, imageUrl)) ?? imageUrl;
+    }
+
     const { data: created, error } = await admin
       .from("events")
       .insert({
@@ -130,7 +139,7 @@ export async function runGigImport(text: string, commit: boolean): Promise<Impor
         currency: "EUR",
         accent_color: ACCENTS[accentCursor % ACCENTS.length],
         category: "Live Music",
-        image_url: gig.image || null,
+        image_url: imageUrl,
         capacity: gig.capacity,
         max_per_order: DEFAULT_MAX_PER_ORDER,
         description: gig.description,

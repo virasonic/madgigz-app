@@ -44,10 +44,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.supabase.co",
       },
-      // Imported shows (#111/#118) keep the poster URL from their source rather
-      // than re-uploading it. Bandsintown is the sanctioned seed source, so its
-      // media host must be allow-listed or the posters 400 through next/image.
-      // Other poster hosts need adding here as new sources are used.
+      // The importer (#118) now re-hosts posters onto our own event-media
+      // bucket (rehost-poster.ts), so imported posters normally resolve as
+      // Supabase URLs above. This entry is the FALLBACK: if a re-host fetch
+      // fails we keep the original Bandsintown URL, and it must render.
       {
         protocol: "https",
         hostname: "**.bandsintown.com",
