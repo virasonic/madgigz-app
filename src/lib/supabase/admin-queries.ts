@@ -806,3 +806,74 @@ export async function fetchUserDetail(
     })),
   };
 }
+
+// Artist ↔ existing-gig matching (#153). A gig imported/created before its
+// artist signed up has artist_id null and isn't in event_artists, so the artist
+// can't post to it. This suggests the links: an approved artist whose handle
+// matches an untagged event's headliner (events.artist_name) or its lineup. The
+// admin approves each (safer than auto-tagging by name, which could mis-attribute
+// a gig to a same-named artist). Approving inserts the event_artists row, which
+// is exactly what puts the show on their profile and lets them post.
+export interface TagSuggestion {
+  event: { id: string; title: string; date: string; venue: string };
+  artist: { id: string; name: string };
+  via: "headliner" | "lineup";
+}
+
+function normName(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+export async function fetchTagSuggestions(admin: SupabaseClient): Promise<TagSuggestion[]> {
+  const [artistsRes, eventsRes, tagsRes] = await Promise.all([
+    admin.from("profiles").select("id, username, artist_name").eq("artist_status", "approved"),
+    admin
+      .from("events")
+      .select("id, title, artist_name, artist_id, event_date, venue, lineup")
+      .eq("cancelled", false),
+    admin.from("event_artists").select("event_id, profile_id"),
+  ]);
+
+  const tagged = new Set(
+    (tagsRes.data ?? []).map((t) => `${t.event_id}:${t.profile_id}`)
+  );
+
+  // Both the display name and the username count as a handle a gig might be
+  // billed under.
+  const byHandle = new Map<string, { id: string; name: string }>();
+  for (const a of artistsRes.data ?? []) {
+    const id = a.id as string;
+    const name = (a.artist_name as string | null) ?? (a.username as string);
+    for (const handle of [a.artist_name as string | null, a.username as string | null]) {
+      if (handle && handle.trim()) byHandle.set(normName(handle), { id, name });
+    }
+  }
+
+  const out: TagSuggestion[] = [];
+  for (const e of eventsRes.data ?? []) {
+    const eventId = e.id as string;
+    const ownerId = e.artist_id as string | null;
+    const seen = new Set<string>();
+    const consider = (artist: { id: string; name: string } | undefined, via: "headliner" | "lineup") => {
+      if (!artist || artist.id === ownerId || seen.has(artist.id)) return;
+      if (tagged.has(`${eventId}:${artist.id}`)) return;
+      seen.add(artist.id);
+      out.push({
+        event: { id: eventId, title: e.title as string, date: e.event_date as string, venue: e.venue as string },
+        artist,
+        via,
+      });
+    };
+    consider(byHandle.get(normName((e.artist_name as string) ?? "")), "headliner");
+    for (const l of (e.lineup as string[] | null) ?? []) {
+      if (l && l.trim()) consider(byHandle.get(normName(l)), "lineup");
+    }
+  }
+
+  // Soonest shows first — the ones an artist most wants to post about.
+  return out.sort((a, b) => a.event.date.localeCompare(b.event.date));
+}
