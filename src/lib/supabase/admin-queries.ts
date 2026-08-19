@@ -81,7 +81,9 @@ export async function fetchAllUsers(admin: SupabaseClient): Promise<AdminUserRow
 export async function fetchDashboardStats(admin: SupabaseClient) {
   const [{ count: userCount }, { count: eventCount }, { count: pendingArtistCount }, { data: tickets }] =
     await Promise.all([
-      admin.from("profiles").select("*", { count: "exact", head: true }),
+      // Tombstoned (purged) accounts aren't real users any more, so they don't
+      // count toward the total.
+      admin.from("profiles").select("*", { count: "exact", head: true }).is("deleted_at", null),
       admin.from("events").select("*", { count: "exact", head: true }),
       admin
         .from("profiles")
