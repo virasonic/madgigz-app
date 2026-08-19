@@ -172,17 +172,59 @@ webhook-driven.
 
 **5. Redeploy — (you).** Env changes only take effect on a new deployment.
 
-**6. Artists redo Connect onboarding for real — (you + artists).** Test
+**6. Clear the stale test-mode Connect accounts — (SQL, right after the swap).**
+`profiles.stripe_account_id` currently holds **test-mode** `acct_` ids (5 artists
+as of 19 Aug 2026, 4 of them with `stripe_payouts_ready = true`). A live key
+cannot see a test-mode account, and this fails in a way that has no route out
+from the UI:
+
+- `startPayoutOnboarding` only mints a new account **when the column is null**
+  (`payout-actions.ts`), so an artist with a stale id gets "Something went wrong
+  connecting to Stripe" on every click, forever.
+- The 4 rows still flagged `stripe_payouts_ready` can publish paid shows whose
+  checkout then dies at `transfer_data.destination` — no money is taken, the
+  show is just unsellable.
+
+So null them out in the **prod** Supabase SQL editor, after the keys are live:
+
+```sql
+update public.profiles
+   set stripe_account_id = null,
+       stripe_payouts_ready = false
+ where stripe_account_id is not null;
+```
+
+Safe to run wholesale **only while no ticket has sold through Connect** — check
+first, and if it returns anything, clear those rows individually instead:
+
+```sql
+select count(*) from public.tickets
+ where stripe_account_id is not null and refunded = false;
+```
+
+This is a one-off data cleanup, not a schema change, so it is deliberately *not*
+a numbered addendum and must **not** go into `staging_full_setup.sql` — a fresh
+DB has no accounts to clear. Admin → Artists → **Reset payout account** does the
+same thing per-artist and now survives the missing-account error too
+(`resetArtistPayoutAccount`), but the bulk SQL is one step instead of five.
+
+**7. Artists redo Connect onboarding for real — (you + artists).** Test
 onboarding doesn't transfer; each artist completes live KYC + bank before they
 can sell. `stripe_payouts_ready` flips automatically via the `account.updated`
 webhook.
 
-**7. Verify:** `/api/health` → `stripeMode: "live"`, `ok: true`, both webhook
+**8. Verify:** `/api/health` → `stripeMode: "live"`, `ok: true`, both webhook
 secrets `ok`. Then buy **one real low-value ticket** end-to-end (checkout →
 webhook fulfils → ticket + QR appears → the charge shows on the artist's
 connected account minus the fee), and run **one real refund** from admin.
 
-**8. Rotate** per `docs/key-rotation.md` (the Stripe rows are the same work).
+**9. Rotate** per `docs/key-rotation.md` (the Stripe rows are the same work).
+
+**Nothing is mid-flight, so the window is wide open** (checked 19 Aug 2026): 0
+tickets sold, and all 27 active events are `ticketing_mode = external` — they
+link out to the promoter, so no in-app checkout runs today. There is no
+half-finished order to strand and no artist balance to orphan. That changes the
+moment the first in-app paid show goes on sale, so flip before then, not after.
 
 ### Prove it in sandbox first (all mode-agnostic, so test-mode proves the code)
 - **Happy path:** paid checkout → `checkout.session.completed` → ticket + QR issued.

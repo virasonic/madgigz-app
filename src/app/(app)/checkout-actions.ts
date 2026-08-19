@@ -14,6 +14,42 @@ export interface CheckoutResult {
   error?: string;
 }
 
+// A destination charge sits on the platform account, so the fan's card
+// statement shows MadGigz's descriptor, not the artist's - identical for every
+// show. Weeks usually pass between buying and the gig, and an unrecognised line
+// on a statement is the most common reason a card holder opens a dispute, which
+// on these charges is our liability, not the artist's. Appending the act's name
+// makes the line self-explanatory: "MADGIGZ* VANGOURA".
+//
+// Sanitised hard rather than cleverly, because Stripe rejects the entire
+// session on an invalid suffix - that would take down every paid checkout, not
+// just the descriptor. Accents fold to ASCII (Spanish line-ups are full of
+// them) and anything outside letters, digits and spaces is dropped.
+//
+// Budget: Stripe caps the platform prefix plus this suffix at 22 characters
+// combined, joined with "* ". 10 here leaves room for a prefix of up to 10,
+// which "MADGIGZ" (7) clears comfortably. Raise the prefix beyond that and this
+// needs to come down to match.
+const DESCRIPTOR_SUFFIX_MAX = 10;
+
+function statementDescriptorSuffix(name: string | null): string | undefined {
+  if (!name) return undefined;
+  const cleaned = name
+    .normalize("NFD")
+    // Combining marks must be deleted, not blanked: NFD splits "Vértice" into
+    // "Ve" + accent + "rtice", so letting the next rule turn the accent into a
+    // space would yield "Ve rtice".
+    .replace(/\p{M}/gu, "")
+    .replace(/[^A-Za-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, DESCRIPTOR_SUFFIX_MAX)
+    .trim();
+  // Stripe requires at least one latin letter, so a name that sanitises down to
+  // digits alone ("2026") has to be dropped rather than sent.
+  return /[A-Za-z]/.test(cleaned) ? cleaned : undefined;
+}
+
 // The only path to a ticket. Server Actions are public POST endpoints, so
 // nothing the client sends about identity or price is trusted: the user comes
 // from the session, the price from the database, and the discount is
@@ -185,6 +221,7 @@ export async function createCheckout(
     ? { feeCents: 0, feeVatCents: 0 }
     : breakdownFor(totalCents);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const descriptorSuffix = statementDescriptorSuffix(event.artist);
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -210,17 +247,20 @@ export async function createCheckout(
           },
         },
       ],
-      // Omitted entirely for a house show. Passing application_fee_amount: 0
-      // with no destination is not the same thing - Stripe rejects a transfer
-      // to nowhere, and a zero fee on a normal charge is a different intent.
-      ...(houseRun
-        ? {}
-        : {
-            payment_intent_data: {
+      // The fee and transfer are omitted entirely for a house show. Passing
+      // application_fee_amount: 0 with no destination is not the same thing -
+      // Stripe rejects a transfer to nowhere, and a zero fee on a normal charge
+      // is a different intent. The descriptor suffix applies either way: a house
+      // show still bills the fan from the platform account.
+      payment_intent_data: {
+        ...(descriptorSuffix ? { statement_descriptor_suffix: descriptorSuffix } : {}),
+        ...(houseRun
+          ? {}
+          : {
               application_fee_amount: feeCents,
               transfer_data: { destination: artist!.stripe_account_id },
-            },
-          }),
+            }),
+      },
       metadata: {
         event_id: event.id,
         user_id: user.id,

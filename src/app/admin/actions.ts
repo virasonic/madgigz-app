@@ -351,29 +351,44 @@ export async function resetArtistPayoutAccount(
 
   // Check if they have any live (non-refunded) tickets sold - those are
   // backed by a live balance in Stripe that deleting the account would orphan.
-  const { data: liveTickets } = await admin
+  // Read `count`, not `data`: a head:true request returns no rows at all, so
+  // the old `data.length` test was always false and this guard never fired.
+  const { count: liveTickets } = await admin
     .from("tickets")
     .select("id", { count: "exact", head: true })
     .eq("stripe_account_id", profile.stripe_account_id)
     .eq("refunded", false);
 
-  if ((liveTickets && liveTickets.length > 0) || (!liveTickets && false)) {
+  if (liveTickets && liveTickets > 0) {
     return { error: "Cannot reset: artist has live tickets. Contact Stripe support." };
   }
 
   // Delete the connected account - Stripe will reject if there's pending
   // balance, but that's a rare edge case and the admin can always retry
   // after those funds are paid out.
+  //
+  // `resource_missing` is the exception: the account doesn't exist under the
+  // key we're holding. That's the test->live swap case - every stored acct_ id
+  // was minted in test mode and is invisible to the live key - and it's exactly
+  // the row that most needs clearing, since startPayoutOnboarding only mints a
+  // fresh account when the column is null. Treat "not there" as already-deleted
+  // and fall through to the clear, rather than returning an error that would
+  // strand the artist with an unusable account they can never replace.
   try {
     await stripe.accounts.del(profile.stripe_account_id);
   } catch (error) {
-    console.error(`Failed to delete Stripe account ${profile.stripe_account_id}:`, error);
-    return {
-      error:
-        error instanceof Error && error.message.includes("pending")
-          ? "Artist has pending balance - wait for payout to complete, then retry"
-          : "Stripe deletion failed - check the logs and retry",
-    };
+    if ((error as { code?: string })?.code !== "resource_missing") {
+      console.error(`Failed to delete Stripe account ${profile.stripe_account_id}:`, error);
+      return {
+        error:
+          error instanceof Error && error.message.includes("pending")
+            ? "Artist has pending balance - wait for payout to complete, then retry"
+            : "Stripe deletion failed - check the logs and retry",
+      };
+    }
+    console.warn(
+      `Stripe account ${profile.stripe_account_id} not found under the current key - clearing the stale reference.`
+    );
   }
 
   // Clear the references so they can start fresh onboarding
