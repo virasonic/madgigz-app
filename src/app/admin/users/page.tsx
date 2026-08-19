@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { adminClient, fetchAllUsers, requireAdmin } from "@/lib/supabase/admin-queries";
 import UsersTable from "./UsersTable";
 
@@ -17,7 +18,18 @@ export default async function AdminUsersPage() {
         <h1 className="font-display text-2xl text-foreground">Users</h1>
         <p className="text-sm text-muted">
           {active.length} accounts.
-          {deletedCount > 0 && ` ${deletedCount} deleted (hidden).`}
+          {deletedCount > 0 && (
+            <>
+              {" "}
+              <Link
+                href="/admin/users/deleted"
+                className="text-accent underline underline-offset-2"
+              >
+                {deletedCount} deleted
+              </Link>{" "}
+              (hidden).
+            </>
+          )}
         </p>
       </div>
       <div className="rounded-2xl bg-surface p-5">
