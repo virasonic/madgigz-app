@@ -134,7 +134,7 @@ export async function runGigImport(text: string, commit: boolean): Promise<Impor
         capacity: gig.capacity,
         max_per_order: DEFAULT_MAX_PER_ORDER,
         description: gig.description,
-        lineup: [],
+        lineup: gig.lineup,
         doors: gig.time,
         age_restriction: gig.age,
         rating: 0,

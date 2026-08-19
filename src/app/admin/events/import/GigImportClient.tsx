@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { runGigImport, type ImportResult, type RowStatus } from "./gig-import";
 
 // A worked example so an admin sees the exact shape before pasting. Tab-separated
@@ -27,7 +27,20 @@ const STATUS_LABEL: Record<RowStatus, string> = {
 export default function GigImportClient() {
   const [text, setText] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Reset the input so picking the same file again re-fires onChange.
+    e.target.value = "";
+    if (!file) return;
+    const content = await file.text();
+    setText(content);
+    setFileName(file.name);
+    setResult(null);
+  }
 
   function preview() {
     startTransition(async () => setResult(await runGigImport(text, false)));
@@ -43,18 +56,46 @@ export default function GigImportClient() {
     <div className="flex flex-col gap-5">
       <div className="rounded-2xl bg-surface p-5">
         <label className="mb-2 block font-heading text-sm text-foreground">
-          Paste gigs (spreadsheet or CSV)
+          Upload or paste gigs (spreadsheet or CSV)
         </label>
         <p className="mb-3 text-xs text-muted">
           First row is the header. Required columns: <strong>title, artist, venue, date,
-          ticket_url</strong>. Optional: time, price, genre, age, description, image, capacity.
-          Copy straight from Google Sheets / Excel (tab-separated) or paste a CSV. Dates read as
-          YYYY-MM-DD or DD/MM/YYYY. Every imported show is an external-ticketing listing owned by
-          MadGigz.
+          ticket_url</strong>. Optional: time, price, <strong>lineup</strong>, genre, age,
+          description, image, capacity. Upload a <strong>.csv</strong> file, or copy straight from
+          Google Sheets / Excel (tab-separated) and paste below. A multi-act bill in{" "}
+          <strong>lineup</strong> (or a comma-separated <strong>artist</strong>) fills the line-up.
+          Dates read as YYYY-MM-DD or DD/MM/YYYY. Every imported show is an external-ticketing
+          listing owned by MadGigz.
         </p>
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"
+            onChange={onFile}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={pending}
+            className="rounded-full bg-surface px-4 py-2 font-heading text-sm text-foreground ring-1 ring-muted/30 disabled:opacity-50"
+          >
+            Upload CSV file
+          </button>
+          {fileName && (
+            <span className="text-xs text-muted">
+              Loaded <strong className="text-foreground">{fileName}</strong> — review below, then
+              Preview.
+            </span>
+          )}
+        </div>
         <textarea
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            setFileName(null);
+          }}
           rows={10}
           spellCheck={false}
           placeholder={SAMPLE}

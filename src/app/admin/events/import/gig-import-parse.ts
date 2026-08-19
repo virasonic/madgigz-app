@@ -14,7 +14,11 @@ const DEFAULT_CAPACITY = 100; // cosmetic for external shows (nothing sold here)
 // "Ticket URL", "ticket_url" and "ticketlink" all land on the same field.
 const HEADER_ALIASES: Record<string, string[]> = {
   title: ["title", "show", "name", "event", "gig"],
-  artist: ["artist", "billedas", "billed", "act", "headliner", "lineup", "performer"],
+  artist: ["artist", "billedas", "billed", "act", "headliner", "performer"],
+  // A separate column for the full bill. Split into the lineup array (not the
+  // single artist_name headline). When absent, the lineup is derived from a
+  // multi-name artist field below.
+  lineup: ["lineup", "artists", "acts", "performers", "billing", "fullbill", "line/up"],
   venue: ["venue", "location", "place", "hall", "club"],
   date: ["date", "eventdate", "day"],
   time: ["time", "starttime", "start", "doors"],
@@ -26,6 +30,15 @@ const HEADER_ALIASES: Record<string, string[]> = {
   image: ["image", "imageurl", "poster", "posterurl", "art", "artwork"],
   capacity: ["capacity", "cap", "seats"],
 };
+
+// Split a bill into individual acts on commas / semicolons / pipes / " x " /
+// " + " (common festival-poster separators). Trims and drops blanks.
+function splitBill(raw: string): string[] {
+  return raw
+    .split(/\s*[,;|]\s*|\s+[x+]\s+/i)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 const REQUIRED_COLUMNS = ["title", "artist", "venue", "date", "ticketurl"];
 
@@ -166,6 +179,7 @@ interface ParsedGig {
   line: number;
   title: string;
   artist: string;
+  lineup: string[];
   venue: string;
   date: string; // normalised ISO, or "" when unreadable
   rawDate: string;
@@ -213,6 +227,17 @@ export function parseGigText(text: string): ParseOutput {
 
     const title = get("title");
     const artist = get("artist");
+    // Prefer an explicit lineup column; otherwise derive the bill from a
+    // multi-name artist field (e.g. "A, B, C"). A single-act artist yields no
+    // lineup — the artist_name headline already carries it, so no redundant
+    // one-item bill.
+    const lineupCol = get("lineup");
+    const derivedFromArtist = splitBill(artist);
+    const lineup = lineupCol
+      ? splitBill(lineupCol)
+      : derivedFromArtist.length > 1
+        ? derivedFromArtist
+        : [];
     const venue = get("venue");
     const rawDate = get("date");
     const date = normaliseDate(rawDate);
@@ -245,6 +270,7 @@ export function parseGigText(text: string): ParseOutput {
       line: i + 1,
       title,
       artist,
+      lineup,
       venue,
       date: date ?? "",
       rawDate,

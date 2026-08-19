@@ -84,6 +84,33 @@ const rc = parseGigText(csv);
 eq("csv 1 gig", rc.gigs.length, 1);
 eq("csv quoted title", rc.gigs[0].title, "Jazz, Live");
 eq("csv quoted desc", rc.gigs[0].description, "soul, funk & jazz");
+
+// Line-up (#111 fix) — a multi-act bill fills the line-up; a single act doesn't.
+eq("r1 single act, no lineup", r.gigs[0].lineup.length, 0);
+const bill = parseGigText(
+  "title,artist,venue,date,ticket_url\n" +
+    'Trio Night,"A Sax, B Bass, C Drums",El Sol,2026-10-01,https://x.com/a\n' +
+    "Solo,Just Me,El Sol,2026-10-02,https://x.com/b"
+);
+eq(
+  "multi-act artist splits to lineup",
+  JSON.stringify(bill.gigs[0].lineup),
+  JSON.stringify(["A Sax", "B Bass", "C Drums"])
+);
+eq("multi-act keeps headline artist", bill.gigs[0].artist, "A Sax, B Bass, C Drums");
+eq("single act -> no lineup", bill.gigs[1].lineup.length, 0);
+
+// An explicit lineup column wins over the artist field.
+const withCol = parseGigText(
+  "title,artist,lineup,venue,date,ticket_url\n" +
+    'Fest,Headliner,"X; Y; Z",El Sol,2026-10-03,https://x.com/c'
+);
+eq(
+  "explicit lineup column",
+  JSON.stringify(withCol.gigs[0].lineup),
+  JSON.stringify(["X", "Y", "Z"])
+);
+eq("explicit lineup keeps artist headline", withCol.gigs[0].artist, "Headliner");
 eq("csv valid", rc.gigs[0].fieldError, null);
 
 // Whole-paste failures
