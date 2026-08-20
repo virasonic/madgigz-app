@@ -11,15 +11,21 @@ Vir's call (13 Aug 2026): these are the items that **must** land before the
 public launch at end of month. Everything else in the list is "great to have,"
 not a blocker.
 
-**Still open (9):** #137 (performance & scale), #95 (real-payments go-live),
-#119 (terms & legal — lawyer pass), #134 (Universal Links), #118 (seed real
-Madrid shows), #115 (flesh out fan profile), #116 (past-events poster wall —
-code shipped, visual eyeball still pending), #129 (offline tickets), #110 (app
-stores), #97 (tax & invoicing).
+**Still open (6):** #137 (performance & scale), #134 (Universal Links), #118
+(seed real Madrid shows — Batch 2 CSV built, Vir enriching + importing), #115
+(flesh out fan profile), #116 (past-events poster wall — code shipped, visual
+eyeball still pending), #129 (offline tickets — batched into next iOS build),
+#110 (app stores).
 
 **Shipped from the critical set (19 Aug 2026):** #122 (branded OAuth ✅),
 #111 (mass gig upload ✅), #140 (TUS resumable upload ✅), #58 (admin activity
 tracking ✅).
+
+**Closed 20 Aug 2026 (verified live on prod):** #95 (real payments — prod now
+in Stripe **live** mode, both webhook secrets present, `/api/health` green ✅),
+#97 (fiscal-identity capture live on prod, real rows saving — only the monthly
+Odoo commission-invoice run remains, an ops task not a gate ✅), #119 (terms &
+legal — lawyer pass closed ✅).
 
 Not in the launch set (nice-to-have after): #88, #90b, #92, #98, #99, #117,
 #121, #124, #112, #125 (recurring ops).
