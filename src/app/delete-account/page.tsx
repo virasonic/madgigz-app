@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: "How to delete your MadGigz account and what data is removed or retained.",
 };
 
-const SUPPORT_EMAIL = "vir@aurasonic.es";
+const SUPPORT_EMAIL = "info@aurasonic.es";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -67,8 +67,16 @@ export default function DeleteAccountPage() {
       <Section title="What is kept, and why">
         <p>
           Records of ticket purchases and sales are retained for the period required by Spanish
-          commercial and tax law (up to 6 years), as permitted under GDPR Article 17(3). These are
-          detached from your personal profile — they remain only as anonymised financial records.
+          commercial and tax law (up to 6 years), as permitted under GDPR Article 17(3)(b). The
+          profile they belong to is stripped of everything that identifies you, so what remains is
+          a financial record rather than a person.
+        </p>
+        <p>
+          If you sold tickets as an organiser, we also keep the tax identification you gave us —
+          your legal or business name, tax ID, country and fiscal address. It is the identity on
+          the commission invoices we have already issued to you, and an invoice whose recipient
+          cannot be identified is not a valid accounting record. It stays visible only to our staff
+          for invoicing, and is used for nothing else.
         </p>
       </Section>
 
@@ -121,9 +129,16 @@ export default function DeleteAccountPage() {
       <Section title="Qué se conserva, y por qué">
         <p>
           Los registros de compra y venta de entradas se conservan durante el periodo exigido por la
-          normativa mercantil y fiscal española (hasta 6 años), según permite el artículo 17(3) del
-          RGPD. Se desvinculan de tu perfil personal — permanecen solo como registros financieros
-          anonimizados.
+          normativa mercantil y fiscal española (hasta 6 años), según permite el artículo 17(3)(b)
+          del RGPD. El perfil al que pertenecen se depura de todo lo que te identifica, de modo que
+          lo que queda es un registro contable y no una persona.
+        </p>
+        <p>
+          Si has vendido entradas como organizador, también conservamos la identificación fiscal que
+          nos facilitaste — tu nombre o razón social, identificación fiscal, país y domicilio fiscal.
+          Es la identidad que consta en las facturas de comisión que ya te hemos emitido, y una
+          factura cuyo destinatario no puede identificarse no es un registro contable válido. Solo
+          es accesible para nuestro personal a efectos de facturación y no se usa para nada más.
         </p>
       </Section>
 

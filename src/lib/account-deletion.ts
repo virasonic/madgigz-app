@@ -202,6 +202,22 @@ export async function purgeAccount(
   // account rather than a person, the payout reconciliation needs it, and
   // nulling it would strand any balance Stripe is still holding. It is
   // service-role-only since addendum_018, so it is not exposed by keeping it.
+  //
+  // The fiscal_* columns from addendum_042 (legal name, NIF/VAT or government
+  // ID, country, fiscal address) are left alone too, and unlike the fields
+  // above that is a decision rather than an oversight - so it is written down
+  // here. They are the identity on the commission invoices AuraSonic has
+  // already raised through Odoo; a factura whose recipient cannot be identified
+  // is not a valid commercial record, so scrubbing them would break the very
+  // books RETENTION_YEARS exists to preserve. GDPR art. 17(3)(b) defers to that
+  // obligation, the same basis as the ticket tombstone. They are
+  // service-role-only (never granted to anon or authenticated), so keeping them
+  // exposes nothing - the admin payouts page is the only reader.
+  //
+  // This is genuinely indefinite retention: nothing enforces the six-year
+  // expiry yet. When the "purge past retention" job lands, these columns go in
+  // it alongside the tombstoned tickets. The privacy policy discloses this
+  // category and its retention basis; if that changes here, change it there.
   const { error: authError } = await admin.auth.admin.updateUserById(profileId, {
     email: `deleted-${profileId}@deleted.madgigz.invalid`,
     password: crypto.randomUUID() + crypto.randomUUID(),
