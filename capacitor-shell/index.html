@@ -5,16 +5,84 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>MadGigz</title>
     <style>
-      html,
-      body {
-        margin: 0;
-        height: 100%;
-        background: #0a0807;
-        color: #f5efe6;
-        font-family: -apple-system, system-ui, sans-serif;
+      :root {
+        --bg: #0a0807;
+        --fg: #f5efe6;
+        --muted: #b8ada0;
+        --card: #171310;
+        --line: rgba(184, 173, 160, 0.18);
+        --accent: #e8621f;
       }
-      .wrap {
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
         min-height: 100%;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: -apple-system, system-ui, sans-serif;
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right)
+          env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      .bar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        background: linear-gradient(var(--bg), rgba(10, 8, 7, 0.85));
+        backdrop-filter: blur(6px);
+      }
+      .wordmark { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.02em; }
+      .reconnect {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--fg);
+        font: inherit;
+        font-size: 0.85rem;
+        padding: 0.4rem 0.9rem;
+        border-radius: 999px;
+      }
+      .banner {
+        margin: 0 1.25rem 0.5rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      .list { padding: 0.5rem 1.25rem 2rem; display: flex; flex-direction: column; gap: 1rem; }
+      .card {
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--accent);
+        border-radius: 1rem;
+        background: var(--card);
+        overflow: hidden;
+      }
+      .qrwrap {
+        background: #ffffff;
+        display: flex;
+        justify-content: center;
+        padding: 1rem;
+      }
+      .qrwrap img { width: 100%; max-width: 240px; height: auto; image-rendering: pixelated; }
+      .meta { padding: 0.9rem 1.1rem 1.1rem; }
+      .title { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.15rem; }
+      .sub { color: var(--muted); font-size: 0.9rem; margin: 0.1rem 0; }
+      .pills { margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+      .pill {
+        font-size: 0.75rem;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 0.2rem 0.6rem;
+      }
+      .code { margin-top: 0.55rem; font-size: 0.7rem; color: var(--muted); word-break: break-all; }
+      /* Empty / unreachable state */
+      .empty {
+        min-height: 70vh;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -23,34 +91,147 @@
         padding: 2rem;
         text-align: center;
       }
-      h1 {
-        font-size: 1.5rem;
-        letter-spacing: 0.02em;
-        margin: 0;
-      }
-      p {
-        margin: 0;
-        color: #b8ada0;
-        font-size: 0.95rem;
-      }
+      .empty h1 { font-size: 1.5rem; margin: 0; letter-spacing: 0.02em; }
+      .empty p { margin: 0; color: var(--muted); font-size: 0.95rem; max-width: 22rem; }
+      .empty .reconnect { margin-top: 0.5rem; }
+      [hidden] { display: none !important; }
     </style>
   </head>
   <body>
     <!--
-      This screen only appears if the live site can't be reached at launch. The
-      real app is served remotely (see capacitor.config.ts server.url), so there
-      is deliberately nothing else bundled here.
+      Offline fallback (capacitor.config.ts server.errorPath). The real app is
+      served remotely (server.url); this local page shows ONLY when that can't be
+      reached. On iOS it keeps Capacitor plugin access, so it reads the fan's
+      tickets - mirrored with pre-rendered QR by offline-tickets-native.ts - from
+      Preferences and renders them for the door with no network. On web/no cache
+      it degrades to the "can't reach" message (#129, native half).
     -->
-    <div class="wrap">
-      <h1>MadGigz</h1>
-      <p>Can't reach MadGigz right now.<br />Check your connection and reopen the app.</p>
+    <div id="app">
+      <div class="empty" id="empty">
+        <h1 id="emptyTitle">MadGigz</h1>
+        <p id="emptyBody">Can't reach MadGigz right now. Check your connection and reopen the app.</p>
+        <button class="reconnect" id="emptyReconnect" type="button">Reconnect</button>
+      </div>
+      <div id="tickets" hidden>
+        <div class="bar">
+          <span class="wordmark">MadGigz</span>
+          <button class="reconnect" id="reconnect" type="button">Reconnect</button>
+        </div>
+        <p class="banner" id="banner"></p>
+        <div class="list" id="list"></div>
+      </div>
     </div>
+
     <script>
-      // Backstop for launchAutoHide:false — if the app launches offline and lands
-      // on this fallback (no React app to hand off), hide the native splash here
-      // so it can't stay stuck over this message. Capacitor injects the bridge
-      // into locally-served pages too, so the plugin is available.
+      // Backstop for launchAutoHide:false - lift the native splash the moment
+      // this page paints, so an offline launch can't leave it stuck.
       window.Capacitor?.Plugins?.SplashScreen?.hide?.();
+
+      var LIVE_URL = "https://madgigz.aurasonic.es";
+      var KEY = "mg.offline.tickets.v1";
+
+      var COPY = {
+        en: {
+          reconnect: "Reconnect",
+          banner: "You're offline — showing your saved tickets.",
+          emptyTitle: "Can't reach MadGigz",
+          emptyBody:
+            "Check your connection and reopen the app. Your saved tickets appear here once you've opened MadGigz online.",
+          qty: function (n) { return n > 1 ? n + " tickets" : "1 ticket"; },
+          idLabel: "Ticket ID",
+        },
+        es: {
+          reconnect: "Reconectar",
+          banner: "Sin conexión — mostrando tus entradas guardadas.",
+          emptyTitle: "No se puede conectar con MadGigz",
+          emptyBody:
+            "Comprueba tu conexión y vuelve a abrir la app. Tus entradas guardadas aparecerán aquí una vez que hayas abierto MadGigz con conexión.",
+          qty: function (n) { return n > 1 ? n + " entradas" : "1 entrada"; },
+          idLabel: "ID de entrada",
+        },
+      };
+
+      function reconnect() { window.location.href = LIVE_URL; }
+      document.getElementById("reconnect").addEventListener("click", reconnect);
+      document.getElementById("emptyReconnect").addEventListener("click", reconnect);
+
+      function esc(s) {
+        return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      }
+
+      function formatDate(iso, locale) {
+        try {
+          var d = new Date(iso + "T00:00:00");
+          return d.toLocaleDateString(locale === "es" ? "es-ES" : "en-GB", {
+            weekday: "short", day: "numeric", month: "short",
+          });
+        } catch (e) { return iso; }
+      }
+
+      function showEmpty(locale) {
+        var c = COPY[locale] || COPY.en;
+        document.getElementById("emptyTitle").textContent = c.emptyTitle;
+        document.getElementById("emptyBody").textContent = c.emptyBody;
+        document.getElementById("emptyReconnect").textContent = c.reconnect;
+        document.getElementById("empty").hidden = false;
+        document.getElementById("tickets").hidden = true;
+      }
+
+      function render(store) {
+        var locale = store.locale === "es" ? "es" : "en";
+        var c = COPY[locale] || COPY.en;
+        var tickets = Array.isArray(store.tickets) ? store.tickets : [];
+        if (!tickets.length) { showEmpty(locale); return; }
+
+        document.documentElement.lang = locale;
+        document.getElementById("reconnect").textContent = c.reconnect;
+        document.getElementById("banner").textContent = c.banner;
+
+        var list = document.getElementById("list");
+        list.innerHTML = "";
+        tickets.forEach(function (t) {
+          var card = document.createElement("div");
+          card.className = "card";
+          if (t.accentColor) card.style.borderLeftColor = t.accentColor;
+
+          var dateLine = esc(formatDate(t.date, locale)) + (t.time ? " · " + esc(t.time) : "");
+          var pills = [];
+          if (t.quantity) pills.push('<span class="pill">' + esc(c.qty(t.quantity)) + "</span>");
+          if (t.tierName) pills.push('<span class="pill">' + esc(t.tierName) + "</span>");
+
+          card.innerHTML =
+            '<div class="qrwrap">' +
+              (t.qrDataUrl ? '<img alt="" src="' + esc(t.qrDataUrl) + '" />' : "") +
+            "</div>" +
+            '<div class="meta">' +
+              '<p class="title">' + esc(t.title) + "</p>" +
+              '<p class="sub">' + esc(t.venue) + "</p>" +
+              '<p class="sub">' + dateLine + "</p>" +
+              (pills.length ? '<div class="pills">' + pills.join("") + "</div>" : "") +
+              '<p class="code">' + esc(c.idLabel) + ": " + esc(t.id) + "</p>" +
+            "</div>";
+          list.appendChild(card);
+        });
+
+        document.getElementById("empty").hidden = true;
+        document.getElementById("tickets").hidden = false;
+      }
+
+      (function () {
+        var prefs = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences;
+        if (!prefs) { showEmpty("en"); return; }
+        Promise.resolve(prefs.get({ key: KEY }))
+          .then(function (res) {
+            if (!res || !res.value) { showEmpty("en"); return; }
+            var store;
+            try { store = JSON.parse(res.value); } catch (e) { store = null; }
+            if (!store) { showEmpty("en"); return; }
+            render(store);
+          })
+          .catch(function () { showEmpty("en"); });
+      })();
     </script>
   </body>
 </html>

@@ -19,6 +19,13 @@ const config: CapacitorConfig = {
   android: { backgroundColor: "#0a0807" },
   server: {
     url: "https://madgigz.aurasonic.es",
+    // Shown when the remote URL can't load - i.e. a no-connection cold launch.
+    // Without this, a failed load leaves the WKWebView on its own blank error
+    // instead of our shell, so the app "doesn't open" offline. On iOS this page
+    // keeps Capacitor plugin access (the no-plugins caveat is Android-only), so
+    // capacitor-shell/index.html can read the offline tickets from Preferences
+    // and render them (#129, native half).
+    errorPath: "index.html",
     // Third-party domains the WKWebView may navigate to IN-APP instead of kicking
     // out to Safari. Stripe Checkout + Connect onboarding live here: without this
     // the pay screen opens in the system browser and the post-payment return URL

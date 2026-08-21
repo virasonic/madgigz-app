@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem, Ticket } from "@/lib/types";
 import { saveOfflineTickets, type OfflineTicket } from "@/lib/offline-tickets";
+import { mirrorOfflineTicketsToNative } from "@/lib/offline-tickets-native";
 import { hideRefundedTicket } from "./actions";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -140,10 +141,14 @@ export default function SavedClient({
         accentColor: event.accentColor,
       }));
     saveOfflineTickets(userId, offline);
+    // Native shell: also mirror into Capacitor Preferences with pre-rendered QR,
+    // so the offline fallback page can show tickets when the remote origin is
+    // unreachable at cold launch (a no-op on plain web).
+    void mirrorOfflineTicketsToNative(userId, locale, offline);
     // Warm the service-worker cache for the offline page so it's replayable with
     // no network later (the SW caches this GET; see public/sw.js).
     fetch("/tickets").catch(() => {});
-  }, [allTicketRows, tierNames, userId]);
+  }, [allTicketRows, tierNames, userId, locale]);
 
   // A real toggle rather than unsave-only. From this list it always unsaves -
   // everything here is saved by definition - but the ticket sheet opened from
