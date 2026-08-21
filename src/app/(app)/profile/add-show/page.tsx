@@ -23,6 +23,7 @@ import {
   fetchVenues,
 } from "@/lib/supabase/queries";
 import { uploadEventMedia } from "@/lib/supabase/storage";
+import { parseEuros } from "@/lib/pricing";
 import { AppUser, Genre, PublicArtistProfile, Venue } from "@/lib/types";
 import { finaliseNewShow } from "../show-actions";
 import { canActAsArtist } from "@/lib/roles";
@@ -202,7 +203,7 @@ export default function AddShowPage() {
     if (cleanedLineup.length === 0) nextErrors.lineup = t("addShow.errLineup");
 
     const internal = ticketingMode === "internal";
-    const priceNum = Number(price);
+    const priceNum = parseEuros(price);
     let minTierPrice = 0;
 
     const capacityNum = Number(capacity);
@@ -222,8 +223,8 @@ export default function AddShowPage() {
           (r) =>
             r.name.trim() &&
             r.price.trim() &&
-            !Number.isNaN(Number(r.price)) &&
-            Number(r.price) >= 0 &&
+            !Number.isNaN(parseEuros(r.price)) &&
+            parseEuros(r.price) >= 0 &&
             Number(r.capacity) >= 1 &&
             Number(r.maxPerOrder || "6") >= 1
         );
@@ -232,7 +233,7 @@ export default function AddShowPage() {
       } else {
         // Types may each be available up to the room cap (they share it) — no
         // "sum ≤ capacity" check; the shared total is enforced at checkout.
-        minTierPrice = Math.min(...filled.map((r) => Number(r.price)));
+        minTierPrice = Math.min(...filled.map((r) => parseEuros(r.price)));
         if (minTierPrice > 0 && !user?.stripePayoutsReady) {
           nextErrors.tiers = t("addShow.errPayout");
         }

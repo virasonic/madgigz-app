@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toCents, toEuros, breakdownFor, formatEuros } from "./pricing";
+import { toCents, toEuros, breakdownFor, formatEuros, parseEuros } from "./pricing";
 
 // The money math is the highest-stakes logic in the app: a subtle bug here
 // silently over- or under-charges a fan or short-pays an artist. These tests
@@ -69,6 +69,29 @@ describe("breakdownFor", () => {
   it("treats a negative total as zero rather than computing a fee on it", () => {
     expect(breakdownFor(-500).feeCents).toBe(0);
     expect(breakdownFor(-500).artistReceivesCents).toBe(0);
+  });
+});
+
+describe("parseEuros", () => {
+  it("accepts the European decimal comma", () => {
+    // The exact bug: a Spanish number pad types "21,50", Number() gave NaN.
+    expect(parseEuros("21,50")).toBe(21.5);
+    expect(parseEuros("21,5")).toBe(21.5);
+    expect(parseEuros("0,36")).toBe(0.36);
+  });
+
+  it("still accepts a dot and plain integers", () => {
+    expect(parseEuros("21.50")).toBe(21.5);
+    expect(parseEuros("21")).toBe(21);
+    expect(parseEuros(" 8 ")).toBe(8);
+  });
+
+  it("returns NaN for junk so callers' guards still catch it", () => {
+    expect(Number.isNaN(parseEuros("abc"))).toBe(true);
+    expect(Number.isNaN(parseEuros("1,2,3"))).toBe(true);
+    // Empty parses to 0 (same as the old Number("")); callers gate on
+    // r.price.trim() before this runs, so a blank field never reaches here.
+    expect(parseEuros("")).toBe(0);
   });
 });
 

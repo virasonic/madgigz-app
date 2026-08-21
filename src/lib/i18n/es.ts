@@ -595,7 +595,8 @@ export const es: Messages = {
     maxPerOrder: "Máx/pedido",
     onSaleUntil: "A la venta hasta (opcional)",
     youKeep: "Te quedas {amount}/entrada",
-    breakdownTip: "El fan paga {fans}. Comisión MadGigz {fee} + IVA {vat}. Te quedas con {net}.",
+    breakdownTip:
+      "El fan paga {fans}. Comisión MadGigz {fee} + IVA {vat}. Te quedas con {net}. La comisión es el {pct}% del precio (mínimo {min}, para cubrir las comisiones de transacción con tarjeta) más IVA.",
     freeType: "Gratis",
     sold: "Vendidas: {n}",
     remove: "Quitar",

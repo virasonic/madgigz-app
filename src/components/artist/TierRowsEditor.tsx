@@ -1,6 +1,13 @@
 "use client";
 
-import { breakdownFor, formatEuros, toCents } from "@/lib/pricing";
+import {
+  breakdownFor,
+  FEE_PERCENT,
+  formatEuros,
+  MIN_FEE_CENTS,
+  parseEuros,
+  toCents,
+} from "@/lib/pricing";
 import type { TierInput } from "@/lib/tiers-apply";
 import InfoTip from "@/components/ui/InfoTip";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -57,7 +64,7 @@ export function tierRowsToInput(rows: TierRow[]): TierInput[] {
     .map((r, idx) => ({
       id: r.id,
       name: r.name,
-      price: Number(r.price),
+      price: parseEuros(r.price),
       capacity: Number(r.capacity),
       maxPerOrder: r.maxPerOrder ? Number(r.maxPerOrder) : undefined,
       availableUntil: r.availableUntil ? new Date(r.availableUntil).toISOString() : null,
@@ -98,7 +105,7 @@ export default function TierRowsEditor({
       <p className="text-xs text-muted">{t("tierEditor.subtitle")}</p>
 
       {rows.map((r, i) => {
-        const priceNum = Number(r.price);
+        const priceNum = parseEuros(r.price);
         const bd =
           r.price.trim() && !Number.isNaN(priceNum) && priceNum > 0
             ? breakdownFor(toCents(priceNum))
@@ -165,6 +172,8 @@ export default function TierRowsEditor({
                       fee: formatEuros(bd.feeBaseCents),
                       vat: formatEuros(bd.feeVatCents),
                       net: net ?? "",
+                      pct: FEE_PERCENT,
+                      min: formatEuros(MIN_FEE_CENTS),
                     })}
                   />
                 )}

@@ -609,7 +609,8 @@ export const en = {
     maxPerOrder: "Max/order",
     onSaleUntil: "On sale until (optional)",
     youKeep: "You keep {amount}/ticket",
-    breakdownTip: "Fans pay {fans}. MadGigz fee {fee} + IVA {vat}. You keep {net}.",
+    breakdownTip:
+      "Fans pay {fans}. MadGigz fee {fee} + IVA {vat}. You keep {net}. The fee is {pct}% of the price (minimum {min}, to cover card transaction fees) plus IVA.",
     freeType: "Free",
     sold: "Sold: {n}",
     remove: "Remove",

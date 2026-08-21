@@ -34,6 +34,15 @@ export function toEuros(cents: number): number {
   return Math.round(cents) / 100;
 }
 
+// Parse a user-typed price into a euros number, accepting BOTH the European
+// decimal comma ("21,50") and a dot ("21.50"). A Spanish phone's number pad
+// emits a comma, and Number("21,5") is NaN - which silently read as a free
+// ticket in the price editor. Returns NaN for anything unparseable, so callers
+// keep their existing Number.isNaN guards.
+export function parseEuros(input: string): number {
+  return Number(input.trim().replace(",", "."));
+}
+
 export interface PriceBreakdown {
   fanPaysCents: number;
   /** MadGigz's actual commission, before tax. */
