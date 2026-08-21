@@ -7,6 +7,7 @@ import { Role } from "@/lib/types";
 import { isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useLiveUnreadCount } from "@/lib/realtime";
+import { FEED_TO_TOP_EVENT } from "@/lib/ui-events";
 import { ExploreIcon, FeedIcon, NoteIcon, PersonIcon, TicketIcon } from "@/components/ui/nav-icons";
 
 interface NavItem {
@@ -72,6 +73,14 @@ export default function BottomNav({
           <Link
             key={item.href}
             href={item.href}
+            onClick={(e) => {
+              // Tapping the Feed tab while already on the feed scrolls it back to
+              // the top instead of doing a redundant same-route navigation.
+              if (active && item.href === "/feed") {
+                e.preventDefault();
+                window.dispatchEvent(new CustomEvent(FEED_TO_TOP_EVENT));
+              }
+            }}
             className={`relative flex flex-1 flex-col items-center gap-1 py-3 text-xs ${
               active ? "text-primary" : "text-muted"
             }`}

@@ -13,6 +13,7 @@ import { AppUser, ContentPost, EventItem } from "@/lib/types";
 import { canActAsArtist } from "@/lib/roles";
 import { getSeenAnnouncements, markAnnouncementSeen } from "@/lib/seen-announcements";
 import { useUrlModal } from "@/lib/useUrlModal";
+import { FEED_TO_TOP_EVENT } from "@/lib/ui-events";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 import { dateLocale } from "@/lib/dates";
@@ -174,11 +175,24 @@ export default function FeedClient({
   // (each slide is the container's own height), so a click lands on the next
   // reel and snap-mandatory keeps it aligned. Trackpad scrolling is unaffected.
   const forYouScrollRef = useRef<HTMLDivElement>(null);
+  const thisWeekScrollRef = useRef<HTMLDivElement>(null);
   const scrollFeed = useCallback((dir: 1 | -1) => {
     const el = forYouScrollRef.current;
     if (!el) return;
     el.scrollBy({ top: dir * el.clientHeight, behavior: "smooth" });
   }, []);
+
+  // Tapping the Feed tab while already on the feed scrolls the active pane back
+  // to the top (BottomNav dispatches FEED_TO_TOP_EVENT). Re-subscribes on pane
+  // change so it targets whichever list is showing.
+  useEffect(() => {
+    const onToTop = () => {
+      const el = pane === "forYou" ? forYouScrollRef.current : thisWeekScrollRef.current;
+      el?.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.addEventListener(FEED_TO_TOP_EVENT, onToTop);
+    return () => window.removeEventListener(FEED_TO_TOP_EVENT, onToTop);
+  }, [pane]);
 
   // Which reel is in view, so we can eagerly preload it and its neighbours (#135)
   // — the first video was slow to start because nothing was fetched until it
@@ -575,7 +589,7 @@ export default function FeedClient({
             </div>
           )
         ) : (
-          <div className="mx-auto h-full w-full overflow-y-auto px-4 pb-6 lg:max-w-xl">
+          <div ref={thisWeekScrollRef} className="mx-auto h-full w-full overflow-y-auto px-4 pb-6 lg:max-w-xl">
             {weeklyGroups.length === 0 ? (
               <p className="mt-6 text-center text-sm text-muted">{t("feed.emptyThisWeek")}</p>
             ) : (
