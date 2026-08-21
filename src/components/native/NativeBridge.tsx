@@ -17,6 +17,11 @@ import { NATIVE_AUTH_REDIRECT, isNativeApp } from "@/lib/native";
 export default function NativeBridge() {
   useEffect(() => {
     if (!isNativeApp()) return;
+    // Mark the document as the native shell so globals.css can disable text
+    // selection / the long-press callout app-wide (native feel). Scoped here so
+    // the plain web/PWA is untouched. The main app is served remotely, so this
+    // ships with a normal web deploy — no native rebuild needed.
+    document.documentElement.classList.add("native-app");
     let removeListener: (() => void) | undefined;
 
     (async () => {
