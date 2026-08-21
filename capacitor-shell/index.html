@@ -21,6 +21,13 @@
         color: var(--fg);
         font-family: -apple-system, system-ui, sans-serif;
         -webkit-text-size-adjust: 100%;
+        /* Native feel: this is app chrome, not a web document, so nothing here
+           should be selectable/long-press-callout-able (the iOS "Copy /
+           Translate" bubble over the QR + ticket text reads as a webview). */
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
       }
       body {
         padding: env(safe-area-inset-top) env(safe-area-inset-right)
