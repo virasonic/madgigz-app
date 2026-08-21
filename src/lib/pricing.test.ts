@@ -3,7 +3,7 @@ import { toCents, toEuros, breakdownFor, formatEuros } from "./pricing";
 
 // The money math is the highest-stakes logic in the app: a subtle bug here
 // silently over- or under-charges a fan or short-pays an artist. These tests
-// pin the defaults (5% fee, 21% VAT, €0.25 floor — no env overrides in test) and
+// pin the defaults (5% fee, 21% VAT, €0.36 floor — no env overrides in test) and
 // guard the euros⇄cents boundary that has caused real bugs (a €14 gig rendered
 // as €0.14, a €2 ticket charged as 2 cents).
 
@@ -39,20 +39,20 @@ describe("breakdownFor", () => {
     }
   });
 
-  it("applies the €0.25 floor on cheap tickets instead of the raw percentage", () => {
-    // €1.00 → 5% = 5c, but the floor lifts it to 25c; VAT 21% of 25c = 5c.
+  it("applies the €0.36 floor on cheap tickets instead of the raw percentage", () => {
+    // €1.00 → 5% = 5c, but the floor lifts it to 36c; VAT 21% of 36c = 8c (7.56 rounds up).
     const b = breakdownFor(100);
-    expect(b.feeBaseCents).toBe(25);
-    expect(b.feeVatCents).toBe(5);
-    expect(b.feeCents).toBe(30);
-    expect(b.artistReceivesCents).toBe(70);
+    expect(b.feeBaseCents).toBe(36);
+    expect(b.feeVatCents).toBe(8);
+    expect(b.feeCents).toBe(44);
+    expect(b.artistReceivesCents).toBe(56);
   });
 
   it("never hands the artist a negative payout when the fee floor exceeds the ticket", () => {
-    // €0.20 ticket, fee floor + VAT = 30c > 20c → artist gets 0, not -10c.
+    // €0.20 ticket, fee floor + VAT = 44c > 20c → artist gets 0, not -24c.
     const b = breakdownFor(20);
     expect(b.fanPaysCents).toBe(20);
-    expect(b.feeCents).toBe(30);
+    expect(b.feeCents).toBe(44);
     expect(b.artistReceivesCents).toBe(0);
   });
 

@@ -13,9 +13,15 @@ export const FEE_PERCENT = Number(process.env.NEXT_PUBLIC_MADGIGZ_FEE_PERCENT ??
 // rather than earned, so it's tracked separately from revenue everywhere.
 export const VAT_PERCENT = Number(process.env.NEXT_PUBLIC_MADGIGZ_VAT_PERCENT ?? 21);
 
-// Commission floor, applied before VAT. Without it, cheap tickets would cost
-// more to process than they earn.
-export const MIN_FEE_CENTS = Number(process.env.NEXT_PUBLIC_MADGIGZ_MIN_FEE_CENTS ?? 25);
+// Commission floor, applied before VAT. Without it, cheap tickets cost more to
+// process than they earn: our checkout is a destination charge, so the PLATFORM
+// (not the artist) pays Stripe's fee of 1.5% + EUR0.25 per sale. Our margin on a
+// ticket is feeBase - stripeFee; the floor only binds while 5% is below it, i.e.
+// under ~EUR7.20, exactly the band where a bare 5% loses money. EUR0.36 is the
+// break-even at that crossover (0.7 * floor = 25c); anything lower loses money on
+// a ~EUR7 ticket. Do NOT drop this below 36 without redoing that math - and note
+// non-EEA cards (2.5-3.25%) and refunds (Stripe keeps its fee) still erode it.
+export const MIN_FEE_CENTS = Number(process.env.NEXT_PUBLIC_MADGIGZ_MIN_FEE_CENTS ?? 36);
 
 // Stripe works in integer cents; events.price is euros numeric(10,2). Every
 // conversion goes through here so the euros/cents boundary lives in one place -
