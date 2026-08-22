@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toggleDiscountActive } from "../actions";
+import { SortHeader, useTableSort, type SortAccessor } from "../table-sort";
 import type { Discount, EventItem } from "@/lib/types";
 
 export default function DiscountsTable({
@@ -13,7 +14,24 @@ export default function DiscountsTable({
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const eventTitleById = new Map(events.map((e) => [e.id, e.title]));
+  const eventTitleById = useMemo(() => new Map(events.map((e) => [e.id, e.title])), [events]);
+
+  // Built in-component (not module scope) because the Scope column resolves an
+  // event id to its title via the map above. Value sorts on the raw number, so
+  // a €5 code and a 5% code both sort by 5 - imperfect across the two types, but
+  // useful within each; Status sorts active-first when descending.
+  const columns = useMemo<Record<string, SortAccessor<Discount>>>(
+    () => ({
+      code: (d) => d.code,
+      value: (d) => d.value,
+      scope: (d) => (d.eventId ? eventTitleById.get(d.eventId) ?? "" : "All events"),
+      uses: (d) => d.usedCount,
+      expires: (d) => (d.expiresAt ? new Date(d.expiresAt).getTime() : null),
+      status: (d) => d.active,
+    }),
+    [eventTitleById]
+  );
+  const { sorted, sort, toggle } = useTableSort(discounts, columns);
 
   function handleToggle(discountId: string, nextActive: boolean) {
     setPendingId(discountId);
@@ -31,17 +49,17 @@ export default function DiscountsTable({
     <table className="w-full text-left text-sm">
       <thead>
         <tr className="border-b border-muted/15 text-muted">
-          <th className="pb-2 font-heading">Code</th>
-          <th className="pb-2 font-heading">Value</th>
-          <th className="pb-2 font-heading">Scope</th>
-          <th className="pb-2 font-heading">Uses</th>
-          <th className="pb-2 font-heading">Expires</th>
-          <th className="pb-2 font-heading">Status</th>
+          <SortHeader label="Code" sortKey="code" sort={sort} onSort={toggle} />
+          <SortHeader label="Value" sortKey="value" sort={sort} onSort={toggle} />
+          <SortHeader label="Scope" sortKey="scope" sort={sort} onSort={toggle} />
+          <SortHeader label="Uses" sortKey="uses" sort={sort} onSort={toggle} />
+          <SortHeader label="Expires" sortKey="expires" sort={sort} onSort={toggle} />
+          <SortHeader label="Status" sortKey="status" sort={sort} onSort={toggle} />
           <th className="pb-2 font-heading" />
         </tr>
       </thead>
       <tbody>
-        {discounts.map((d) => (
+        {sorted.map((d) => (
           <tr key={d.id} className="border-b border-muted/10 last:border-0">
             <td className="py-2 font-heading text-foreground">{d.code}</td>
             <td className="py-2 text-muted">{d.type === "percent" ? `${d.value}%` : `€${d.value.toFixed(2)}`}</td>

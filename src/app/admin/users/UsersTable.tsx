@@ -8,12 +8,25 @@ import {
   requestUserDeletion,
   runAccountPurge,
 } from "../actions";
+import { SortHeader, useTableSort, type SortAccessor } from "../table-sort";
 import type { AdminUserRow } from "@/lib/supabase/admin-queries";
 
 const GRACE_MS = 30 * 86_400_000;
 // Read once at module load, not during render - React's purity rule, and the
 // same pattern the profile and feed pages already use for "now".
 const NOW = Date.now();
+
+// Dates sort on the timestamp; "Deletion" sorts on when the purge is due (never
+// requested sorts last, as an empty value).
+const USER_COLUMNS: Record<string, SortAccessor<AdminUserRow>> = {
+  username: (u) => u.username,
+  email: (u) => u.email,
+  role: (u) => u.role,
+  tickets: (u) => u.ticketCount,
+  joined: (u) => new Date(u.createdAt).getTime(),
+  lastSignIn: (u) => (u.lastSignInAt ? new Date(u.lastSignInAt).getTime() : null),
+  deletion: (u) => (u.deletionRequestedAt ? new Date(u.deletionRequestedAt).getTime() : null),
+};
 
 function purgeDate(requestedAt: string) {
   return new Date(new Date(requestedAt).getTime() + GRACE_MS).toLocaleDateString("en-GB");
@@ -30,6 +43,8 @@ export default function UsersTable({ users }: { users: AdminUserRow[] }) {
       !u.deletedAt &&
       new Date(u.deletionRequestedAt).getTime() + GRACE_MS <= NOW
   ).length;
+
+  const { sorted, sort, toggle } = useTableSort(users, USER_COLUMNS);
 
   function run(userId: string | null, fn: () => Promise<unknown>) {
     setPendingId(userId);
@@ -71,18 +86,18 @@ export default function UsersTable({ users }: { users: AdminUserRow[] }) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-muted/15 text-muted">
-            <th className="pb-2 font-heading">Username</th>
-            <th className="pb-2 font-heading">Email</th>
-            <th className="pb-2 font-heading">Role</th>
-            <th className="pb-2 font-heading">Tickets</th>
-            <th className="pb-2 font-heading">Joined</th>
-            <th className="pb-2 font-heading">Last sign-in</th>
-            <th className="pb-2 font-heading">Deletion</th>
+            <SortHeader label="Username" sortKey="username" sort={sort} onSort={toggle} />
+            <SortHeader label="Email" sortKey="email" sort={sort} onSort={toggle} />
+            <SortHeader label="Role" sortKey="role" sort={sort} onSort={toggle} />
+            <SortHeader label="Tickets" sortKey="tickets" sort={sort} onSort={toggle} />
+            <SortHeader label="Joined" sortKey="joined" sort={sort} onSort={toggle} />
+            <SortHeader label="Last sign-in" sortKey="lastSignIn" sort={sort} onSort={toggle} />
+            <SortHeader label="Deletion" sortKey="deletion" sort={sort} onSort={toggle} />
             <th className="pb-2 font-heading" />
           </tr>
         </thead>
         <tbody>
-          {users.map((u) => {
+          {sorted.map((u) => {
             const busy = isPending && pendingId === u.id;
             return (
               <tr key={u.id} className="border-b border-muted/10 last:border-0">

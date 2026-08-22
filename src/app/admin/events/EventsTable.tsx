@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { cancelEvent, toggleEventActive } from "../actions";
 import FilterTabs from "../FilterTabs";
+import { SortHeader, useTableSort, type SortAccessor } from "../table-sort";
 import type { EventItem } from "@/lib/types";
 
 type EventFilter = "live" | "hidden" | "cancelled" | "all";
@@ -14,6 +15,18 @@ function statusOf(event: EventItem): Exclude<EventFilter, "all"> {
   if (event.cancelled) return "cancelled";
   return event.active ? "live" : "hidden";
 }
+
+// Module scope so the accessor map is a stable reference across renders (the
+// sort memo depends on it). Date sorts on the timestamp, not the formatted
+// string; "sold" sorts on the raw count.
+const EVENT_COLUMNS: Record<string, SortAccessor<EventItem>> = {
+  title: (e) => e.title,
+  artist: (e) => e.artist,
+  venue: (e) => e.venue,
+  date: (e) => new Date(e.date).getTime(),
+  sold: (e) => e.sold,
+  status: (e) => statusOf(e),
+};
 
 export default function EventsTable({ events }: { events: EventItem[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -26,6 +39,7 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
     () => (filter === "all" ? events : events.filter((e) => statusOf(e) === filter)),
     [events, filter]
   );
+  const { sorted, sort, toggle } = useTableSort(visible, EVENT_COLUMNS);
 
   const counts = useMemo(
     () => ({
@@ -105,24 +119,24 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
       <table className="w-full text-left text-sm">
       <thead>
         <tr className="border-b border-muted/15 text-muted">
-          <th className="pb-2 font-heading">Title</th>
-          <th className="pb-2 font-heading">Artist</th>
-          <th className="pb-2 font-heading">Venue</th>
-          <th className="pb-2 font-heading">Date</th>
-          <th className="pb-2 font-heading">Sold / Capacity</th>
-          <th className="pb-2 font-heading">Status</th>
+          <SortHeader label="Title" sortKey="title" sort={sort} onSort={toggle} />
+          <SortHeader label="Artist" sortKey="artist" sort={sort} onSort={toggle} />
+          <SortHeader label="Venue" sortKey="venue" sort={sort} onSort={toggle} />
+          <SortHeader label="Date" sortKey="date" sort={sort} onSort={toggle} />
+          <SortHeader label="Sold / Capacity" sortKey="sold" sort={sort} onSort={toggle} />
+          <SortHeader label="Status" sortKey="status" sort={sort} onSort={toggle} />
           <th className="pb-2 font-heading" />
         </tr>
       </thead>
       <tbody>
-        {visible.length === 0 && (
+        {sorted.length === 0 && (
           <tr>
             <td colSpan={7} className="py-4 text-muted">
               No {filter === "all" ? "" : filter + " "}events.
             </td>
           </tr>
         )}
-        {visible.map((e) => (
+        {sorted.map((e) => (
           <tr key={e.id} className="border-b border-muted/10 last:border-0">
             <td className="py-2 text-foreground">
               <Link href={`/admin/events/${e.id}`} className="hover:text-accent hover:underline">

@@ -2,10 +2,20 @@
 
 import { useMemo, useState, useTransition } from "react";
 import FilterTabs from "../FilterTabs";
+import { SortHeader, useTableSort, type SortAccessor } from "../table-sort";
 import { createVenue, setVenueActive, updateVenue, VenueInput } from "./actions";
 import type { AdminVenue } from "@/lib/supabase/admin-queries";
 
 type VenueFilter = "needsAddress" | "verified" | "inactive" | "all";
+
+const VENUE_COLUMNS: Record<string, SortAccessor<AdminVenue>> = {
+  name: (v) => v.name,
+  address: (v) => v.address,
+  capacity: (v) => v.capacity,
+  shows: (v) => v.showCount,
+  upcoming: (v) => v.upcomingCount,
+  ticketsSold: (v) => v.ticketsSold,
+};
 
 const EMPTY: VenueInput = { name: "", address: "", postalCode: "", capacity: "", city: "Madrid" };
 
@@ -61,6 +71,8 @@ export default function VenuesTable({ venues }: { venues: AdminVenue[] }) {
     if (filter === "verified") return venues.filter((v) => v.active && v.verified && v.address);
     return venues.filter(needsAttention);
   }, [venues, filter]);
+
+  const { sorted, sort, toggle } = useTableSort(visible, VENUE_COLUMNS);
 
   function startEdit(venue: AdminVenue) {
     setAdding(false);
@@ -183,17 +195,17 @@ export default function VenuesTable({ venues }: { venues: AdminVenue[] }) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-muted/15 text-muted">
-            <th className="pb-2 font-heading">Venue</th>
-            <th className="pb-2 font-heading">Address</th>
-            <th className="pb-2 font-heading">Capacity</th>
-            <th className="pb-2 font-heading">Shows</th>
-            <th className="pb-2 font-heading">Upcoming</th>
-            <th className="pb-2 font-heading">Tickets sold</th>
+            <SortHeader label="Venue" sortKey="name" sort={sort} onSort={toggle} />
+            <SortHeader label="Address" sortKey="address" sort={sort} onSort={toggle} />
+            <SortHeader label="Capacity" sortKey="capacity" sort={sort} onSort={toggle} />
+            <SortHeader label="Shows" sortKey="shows" sort={sort} onSort={toggle} />
+            <SortHeader label="Upcoming" sortKey="upcoming" sort={sort} onSort={toggle} />
+            <SortHeader label="Tickets sold" sortKey="ticketsSold" sort={sort} onSort={toggle} />
             <th className="pb-2 font-heading" />
           </tr>
         </thead>
         <tbody>
-          {visible.length === 0 && (
+          {sorted.length === 0 && (
             <tr>
               <td colSpan={7} className="py-4 text-muted">
                 {filter === "needsAddress"
@@ -202,7 +214,7 @@ export default function VenuesTable({ venues }: { venues: AdminVenue[] }) {
               </td>
             </tr>
           )}
-          {visible.map((venue) => (
+          {sorted.map((venue) => (
             <tr key={venue.id} className="border-b border-muted/10 last:border-0">
               <td className="py-2 text-foreground">
                 <div className="flex items-center gap-2">
