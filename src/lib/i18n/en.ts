@@ -206,6 +206,12 @@ export const en = {
     newHere: "New here?",
     createAccount: "Create a MadGigz account",
   },
+  guest: {
+    title: "Create a free account",
+    body: "Sign up to save shows, follow artists and get tickets.",
+    createAccount: "Create account",
+    signIn: "Sign in",
+  },
 
   landing: {
     tagline: "Local Gigs & Concerts",
@@ -215,6 +221,7 @@ export const en = {
     artistDescription: "Claim your profile, sell your shows",
     artistBadge: "Artist",
     haveAccount: "Already have an account?",
+    browse: "Just looking? Browse shows",
   },
 
   signin: {

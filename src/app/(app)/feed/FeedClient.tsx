@@ -7,6 +7,7 @@ import ContentReelCard from "@/components/feed/ContentReelCard";
 import AnnouncementCard from "@/components/feed/AnnouncementCard";
 import FeedIntroCard from "@/components/feed/FeedIntroCard";
 import AddContentModal from "@/components/artist/AddContentModal";
+import { useGuestGate } from "@/components/auth/GuestGate";
 import { createClient } from "@/lib/supabase/client";
 import { fetchContentPosts, toggleSavedEvent } from "@/lib/supabase/queries";
 import { AppUser, ContentPost, EventItem } from "@/lib/types";
@@ -135,7 +136,8 @@ function withinNextWeek(items: EventItem[]) {
 }
 
 interface FeedClientProps {
-  user: AppUser;
+  /** Null for a logged-out guest browsing the feed (they can look, not act). */
+  user: AppUser | null;
   initialEvents: EventItem[];
   initialPosts: ContentPost[];
   /** Recent artist intro reels injected into For You for discovery (#143). */
@@ -155,6 +157,7 @@ export default function FeedClient({
   followedEventIds,
 }: FeedClientProps) {
   const { t, locale } = useT();
+  const { promptSignup, sheet: guestSheet } = useGuestGate();
   const [pane, setPane] = useState<Pane>("forYou");
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
   // #102: the open ticket and the announcements sheet live in the URL now, so
@@ -332,10 +335,11 @@ export default function FeedClient({
     [initialEvents, ticketModal.value]
   );
 
-  // Don't show an artist their own intro reel as a discovery card.
+  // Don't show an artist their own intro reel as a discovery card. A guest has
+  // no id, so nothing is excluded - they see the full set.
   const discoveryIntros = useMemo(
-    () => initialIntros.filter((p) => p.artistId !== user.id),
-    [initialIntros, user.id]
+    () => initialIntros.filter((p) => p.artistId !== user?.id),
+    [initialIntros, user?.id]
   );
   const forYouFeed = useMemo(
     () => buildForYouFeed(initialEvents, allPosts, followed, seenAnnouncements, discoveryIntros),
@@ -398,6 +402,12 @@ export default function FeedClient({
   // liked event on the Tickets page, and vice versa, rather than being two
   // disconnected concepts.
   async function handleToggleLike(eventId: string) {
+    // A guest has nowhere to store a like - turn the tap into the sign-up prompt
+    // rather than a silent no-op or a server error.
+    if (!user) {
+      promptSignup();
+      return;
+    }
     const wasLiked = savedIds.includes(eventId);
     setSavedIds((ids) => (wasLiked ? ids.filter((id) => id !== eventId) : [...ids, eventId]));
     const supabase = createClient();
@@ -409,7 +419,9 @@ export default function FeedClient({
     }
   }
 
-  const artistName = user.artistName ?? user.username;
+  // Only ever read inside the artist-only "post an update" flow, which a guest
+  // can't open (the "+" button is gated on canActAsArtist below).
+  const artistName = user ? user.artistName ?? user.username : "";
 
   // Newest-first for the panel: a fresh announcement belongs at the TOP of the
   // catch-up list, not buried under the whole intro set (allPosts arrives
@@ -440,7 +452,7 @@ export default function FeedClient({
             <MegaphoneIcon />
           </button>
         )}
-        {canActAsArtist(user) && (
+        {user && canActAsArtist(user) && (
           <button
             type="button"
             onClick={() => setAddContentOpen(true)}
@@ -642,13 +654,14 @@ export default function FeedClient({
         <TicketModal
           key={activeEvent.id}
           event={activeEvent}
+          isGuest={!user}
           liked={savedIds.includes(activeEvent.id)}
           onToggleLike={() => handleToggleLike(activeEvent.id)}
           onClose={ticketModal.close}
         />
       )}
 
-      {addContentOpen && (
+      {addContentOpen && user && (
         <AddContentModal
           shows={shows}
           artistName={artistName}
@@ -656,6 +669,8 @@ export default function FeedClient({
           onPosted={refreshContent}
         />
       )}
+
+      {guestSheet}
 
       {announcementsOpen && (
         <AnnouncementsSheet

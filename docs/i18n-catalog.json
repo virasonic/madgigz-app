@@ -177,6 +177,12 @@
       "newHere": "New here?",
       "createAccount": "Create a MadGigz account"
     },
+    "guest": {
+      "title": "Create a free account",
+      "body": "Sign up to save shows, follow artists and get tickets.",
+      "createAccount": "Create account",
+      "signIn": "Sign in"
+    },
     "landing": {
       "tagline": "Local Gigs & Concerts",
       "fanTitle": "I'm a Fan",
@@ -184,7 +190,8 @@
       "artistTitle": "I'm an Artist",
       "artistDescription": "Claim your profile, sell your shows",
       "artistBadge": "Artist",
-      "haveAccount": "Already have an account?"
+      "haveAccount": "Already have an account?",
+      "browse": "Just looking? Browse shows"
     },
     "signin": {
       "title": "Welcome back",
@@ -884,6 +891,12 @@
       "newHere": "¿Nuevo por aquí?",
       "createAccount": "Crea una cuenta de MadGigz"
     },
+    "guest": {
+      "title": "Crea una cuenta gratis",
+      "body": "Regístrate para guardar bolos, seguir a artistas y conseguir entradas.",
+      "createAccount": "Crear cuenta",
+      "signIn": "Iniciar sesión"
+    },
     "landing": {
       "tagline": "Conciertos y Bolos",
       "fanTitle": "Soy fan",
@@ -891,7 +904,8 @@
       "artistTitle": "Soy artista",
       "artistDescription": "Reclama tu perfil, vende tus bolos",
       "artistBadge": "Artista",
-      "haveAccount": "¿Ya tienes cuenta?"
+      "haveAccount": "¿Ya tienes cuenta?",
+      "browse": "¿Solo mirando? Explora los bolos"
     },
     "signin": {
       "title": "Bienvenido de nuevo",

@@ -200,6 +200,12 @@ export const es: Messages = {
     newHere: "¿Nuevo por aquí?",
     createAccount: "Crea una cuenta de MadGigz",
   },
+  guest: {
+    title: "Crea una cuenta gratis",
+    body: "Regístrate para guardar bolos, seguir a artistas y conseguir entradas.",
+    createAccount: "Crear cuenta",
+    signIn: "Iniciar sesión",
+  },
 
   landing: {
     tagline: "Conciertos y Bolos",
@@ -209,6 +215,7 @@ export const es: Messages = {
     artistDescription: "Reclama tu perfil, vende tus bolos",
     artistBadge: "Artista",
     haveAccount: "¿Ya tienes cuenta?",
+    browse: "¿Solo mirando? Explora los bolos",
   },
 
   signin: {

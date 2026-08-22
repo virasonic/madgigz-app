@@ -21,16 +21,22 @@ interface NavItem {
 // The desktop counterpart to BottomNav (#105): a persistent left rail, TikTok-web
 // style. Hidden below lg, where the bottom nav takes over. Shares its icons and
 // active-state logic with BottomNav so the two can't drift.
+// Personal rows a guest can't use - routed to sign-in (with next) instead of
+// opening a page that would just bounce them.
+const GUEST_GATED = new Set(["/saved", "/notifications", "/profile"]);
+
 export default function SideNav({
   role,
   artistStatus,
   userId,
   unreadCount = 0,
+  isGuest = false,
 }: {
   role: Role;
   artistStatus: ArtistStatus | null;
   userId: string;
   unreadCount?: number;
+  isGuest?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -101,10 +107,14 @@ export default function SideNav({
 
       {items.map((item) => {
         const active = pathname === item.href;
+        const href =
+          isGuest && GUEST_GATED.has(item.href)
+            ? `/signin?next=${encodeURIComponent(item.href)}`
+            : item.href;
         return (
           <Link
             key={item.href}
-            href={item.href}
+            href={href}
             className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-heading transition-colors ${
               active
                 ? "bg-surface text-primary"

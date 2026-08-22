@@ -102,6 +102,17 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
           {t("common.signIn")}
         </Link>
       </p>
+
+      {/* Let a curious fan into the app without an account first - they can
+          scroll the feed and the shows, and get prompted to sign up the moment
+          they try to save, follow or buy (useGuestGate). Lowers the "instant
+          login wall" that puts fans off. Not carried through `next`: this is the
+          "look around" path, not a return-to-a-specific-link one. */}
+      <p className="mt-6 text-center text-sm">
+        <Link href="/feed" className="font-heading text-accent">
+          {t("landing.browse")}
+        </Link>
+      </p>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { LegalNotice } from "@/components/legal/LegalNotice";
 import { createCheckout, previewPromoCode } from "@/app/(app)/checkout-actions";
 import { createClient } from "@/lib/supabase/client";
 import { EventItem, EventTier, EventTierRow, mapEventTier, tierIsAvailable } from "@/lib/types";
+import { eventPath } from "@/lib/site";
 import ShareEventButton from "./ShareEventButton";
 import LikeButton from "./LikeButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -28,6 +29,10 @@ interface TicketModalProps {
   // aren't signed in, and there's nowhere to record a like for them.
   liked?: boolean;
   onToggleLike?: () => void;
+  // A guest browsing the feed can open this sheet to read a show, but buying a
+  // MadGigz-ticketed show needs an account - the buy button becomes a sign-in
+  // link. Externally-ticketed shows are unaffected (they need no account).
+  isGuest?: boolean;
 }
 
 function formatDate(iso: string, dl: string) {
@@ -46,6 +51,7 @@ export default function TicketModal({
   onPurchased,
   liked = false,
   onToggleLike,
+  isGuest = false,
 }: TicketModalProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
@@ -393,7 +399,7 @@ export default function TicketModal({
                   )}
                 </div>
 
-                {!buyBlocked && (
+                {!buyBlocked && !isGuest && (
                   <div className="flex flex-col gap-1.5">
                     <span className="font-heading text-sm text-muted">{t("ticket.promoCode")}</span>
                     <div className="flex gap-2">
@@ -436,15 +442,26 @@ export default function TicketModal({
                   </div>
                 )}
 
-                <Button onClick={handleBuy} disabled={buyBlocked || buying}>
-                  {buyBlocked
-                    ? t("ticket.buySoldOut")
-                    : buying
-                      ? t("ticket.buyStarting")
-                      : total === 0
-                        ? t("ticket.buyFree")
-                        : t("ticket.buyPay")}
-                </Button>
+                {isGuest && !buyBlocked ? (
+                  // No account, nowhere to issue a ticket - send them to sign in
+                  // and back to this show's page (where they can complete it).
+                  <Link
+                    href={`/signin?next=${encodeURIComponent(eventPath(event.id))}`}
+                    className="block"
+                  >
+                    <Button>{t("publicEvent.signInToBuy")}</Button>
+                  </Link>
+                ) : (
+                  <Button onClick={handleBuy} disabled={buyBlocked || buying}>
+                    {buyBlocked
+                      ? t("ticket.buySoldOut")
+                      : buying
+                        ? t("ticket.buyStarting")
+                        : total === 0
+                          ? t("ticket.buyFree")
+                          : t("ticket.buyPay")}
+                  </Button>
+                )}
 
                 {/* Visible, not tapped-for: a fan deciding whether to buy needs
                     this before they pay, not tucked behind an icon they'd have

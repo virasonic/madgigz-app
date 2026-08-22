@@ -20,10 +20,12 @@ export default function BottomNav({
   role,
   userId,
   unreadCount = 0,
+  isGuest = false,
 }: {
   role: Role;
   userId: string;
   unreadCount?: number;
+  isGuest?: boolean;
 }) {
   const pathname = usePathname();
   const { t } = useT();
@@ -69,10 +71,17 @@ export default function BottomNav({
     >
       {items.map((item) => {
         const active = pathname === item.href;
+        // A guest can browse Feed and Explore, but the Tickets and Profile tabs
+        // are personal - send them to sign in (with next, so they land back on
+        // the tab they wanted) rather than to a page that just bounces them.
+        const requiresAccount = isGuest && (item.href === "/saved" || item.href === "/profile");
+        const href = requiresAccount
+          ? `/signin?next=${encodeURIComponent(item.href)}`
+          : item.href;
         return (
           <Link
             key={item.href}
-            href={item.href}
+            href={href}
             onClick={(e) => {
               // Tapping the Feed tab while already on the feed scrolls it back to
               // the top instead of doing a redundant same-route navigation.

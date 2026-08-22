@@ -24,7 +24,11 @@ export default async function PublicArtistProfilePage({
   const { artistId } = await params;
   const supabase = await createClient();
   const currentUser = await fetchCurrentUser(supabase);
-  if (!currentUser) redirect("/");
+  // Reachable mid-browse (an artist link on a reel or in Explore), so a guest
+  // who taps it lands on sign-in with a way back here - not the bare landing.
+  // Viewing an artist's page is still account-gated for now; only Feed and
+  // Explore are open to guests.
+  if (!currentUser) redirect(`/signin?next=${encodeURIComponent(`/profile/${artistId}`)}`);
 
   // An artist viewing their own page gets sent to the richer private view
   // (Add Show, Settings, hidden shows) instead of the stripped-down public one.

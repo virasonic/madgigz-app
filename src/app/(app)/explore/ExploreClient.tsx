@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import EventCard from "@/components/feed/EventCard";
 import TicketModal from "@/components/feed/TicketModal";
 import Avatar from "@/components/ui/Avatar";
+import { useGuestGate } from "@/components/auth/GuestGate";
 import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem, PublicArtistProfile } from "@/lib/types";
@@ -14,7 +15,8 @@ import { useT } from "@/lib/i18n/LocaleProvider";
 import CityBadge from "@/components/ui/CityBadge";
 
 interface ExploreClientProps {
-  userId: string;
+  /** Null for a logged-out guest browsing Explore. */
+  userId: string | null;
   initialEvents: EventItem[];
   initialSavedIds: string[];
   artists: PublicArtistProfile[];
@@ -31,6 +33,7 @@ export default function ExploreClient({
   followedEventIds,
 }: ExploreClientProps) {
   const { t } = useT();
+  const { promptSignup, sheet: guestSheet } = useGuestGate();
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   // #102: the open ticket sheet lives in ?ticket=<id> so back closes it and the
   // link is shareable. Resolved from the param against the events on this page.
@@ -96,6 +99,11 @@ export default function ExploreClient({
   }, [artists, trimmedQuery]);
 
   async function handleToggleSave(eventId: string) {
+    // Guests can browse but not save - the tap becomes the sign-up prompt.
+    if (!userId) {
+      promptSignup();
+      return;
+    }
     const wasSaved = savedIds.includes(eventId);
     setSavedIds((ids) => (wasSaved ? ids.filter((id) => id !== eventId) : [...ids, eventId]));
     const supabase = createClient();
@@ -198,11 +206,14 @@ export default function ExploreClient({
         <TicketModal
           key={activeEvent.id}
           event={activeEvent}
+          isGuest={!userId}
           liked={savedIds.includes(activeEvent.id)}
           onToggleLike={() => handleToggleSave(activeEvent.id)}
           onClose={ticketModal.close}
         />
       )}
+
+      {guestSheet}
     </div>
   );
 }
