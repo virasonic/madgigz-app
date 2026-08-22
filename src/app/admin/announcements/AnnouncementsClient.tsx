@@ -7,6 +7,8 @@ export interface AdminAnnouncement {
   id: string;
   headline: string | null;
   caption: string;
+  headlineEs: string | null;
+  captionEs: string | null;
   mediaUrl: string | null;
   mediaType: string;
   accentColor: string | null;
@@ -63,6 +65,10 @@ export default function AnnouncementsClient({ items }: { items: AdminAnnouncemen
 function TemplateComposer() {
   const [headline, setHeadline] = useState("");
   const [body, setBody] = useState("");
+  // Optional Spanish variants. Leave blank and the card is English-only for
+  // everyone; fill them and Spanish readers get this text instead (addendum_043).
+  const [headlineEs, setHeadlineEs] = useState("");
+  const [bodyEs, setBodyEs] = useState("");
   const [accent, setAccent] = useState(ACCENTS[0].value);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -71,13 +77,15 @@ function TemplateComposer() {
     event.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await createTextAnnouncement({ headline, body, accent });
+      const result = await createTextAnnouncement({ headline, body, accent, headlineEs, bodyEs });
       if (result.error) {
         setError(result.error);
         return;
       }
       setHeadline("");
       setBody("");
+      setHeadlineEs("");
+      setBodyEs("");
     });
   }
 
@@ -101,6 +109,29 @@ function TemplateComposer() {
           placeholder="A line or two underneath (optional)"
           className="w-full rounded-xl border border-muted/20 bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
         />
+
+        {/* Optional Spanish. Filled in, a Spanish-language fan sees these instead;
+            left blank, everyone sees the English above. */}
+        <div className="flex flex-col gap-3 rounded-xl border border-dashed border-muted/20 p-3">
+          <span className="text-xs font-heading uppercase tracking-wide text-muted">
+            Spanish (optional)
+          </span>
+          <input
+            value={headlineEs}
+            onChange={(e) => setHeadlineEs(e.target.value)}
+            maxLength={120}
+            placeholder="Titular — la línea grande"
+            className="w-full rounded-xl border border-muted/20 bg-background px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <textarea
+            value={bodyEs}
+            onChange={(e) => setBodyEs(e.target.value)}
+            rows={3}
+            maxLength={500}
+            placeholder="Una línea o dos debajo (opcional)"
+            className="w-full rounded-xl border border-muted/20 bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted">Accent</span>
@@ -207,10 +238,18 @@ function UploadComposer() {
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         <textarea
           name="caption"
-          rows={4}
+          rows={3}
           maxLength={500}
           placeholder="Caption to show under the media"
           className="w-full rounded-xl border border-muted/20 bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        {/* Optional Spanish caption — shown to Spanish readers when set. */}
+        <textarea
+          name="caption_es"
+          rows={3}
+          maxLength={500}
+          placeholder="Texto en español (opcional)"
+          className="w-full rounded-xl border border-dashed border-muted/20 bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
         />
         <p className="text-xs text-muted">
           For a designed graphic or a video. For plain text on the brand card, use “Write a card”.
@@ -255,6 +294,13 @@ function Row({ item }: { item: AdminAnnouncement }) {
       <div className="min-w-0 flex-1">
         {item.headline && <p className="text-sm font-heading text-foreground">{item.headline}</p>}
         <p className="text-sm text-muted">{item.caption}</p>
+        {(item.headlineEs || item.captionEs) && (
+          <p className="mt-1 text-xs text-accent">
+            ES: {item.headlineEs ?? ""}
+            {item.headlineEs && item.captionEs ? " — " : ""}
+            {item.captionEs ?? ""}
+          </p>
+        )}
         <p className="mt-1 text-xs text-muted">
           {new Date(item.createdAt).toLocaleString("en-GB", {
             day: "numeric",

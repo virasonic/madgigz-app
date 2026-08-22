@@ -4,9 +4,13 @@ import AnnouncementsClient, { AdminAnnouncement } from "./AnnouncementsClient";
 export default async function AdminAnnouncementsPage() {
   await requireAdmin();
 
+  // select("*") rather than an explicit column list so the Spanish columns
+  // (addendum_043) come through once the migration runs and are simply absent
+  // before it - the same graceful pattern the feed read uses. An explicit list
+  // that named them would 42703 the whole query in the pre-migration window.
   const { data, error } = await adminClient()
     .from("content_posts")
-    .select("id, headline, caption, media_url, media_type, accent_color, created_at")
+    .select("*")
     .is("event_id", null)
     .order("created_at", { ascending: false });
 
@@ -18,6 +22,8 @@ export default async function AdminAnnouncementsPage() {
     id: row.id as string,
     headline: (row.headline as string | null) ?? null,
     caption: row.caption as string,
+    headlineEs: (row.headline_es as string | null) ?? null,
+    captionEs: (row.caption_es as string | null) ?? null,
     mediaUrl: (row.media_url as string | null) ?? null,
     mediaType: row.media_type as string,
     accentColor: (row.accent_color as string | null) ?? null,

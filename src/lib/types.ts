@@ -164,6 +164,14 @@ export interface ContentPost {
   headline?: string | null;
   accentColor?: string | null;
   /**
+   * Optional Spanish variants of a MadGigz announcement's text (addendum_043).
+   * When present, AnnouncementCard shows them to es readers; null/undefined
+   * (artist posts, English-only announcements, pre-migration) falls back to the
+   * base headline/caption for everyone.
+   */
+  headlineEs?: string | null;
+  captionEs?: string | null;
+  /**
    * The artist's pinned introduction reel (#143, addendum_038). Kept out of the
    * feed and shown on the artist's profile. Undefined/false in the pre-migration
    * window (the column may not exist yet).
@@ -326,6 +334,11 @@ export interface ContentPostRow {
   stream_uid?: string | null;
   headline?: string | null;
   accent_color?: string | null;
+  // Undefined until addendum_043 runs (select("*"), so the column simply isn't
+  // there yet) — mapContentPost reads them as null. Optional Spanish variants of
+  // an announcement's text; null on artist posts and on English-only announcements.
+  headline_es?: string | null;
+  caption_es?: string | null;
   // Undefined until addendum_038 runs; mapContentPost reads it as false.
   is_intro?: boolean | null;
   /**
@@ -352,6 +365,8 @@ export function mapContentPost(row: ContentPostRow): ContentPost {
     streamUid: row.stream_uid ?? null,
     headline: row.headline ?? null,
     accentColor: row.accent_color ?? null,
+    headlineEs: row.headline_es ?? null,
+    captionEs: row.caption_es ?? null,
     isIntro: row.is_intro ?? false,
   };
 }

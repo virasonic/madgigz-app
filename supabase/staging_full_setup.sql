@@ -2922,3 +2922,9 @@ alter table public.profiles
   add column if not exists fiscal_country     text,
   add column if not exists fiscal_address     text,
   add column if not exists fiscal_provided_at timestamptz;
+
+-- ############# addendum_043_announcement_locale.sql #############
+
+alter table public.content_posts
+  add column if not exists headline_es text,
+  add column if not exists caption_es  text;

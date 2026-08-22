@@ -24,10 +24,18 @@ export default function AnnouncementCard({
   /** Fires once the card has actually been on screen, not merely rendered. */
   onSeen?: (id: string) => void;
 }) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const showVideo = post.mediaType === "video" && post.videoUrl;
+
+  // Announcements follow the reader's language (addendum_043): a Spanish reader
+  // gets the Spanish variant when the admin supplied one, and everyone else -
+  // plus any announcement left English-only - gets the base text. Empty strings
+  // count as "not translated", so a blank ES field never blanks the card.
+  const isSpanish = locale === "es";
+  const headline = isSpanish && post.headlineEs ? post.headlineEs : post.headline;
+  const caption = isSpanish && post.captionEs ? post.captionEs : post.caption;
   // A text announcement carries no media - it is drawn on the brand template in
   // CSS below, which is how the admin panel composes one without any image
   // generation. See addendum_029.
@@ -108,10 +116,10 @@ export default function AnnouncementCard({
           >
             {t("feed.fromMadgigz")}
           </span>
-          {post.headline && (
-            <h2 className="font-display text-3xl leading-tight text-foreground">{post.headline}</h2>
+          {headline && (
+            <h2 className="font-display text-3xl leading-tight text-foreground">{headline}</h2>
           )}
-          {post.caption && <p className="text-base text-muted">{post.caption}</p>}
+          {caption && <p className="text-base text-muted">{caption}</p>}
         </div>
       </div>
     );
@@ -130,7 +138,7 @@ export default function AnnouncementCard({
           onClick={onToggleMute}
         />
       ) : (
-        <Image src={post.image} alt={post.caption} fill sizes="480px" className="object-cover" />
+        <Image src={post.image} alt={caption} fill sizes="480px" className="object-cover" />
       )}
 
       {/* Lighter than the reel gradient: these cards are designed artwork with
@@ -145,12 +153,12 @@ export default function AnnouncementCard({
         <p className="font-heading text-sm text-foreground">{post.artist}</p>
       </div>
 
-      {post.caption && (
+      {caption && (
         <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-3 p-5 pb-8">
           <span className="w-fit rounded-full bg-primary/90 px-3 py-1 text-xs font-heading uppercase tracking-wide text-foreground">
             {t("feed.fromMadgigz")}
           </span>
-          <p className="text-sm text-foreground">{post.caption}</p>
+          <p className="text-sm text-foreground">{caption}</p>
         </div>
       )}
     </div>
