@@ -8,6 +8,7 @@ import { openExternal } from "@/lib/native";
 import { shareUrl } from "@/lib/share";
 import { createWalletPassUrl } from "@/app/(app)/saved/wallet-actions";
 import { createTransfer, cancelTransfer } from "@/app/(app)/saved/transfer-actions";
+import { emailTicket } from "@/app/(app)/saved/ticket-email-actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
@@ -56,6 +57,8 @@ export default function TicketQRModal({
   const [transferBusy, setTransferBusy] = useState(false);
   const [transferError, setTransferError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [emailedTo, setEmailedTo] = useState<string | null>(null);
   const { handleProps, sheetStyle } = useDragToDismiss(onClose);
 
   // A ticket can be handed on only while it's a live, un-used ticket to a show
@@ -110,6 +113,21 @@ export default function TicketQRModal({
     const result = await createWalletPassUrl(ticket.id);
     setWalletPending(false);
     if ("url" in result) openExternal(`${window.location.origin}${result.url}`);
+  }
+
+  // Sends the ticket to the buyer's account email (#155) — the server action
+  // re-derives the address from the session, so nothing sensitive rides on the
+  // client. Best-effort UI: once sent it stays sent; a failure lets them retry.
+  async function handleEmailTicket() {
+    if (emailStatus === "sending" || emailStatus === "sent") return;
+    setEmailStatus("sending");
+    const result = await emailTicket(ticket.id, locale);
+    if ("ok" in result) {
+      setEmailedTo(result.email);
+      setEmailStatus("sent");
+    } else {
+      setEmailStatus("error");
+    }
   }
 
   // The barcode carries qr_secret — the rotatable value the door scanner looks up
@@ -215,6 +233,33 @@ export default function TicketQRModal({
                 </svg>
                 {t("ticket.addToWallet")}
               </button>
+            )}
+
+            {/* Email me this ticket (#155): the QR lands in the inbox as an
+                inline image and a savable attachment, for fans who'd rather keep
+                it there than only in the app. Sent to the account's own email. */}
+            <button
+              type="button"
+              onClick={handleEmailTicket}
+              disabled={emailStatus === "sending" || emailStatus === "sent"}
+              className="mx-auto mt-4 flex items-center justify-center gap-2 rounded-xl border border-muted/30 px-5 py-3 text-sm font-heading text-foreground disabled:opacity-60"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                <path d="m4 7.5 8 5.5 8-5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {emailStatus === "sending"
+                ? t("ticket.emailSending")
+                : emailStatus === "sent"
+                  ? t("ticket.emailSent")
+                  : emailStatus === "error"
+                    ? t("ticket.emailError")
+                    : t("ticket.emailTicket")}
+            </button>
+            {emailStatus === "sent" && emailedTo && (
+              <p className="mt-2 text-center text-xs text-accent">
+                {t("ticket.emailSentTo", { email: emailedTo })}
+              </p>
             )}
 
             {/* Transfer / gift this ticket to someone else (#145). Only while it's

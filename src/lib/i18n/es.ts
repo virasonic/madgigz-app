@@ -151,6 +151,11 @@ export const es: Messages = {
     showAtDoor:
       "Muestra este código en la entrada. Si no se puede escanear, dale el código de arriba al personal.",
     addToWallet: "Añadir a Wallet",
+    emailTicket: "Enviarme la entrada por correo",
+    emailSending: "Enviando…",
+    emailSent: "Enviada ✓",
+    emailSentTo: "Enviada a {email}",
+    emailError: "No se pudo enviar — inténtalo de nuevo",
     refundedTitle: "Esta entrada fue reembolsada",
     refundedBody:
       "El pago se ha devuelto a tu método de pago original; puede tardar unos días en aparecer en tu extracto. Esta entrada ya no es válida para entrar.",

@@ -157,6 +157,11 @@ export const en = {
     generating: "Generating code...",
     showAtDoor: "Show this code at the door. If it can't be scanned, give the code above to staff.",
     addToWallet: "Add to Wallet",
+    emailTicket: "Email me this ticket",
+    emailSending: "Sending…",
+    emailSent: "Emailed ✓",
+    emailSentTo: "Sent to {email}",
+    emailError: "Couldn't send — try again",
     refundedTitle: "This ticket was refunded",
     refundedBody:
       "The payment has been returned to your original payment method - it can take a few days to appear on your statement. This ticket is no longer valid for entry.",
