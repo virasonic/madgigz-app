@@ -156,6 +156,7 @@ export const es: Messages = {
     emailSent: "Enviada ✓",
     emailSentTo: "Enviada a {email}",
     emailError: "No se pudo enviar — inténtalo de nuevo",
+    savedInApp: "Tu entrada está guardada — ábrela cuando quieras en la app, en Entradas.",
     refundedTitle: "Esta entrada fue reembolsada",
     refundedBody:
       "El pago se ha devuelto a tu método de pago original; puede tardar unos días en aparecer en tu extracto. Esta entrada ya no es válida para entrar.",

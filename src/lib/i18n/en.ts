@@ -162,6 +162,7 @@ export const en = {
     emailSent: "Emailed ✓",
     emailSentTo: "Sent to {email}",
     emailError: "Couldn't send — try again",
+    savedInApp: "Your ticket is saved — open it anytime in the app under Tickets.",
     refundedTitle: "This ticket was refunded",
     refundedBody:
       "The payment has been returned to your original payment method - it can take a few days to appear on your statement. This ticket is no longer valid for entry.",

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import { LegalNotice } from "@/components/legal/LegalNotice";
 import { createCheckout, previewPromoCode } from "@/app/(app)/checkout-actions";
+import { emailTicket } from "@/app/(app)/saved/ticket-email-actions";
 import { createClient } from "@/lib/supabase/client";
 import { EventItem, EventTier, EventTierRow, mapEventTier, tierIsAvailable } from "@/lib/types";
 import { eventPath } from "@/lib/site";
@@ -63,6 +64,12 @@ export default function TicketModal({
   const [tab, setTab] = useState<Tab>(initialTab);
   const [quantity, setQuantity] = useState(1);
   const [purchased, setPurchased] = useState(false);
+  // The just-issued free ticket's id, so the success screen can email it (#155).
+  // Paid tickets redirect out to Stripe and land on /checkout/complete instead,
+  // which carries its own copy of this action.
+  const [purchasedTicketId, setPurchasedTicketId] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [emailedTo, setEmailedTo] = useState<string | null>(null);
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState<string | undefined>();
 
@@ -195,8 +202,23 @@ export default function TicketModal({
     }
 
     setBuying(false);
+    setPurchasedTicketId(result.freeTicketId ?? null);
     setPurchased(true);
     onPurchased?.();
+  }
+
+  // Email the just-issued ticket from the success screen (#155). Same server
+  // action the QR sheet uses — owner re-derived from the session.
+  async function handleEmailTicket() {
+    if (!purchasedTicketId || emailStatus === "sending" || emailStatus === "sent") return;
+    setEmailStatus("sending");
+    const result = await emailTicket(purchasedTicketId, locale);
+    if ("ok" in result) {
+      setEmailedTo(result.email);
+      setEmailStatus("sent");
+    } else {
+      setEmailStatus("error");
+    }
   }
 
   function handleBuyExternal() {
@@ -223,7 +245,7 @@ export default function TicketModal({
         </div>
 
         {purchased ? (
-          <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <div className="flex flex-col items-center gap-3 py-8 text-center">
             <div
               className="flex h-16 w-16 items-center justify-center rounded-full text-2xl"
               style={{ backgroundColor: event.accentColor }}
@@ -239,6 +261,62 @@ export default function TicketModal({
                 venue: event.venue,
               })}
             </p>
+
+            {/* Reassure the buyer the ticket is safe in the app, and offer to
+                drop a copy in their inbox too (#155). The note references the
+                Tickets tab by its real name so it's findable. */}
+            <div className="mt-4 flex w-full max-w-xs flex-col gap-3">
+              <div className="flex items-center gap-3 rounded-2xl bg-background/60 px-4 py-3 text-left ring-1 ring-muted/10">
+                <span
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  style={{ backgroundColor: `${event.accentColor}26` }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v1.5a1.5 1.5 0 0 0 0 5V16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1.5a1.5 1.5 0 0 0 0-5V8Z"
+                      stroke={event.accentColor}
+                      strokeWidth="1.7"
+                      strokeLinejoin="round"
+                    />
+                    <path d="M14 6v12" stroke={event.accentColor} strokeWidth="1.7" strokeDasharray="2 2" />
+                  </svg>
+                </span>
+                <p className="text-xs leading-relaxed text-muted">{t("ticket.savedInApp")}</p>
+              </div>
+
+              {purchasedTicketId && (
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={handleEmailTicket}
+                    disabled={emailStatus === "sending" || emailStatus === "sent"}
+                    className="flex w-full items-center justify-center gap-2 rounded-full border border-muted/30 py-3 text-sm font-heading text-foreground disabled:opacity-60"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                      <path
+                        d="m4 7.5 8 5.5 8-5.5"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    {emailStatus === "sending"
+                      ? t("ticket.emailSending")
+                      : emailStatus === "sent"
+                        ? t("ticket.emailSent")
+                        : emailStatus === "error"
+                          ? t("ticket.emailError")
+                          : t("ticket.emailTicket")}
+                  </button>
+                  {emailStatus === "sent" && emailedTo && (
+                    <p className="text-xs text-accent">{t("ticket.emailSentTo", { email: emailedTo })}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <Button className="mt-4" onClick={onClose}>
               {t("common.done")}
             </Button>
