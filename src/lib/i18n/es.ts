@@ -212,6 +212,12 @@ export const es: Messages = {
     createAccount: "Crear cuenta",
     signIn: "Iniciar sesión",
   },
+  checkout: {
+    pendingTitle: "Casi listo",
+    pendingBody: "Este pago aún no se ha completado. Tu entrada aparecerá en cuanto se complete.",
+    errorBody: "No pudimos confirmar el pago. Si se te cobró, tu entrada aparecerá en breve.",
+    viewTickets: "Ver mis entradas",
+  },
 
   landing: {
     tagline: "Conciertos y Bolos",

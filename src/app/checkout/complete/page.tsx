@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { stripe } from "@/lib/stripe";
 import { fulfilCheckoutSession } from "@/lib/fulfilment";
 import { createClient } from "@/lib/supabase/server";
+import { getServerT } from "@/lib/i18n/server";
+import TicketEmailPrompt from "@/components/feed/TicketEmailPrompt";
 
 // Stripe redirects the fan here after payment. The webhook is the authoritative
 // fulfilment path, but it frequently lands *after* the browser does - so this
@@ -22,8 +24,10 @@ export default async function CheckoutCompletePage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/signin");
 
+  const { t } = await getServerT();
+
   let ok = false;
-  let message = "We couldn't confirm this payment. If you were charged, your ticket will appear shortly.";
+  let message = t("checkout.errorBody");
 
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -37,10 +41,24 @@ export default async function CheckoutCompletePage({
       await fulfilCheckoutSession(session);
       ok = true;
     } else {
-      message = "This payment hasn't completed yet. Your ticket will appear once it does.";
+      message = t("checkout.pendingBody");
     }
   } catch {
     // Fall through to the failure message - the webhook remains the backstop.
+  }
+
+  // Resolve the just-bought ticket so the buyer can email it (#155), matching
+  // the free-ticket success screen. Keyed by session id, so it works whichever
+  // path fulfilled the ticket (this page or the webhook).
+  let ticketId: string | null = null;
+  if (ok) {
+    const { data } = await supabase
+      .from("tickets")
+      .select("id")
+      .eq("stripe_session_id", sessionId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    ticketId = (data?.id as string | null) ?? null;
   }
 
   return (
@@ -53,16 +71,22 @@ export default async function CheckoutCompletePage({
         {ok ? "✓" : "…"}
       </div>
       <h1 className="font-display text-2xl text-foreground">
-        {ok ? "You're going!" : "Almost there"}
+        {ok ? t("ticket.goingTitle") : t("checkout.pendingTitle")}
       </h1>
-      <p className="max-w-xs text-sm text-muted">
-        {ok ? "Your ticket and QR code are in My Tickets." : message}
-      </p>
+
+      {ok ? (
+        // The "saved in the app" note + "email me this ticket" option, identical
+        // to the free-ticket success screen inside TicketModal.
+        <TicketEmailPrompt ticketId={ticketId} />
+      ) : (
+        <p className="max-w-xs text-sm text-muted">{message}</p>
+      )}
+
       <Link
         href="/saved"
         className="mt-4 rounded-full bg-primary px-6 py-3 font-heading text-sm text-foreground"
       >
-        View my tickets
+        {t("checkout.viewTickets")}
       </Link>
     </div>
   );

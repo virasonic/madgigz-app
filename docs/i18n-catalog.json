@@ -189,6 +189,12 @@
       "createAccount": "Create account",
       "signIn": "Sign in"
     },
+    "checkout": {
+      "pendingTitle": "Almost there",
+      "pendingBody": "This payment hasn't completed yet. Your ticket will appear once it does.",
+      "errorBody": "We couldn't confirm this payment. If you were charged, your ticket will appear shortly.",
+      "viewTickets": "View my tickets"
+    },
     "landing": {
       "tagline": "Local Gigs & Concerts",
       "fanTitle": "I'm a Fan",
@@ -908,6 +914,12 @@
       "body": "Regístrate para guardar bolos, seguir a artistas y conseguir entradas.",
       "createAccount": "Crear cuenta",
       "signIn": "Iniciar sesión"
+    },
+    "checkout": {
+      "pendingTitle": "Casi listo",
+      "pendingBody": "Este pago aún no se ha completado. Tu entrada aparecerá en cuanto se complete.",
+      "errorBody": "No pudimos confirmar el pago. Si se te cobró, tu entrada aparecerá en breve.",
+      "viewTickets": "Ver mis entradas"
     },
     "landing": {
       "tagline": "Conciertos y Bolos",

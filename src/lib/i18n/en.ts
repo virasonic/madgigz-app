@@ -218,6 +218,12 @@ export const en = {
     createAccount: "Create account",
     signIn: "Sign in",
   },
+  checkout: {
+    pendingTitle: "Almost there",
+    pendingBody: "This payment hasn't completed yet. Your ticket will appear once it does.",
+    errorBody: "We couldn't confirm this payment. If you were charged, your ticket will appear shortly.",
+    viewTickets: "View my tickets",
+  },
 
   landing: {
     tagline: "Local Gigs & Concerts",
