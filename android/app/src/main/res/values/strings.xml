@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MadGigz</string>
+    <string name="title_activity_main">MadGigz</string>
+    <string name="package_name">es.aurasonic.madgigz</string>
+    <string name="custom_url_scheme">es.aurasonic.madgigz</string>
+</resources>
