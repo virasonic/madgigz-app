@@ -109,7 +109,22 @@ function SettingsSheet({
         <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3">
           <div className="h-1 w-10 rounded-full bg-muted/30" />
         </div>
-        <h2 className="font-display text-xl text-foreground">{t("settings.title")}</h2>
+        {/* Explicit close control: the sheet also dismisses on drag / tap-out,
+            but in the native app there's no browser back button, so without a
+            visible X the settings screen felt like a dead end (esp. iOS). */}
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-display text-xl text-foreground">{t("settings.title")}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.close")}
+            className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background text-muted transition-colors hover:bg-primary hover:text-foreground"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
         <div className="mt-4 flex flex-col gap-2">
           <Link
             href="/profile/edit"
