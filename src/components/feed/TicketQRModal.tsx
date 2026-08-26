@@ -154,7 +154,7 @@ export default function TicketQRModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-t-3xl bg-surface p-6 pb-10"
+        className="max-h-[88dvh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10"
         style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
       >
