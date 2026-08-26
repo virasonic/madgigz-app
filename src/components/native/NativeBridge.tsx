@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import { NATIVE_AUTH_REDIRECT, isNativeApp } from "@/lib/native";
 
 // Native-shell wiring, mounted app-wide from the root layout so it's listening
@@ -30,6 +31,17 @@ export default function NativeBridge() {
       const { SplashScreen } = await import("@capacitor/splash-screen");
       const { StatusBar, Style } = await import("@capacitor/status-bar");
 
+      // Android (targetSdk 36) is forced edge-to-edge, and its WebView doesn't
+      // report the status-bar height through env(safe-area-inset-top) the way
+      // iOS's WKWebView does. Left overlaid, content slides up under the status
+      // bar and screen headers / back buttons get clipped. Take the bar out of
+      // overlay mode so the webview lays out BELOW it (the plugin applies the
+      // top inset on Android 15+) and paint it the near-black canvas colour.
+      // iOS keeps its translucent overlay + the env() padding it handles right.
+      if (Capacitor.getPlatform() === "android") {
+        StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
+        StatusBar.setBackgroundColor({ color: "#0a0807" }).catch(() => {});
+      }
       // Light content (white text) reads against the #0a0807 background.
       StatusBar.setStyle({ style: Style.Light }).catch(() => {});
       SplashScreen.hide().catch(() => {});
