@@ -10,10 +10,11 @@ import DiscountsTable from "./DiscountsTable";
 export default async function AdminDiscountsPage() {
   await requireAdmin();
   const admin = adminClient();
-  const [discounts, events] = await Promise.all([
+  const [discounts, eventsResult] = await Promise.all([
     fetchAllDiscounts(admin),
     fetchAllEventsAdmin(admin),
   ]);
+  const events = eventsResult.events;
 
   return (
     <div className="flex flex-col gap-6">

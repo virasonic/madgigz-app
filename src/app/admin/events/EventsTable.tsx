@@ -16,10 +16,13 @@ function statusOf(event: EventItem): Exclude<EventFilter, "all"> {
   return event.active ? "live" : "hidden";
 }
 
-// Module scope so the accessor map is a stable reference across renders (the
-// sort memo depends on it). Date sorts on the timestamp, not the formatted
-// string; "sold" sorts on the raw count.
-const EVENT_COLUMNS: Record<string, SortAccessor<EventItem>> = {
+type EventInterest = { saves: number; clicks: number; shares: number };
+
+// Base columns are module scope (stable reference). The interest columns
+// (saves/clicks/shares) depend on the `interest` map, so they're merged in a
+// memo inside the component. Date sorts on the timestamp, counts on the raw
+// number.
+const BASE_EVENT_COLUMNS: Record<string, SortAccessor<EventItem>> = {
   title: (e) => e.title,
   artist: (e) => e.artist,
   venue: (e) => e.venue,
@@ -28,7 +31,13 @@ const EVENT_COLUMNS: Record<string, SortAccessor<EventItem>> = {
   status: (e) => statusOf(e),
 };
 
-export default function EventsTable({ events }: { events: EventItem[] }) {
+export default function EventsTable({
+  events,
+  interest,
+}: {
+  events: EventItem[];
+  interest: Record<string, EventInterest>;
+}) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -39,7 +48,16 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
     () => (filter === "all" ? events : events.filter((e) => statusOf(e) === filter)),
     [events, filter]
   );
-  const { sorted, sort, toggle } = useTableSort(visible, EVENT_COLUMNS);
+  const columns = useMemo<Record<string, SortAccessor<EventItem>>>(
+    () => ({
+      ...BASE_EVENT_COLUMNS,
+      saves: (e) => interest[e.id]?.saves ?? 0,
+      clicks: (e) => interest[e.id]?.clicks ?? 0,
+      shares: (e) => interest[e.id]?.shares ?? 0,
+    }),
+    [interest]
+  );
+  const { sorted, sort, toggle } = useTableSort(visible, columns);
 
   const counts = useMemo(
     () => ({
@@ -124,6 +142,9 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
           <SortHeader label="Venue" sortKey="venue" sort={sort} onSort={toggle} />
           <SortHeader label="Date" sortKey="date" sort={sort} onSort={toggle} />
           <SortHeader label="Sold / Capacity" sortKey="sold" sort={sort} onSort={toggle} />
+          <SortHeader label="Saves" sortKey="saves" sort={sort} onSort={toggle} />
+          <SortHeader label="Clicks" sortKey="clicks" sort={sort} onSort={toggle} />
+          <SortHeader label="Shares" sortKey="shares" sort={sort} onSort={toggle} />
           <SortHeader label="Status" sortKey="status" sort={sort} onSort={toggle} />
           <th className="pb-2 font-heading" />
         </tr>
@@ -131,7 +152,7 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
       <tbody>
         {sorted.length === 0 && (
           <tr>
-            <td colSpan={7} className="py-4 text-muted">
+            <td colSpan={10} className="py-4 text-muted">
               No {filter === "all" ? "" : filter + " "}events.
             </td>
           </tr>
@@ -154,6 +175,9 @@ export default function EventsTable({ events }: { events: EventItem[] }) {
             <td className="py-2 text-muted">
               {e.sold} / {e.capacity}
             </td>
+            <td className="py-2 text-muted tabular-nums">{interest[e.id]?.saves ?? 0}</td>
+            <td className="py-2 tabular-nums text-accent">{interest[e.id]?.clicks ?? 0}</td>
+            <td className="py-2 text-muted tabular-nums">{interest[e.id]?.shares ?? 0}</td>
             <td className="py-2">
               <span
                 className={

@@ -268,9 +268,37 @@ export async function fetchVenuesAdmin(admin: SupabaseClient): Promise<AdminVenu
   });
 }
 
-export async function fetchAllEventsAdmin(admin: SupabaseClient) {
+export interface EventInterest {
+  saves: number;
+  clicks: number;
+  shares: number;
+}
+
+export async function fetchAllEventsAdmin(
+  admin: SupabaseClient
+): Promise<{ events: EventItem[]; interest: Record<string, EventInterest> }> {
   const { data } = await admin.from("events").select("*").order("event_date");
-  return ((data as EventRow[]) ?? []).map(mapEvent);
+  const events = ((data as EventRow[]) ?? []).map(mapEvent);
+
+  // Interest signals per event, aggregated in one pass each (two queries total,
+  // not N-per-event). Fine at launch volume; if saved_events / event_link_clicks
+  // grow large, move this to a grouped DB view. event_link_clicks may be absent
+  // pre-addendum_044 (→ empty), and its `kind` column absent pre-045 (select *
+  // just omits it → counted as a click, which is what it was).
+  const interest: Record<string, EventInterest> = {};
+  const bump = (id: string, key: keyof EventInterest) => {
+    (interest[id] ??= { saves: 0, clicks: 0, shares: 0 })[key] += 1;
+  };
+
+  const { data: saves } = await admin.from("saved_events").select("event_id");
+  for (const s of (saves as { event_id: string }[]) ?? []) bump(s.event_id, "saves");
+
+  const { data: clicks } = await admin.from("event_link_clicks").select("*");
+  for (const c of (clicks as { event_id: string; kind?: string | null }[]) ?? []) {
+    bump(c.event_id, c.kind === "share" ? "shares" : "clicks");
+  }
+
+  return { events, interest };
 }
 
 export interface AdminTicketRow {

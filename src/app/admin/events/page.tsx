@@ -5,7 +5,7 @@ import EventsTable from "./EventsTable";
 export default async function AdminEventsPage() {
   await requireAdmin();
   const admin = adminClient();
-  const events = await fetchAllEventsAdmin(admin);
+  const { events, interest } = await fetchAllEventsAdmin(admin);
 
   return (
     <div className="flex flex-col gap-6">
@@ -30,7 +30,7 @@ export default async function AdminEventsPage() {
         </div>
       </div>
       <div className="rounded-2xl bg-surface p-5">
-        <EventsTable events={events} />
+        <EventsTable events={events} interest={interest} />
       </div>
     </div>
   );
