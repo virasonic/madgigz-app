@@ -541,3 +541,19 @@ export async function fetchShowsByArtist(
     .order("event_date");
   return ((data as EventRow[]) ?? []).map(mapEvent);
 }
+
+// MadGigz-organised gigs: ownerless (no artist_id) and MadGigz-ticketed
+// (internal). Surfaced on an admin's own profile so they manage and scan them
+// like an artist's own shows (#157) - the natural home on mobile, rather than
+// the admin panel. Externally-ticketed ownerless imports are excluded: there
+// are no MadGigz tickets to scan on those. Events are world-readable, so the
+// admin's session can read these directly.
+export async function fetchMadGigzShows(supabase: SupabaseClient): Promise<EventItem[]> {
+  const { data } = await supabase
+    .from("events")
+    .select("*, venues(address)")
+    .is("artist_id", null)
+    .eq("ticketing_mode", "internal")
+    .order("event_date");
+  return ((data as EventRow[]) ?? []).map(mapEvent);
+}
