@@ -2928,3 +2928,31 @@ alter table public.profiles
 alter table public.content_posts
   add column if not exists headline_es text,
   add column if not exists caption_es  text;
+
+
+-- ############# addendum_044_event_link_clicks.sql #############
+
+create table if not exists public.event_link_clicks (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events(id) on delete cascade,
+  user_id uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index if not exists event_link_clicks_event_idx
+  on public.event_link_clicks (event_id);
+alter table public.event_link_clicks enable row level security;
+create or replace function public.record_event_link_click(p_event_id uuid)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  -- Ignore anything that isn't a real event, so a bad id can't grow the table.
+  if not exists (select 1 from public.events where id = p_event_id) then
+    return;
+  end if;
+  insert into public.event_link_clicks (event_id, user_id)
+  values (p_event_id, auth.uid());
+end;
+$$;
+grant execute on function public.record_event_link_click(uuid) to anon, authenticated;

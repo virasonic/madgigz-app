@@ -122,6 +122,19 @@ export default async function AdminEventDetailPage({
         />
       </div>
 
+      {/* Interest signals: who saved the show, and how many opened its ticket
+          link / started checkout - useful before (or instead of) sales, esp.
+          for externally-ticketed shows we don't sell for. */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Saves" value={String(stats.savesCount)} hint="fans who saved this" />
+        <StatCard
+          label="Ticket clicks"
+          value={String(stats.clicksCount)}
+          hint={isExternal ? "external link opens" : "opened / started checkout"}
+          tone="accent"
+        />
+      </div>
+
       {!isExternal && <TierManager eventId={eventId} initialTiers={tiers} />}
 
       <div className="rounded-2xl bg-surface p-5">

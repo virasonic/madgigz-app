@@ -362,6 +362,8 @@ export interface AdminEventDetail {
     refundedOrders: number;
     refundedCents: number;
     checkedInCount: number;
+    savesCount: number;
+    clicksCount: number;
   };
   orders: AdminEventOrder[];
   discountUsage: AdminEventDiscountUsage[];
@@ -377,6 +379,18 @@ export async function fetchEventDetail(
   const { data: eventRow } = await admin.from("events").select("*").eq("id", eventId).single();
   if (!eventRow) return null;
   const event = mapEvent(eventRow as EventRow);
+
+  // Interest signals shown next to sales. Saves come from the existing
+  // saved_events table; clicks from event_link_clicks (addendum_044) - which may
+  // not exist yet, in which case the query returns a null count, not a throw.
+  const { count: savesCount } = await admin
+    .from("saved_events")
+    .select("*", { count: "exact", head: true })
+    .eq("event_id", eventId);
+  const { count: clicksCount } = await admin
+    .from("event_link_clicks")
+    .select("*", { count: "exact", head: true })
+    .eq("event_id", eventId);
 
   const { data: ticketRows } = await admin
     .from("tickets")
@@ -434,6 +448,8 @@ export async function fetchEventDetail(
     refundedOrders: refunded.length,
     refundedCents: refunded.reduce((sum, o) => sum + o.pricePaidCents, 0),
     checkedInCount: live.filter((o) => o.checkedInAt).length,
+    savesCount: savesCount ?? 0,
+    clicksCount: clicksCount ?? 0,
   };
 
   // Grouped by discount_id (not the code string) so two different codes that

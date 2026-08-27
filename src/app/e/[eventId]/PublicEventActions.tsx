@@ -11,6 +11,7 @@ import { EventItem } from "@/lib/types";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { isNativeApp, openExternal } from "@/lib/native";
+import { recordEventLinkClick } from "@/lib/track";
 
 export default function PublicEventActions({
   event,
@@ -65,6 +66,7 @@ export default function PublicEventActions({
           rel="noopener noreferrer"
           className="block"
           onClick={(e) => {
+            recordEventLinkClick(event.id);
             if (isNativeApp()) {
               e.preventDefault();
               void openExternal(externalUrl);
