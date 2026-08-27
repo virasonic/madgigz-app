@@ -109,7 +109,8 @@ export async function fetchDashboardStats(admin: SupabaseClient) {
     pendingArtistCount: pendingArtistCount ?? 0,
     ticketsSold,
     revenue,
-    signupsByDay: Array.from(signupsByDay.entries()).sort(([a], [b]) => a.localeCompare(b)),
+    // Most recent day first, so the newest signups sit at the top of the list.
+    signupsByDay: Array.from(signupsByDay.entries()).sort(([a], [b]) => b.localeCompare(a)),
   };
 }
 
