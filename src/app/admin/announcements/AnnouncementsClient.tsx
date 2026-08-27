@@ -276,9 +276,11 @@ function Row({ item }: { item: AdminAnnouncement }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // Text announcements carry a headline; uploads (image/video) are caption-only,
-  // matching the two composers above.
-  const isText = item.mediaType === "text";
+  // Text/template announcements carry a headline; uploads (image/video) are
+  // caption-only. Key off the headline's presence, not media_type — older posts
+  // predate the media_type:"text" convention and would otherwise hide the
+  // Spanish headline field.
+  const isText = item.mediaType === "text" || Boolean(item.headline);
 
   // Local copies so the row reflects a save without a full page reload. Editing
   // toggles the inline Spanish fields.
