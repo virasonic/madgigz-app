@@ -133,6 +133,7 @@ export default async function AdminEventDetailPage({
           hint={isExternal ? "external link opens" : "opened / started checkout"}
           tone="accent"
         />
+        <StatCard label="Shares" value={String(stats.sharesCount)} hint="link shared / copied" />
       </div>
 
       {!isExternal && <TierManager eventId={eventId} initialTiers={tiers} />}

@@ -364,6 +364,7 @@ export interface AdminEventDetail {
     checkedInCount: number;
     savesCount: number;
     clicksCount: number;
+    sharesCount: number;
   };
   orders: AdminEventOrder[];
   discountUsage: AdminEventDiscountUsage[];
@@ -381,16 +382,25 @@ export async function fetchEventDetail(
   const event = mapEvent(eventRow as EventRow);
 
   // Interest signals shown next to sales. Saves come from the existing
-  // saved_events table; clicks from event_link_clicks (addendum_044) - which may
-  // not exist yet, in which case the query returns a null count, not a throw.
+  // saved_events table. Ticket clicks + shares share the event_link_clicks table
+  // (addendum_044/045), split by `kind`. Clicks = total − shares, which is
+  // correct both before addendum_045 (no kind column → the shares query errors →
+  // 0 → clicks = total) and after; a missing table (pre-044) → null counts → 0.
   const { count: savesCount } = await admin
     .from("saved_events")
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId);
-  const { count: clicksCount } = await admin
+  const { count: interactionsTotal } = await admin
     .from("event_link_clicks")
     .select("*", { count: "exact", head: true })
     .eq("event_id", eventId);
+  const { count: sharesRaw } = await admin
+    .from("event_link_clicks")
+    .select("*", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .eq("kind", "share");
+  const sharesCount = sharesRaw ?? 0;
+  const clicksCount = Math.max(0, (interactionsTotal ?? 0) - sharesCount);
 
   const { data: ticketRows } = await admin
     .from("tickets")
@@ -449,7 +459,8 @@ export async function fetchEventDetail(
     refundedCents: refunded.reduce((sum, o) => sum + o.pricePaidCents, 0),
     checkedInCount: live.filter((o) => o.checkedInAt).length,
     savesCount: savesCount ?? 0,
-    clicksCount: clicksCount ?? 0,
+    clicksCount,
+    sharesCount,
   };
 
   // Grouped by discount_id (not the code string) so two different codes that

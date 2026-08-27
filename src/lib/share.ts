@@ -1,5 +1,6 @@
 import { EventItem } from "@/lib/types";
 import { absoluteUrl, eventPath } from "@/lib/site";
+import { recordEventShare } from "@/lib/track";
 
 export type ShareOutcome = "shared" | "copied" | "cancelled" | "failed";
 
@@ -53,6 +54,7 @@ export async function shareEvent(event: EventItem): Promise<ShareOutcome> {
       // concatenate a description onto the link - and a title is displayed as
       // a label by targets that use it, rather than appended to the URL.
       await navigator.share({ title: `${event.title} - ${event.artist}`, url });
+      recordEventShare(event.id); // interest signal (#shares) - only on a real share
       return "shared";
     } catch (error) {
       // Dismissing the share sheet rejects with AbortError. That's a decision,
@@ -64,6 +66,7 @@ export async function shareEvent(event: EventItem): Promise<ShareOutcome> {
 
   try {
     await navigator.clipboard.writeText(url);
+    recordEventShare(event.id); // link copied counts as a share too
     return "copied";
   } catch {
     // Clipboard access needs a secure context, a visible document, and can be
