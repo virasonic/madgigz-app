@@ -34,7 +34,11 @@ export default function ScanTicketsPage() {
   useEffect(() => {
     const supabase = createClient();
     fetchCurrentUser(supabase).then((user) => {
-      if (!user || !canActAsArtist(user)) {
+      // Artists scan their own gigs; admins also scan MadGigz-organised
+      // (ownerless) gigs (#157), even if the admin account isn't an approved
+      // artist. The database still enforces which tickets each can actually read
+      // and check in (RLS) - this only widens who reaches the scanner.
+      if (!user || (!canActAsArtist(user) && user.role !== "admin")) {
         router.replace("/profile");
         return;
       }

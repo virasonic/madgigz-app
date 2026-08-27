@@ -84,6 +84,19 @@ export default async function AdminEventDetailPage({
           {event.artist} · {event.venue} ·{" "}
           {new Date(event.date).toLocaleDateString("en-GB", { timeZone: "UTC" })}
         </p>
+
+        {/* Door tool (#157): MadGigz-organised (ownerless) ticketed gigs are
+            scanned by an admin, since the artist scanner keys on the (null)
+            owner. Only shown where there are MadGigz tickets to scan — not for
+            externally-ticketed or cancelled shows. Works from the phone app. */}
+        {!event.artistId && !isExternal && !event.cancelled && (
+          <Link
+            href="/profile/scan"
+            className="mt-3 inline-flex items-center rounded-full bg-primary px-4 py-2 font-heading text-sm text-foreground"
+          >
+            Scan tickets at the door
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

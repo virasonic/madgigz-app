@@ -2976,3 +2976,23 @@ begin
 end;
 $$;
 grant execute on function public.record_event_share(uuid) to anon, authenticated;
+
+
+-- ############# addendum_046_admin_scan_madgigz_gigs.sql #############
+
+create policy "Admins can view tickets for MadGigz events" on public.tickets
+  for select to authenticated
+  using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+    and exists (
+      select 1 from public.events e where e.id = tickets.event_id and e.artist_id is null
+    )
+  );
+create policy "Admins can check in tickets for MadGigz events" on public.tickets
+  for update to authenticated
+  using (
+    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
+    and exists (
+      select 1 from public.events e where e.id = tickets.event_id and e.artist_id is null
+    )
+  );

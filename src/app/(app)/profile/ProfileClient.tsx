@@ -83,6 +83,7 @@ function SettingsSheet({
   payoutReady,
   fiscalProvided,
   isArtist,
+  isAdmin,
 }: {
   onClose: () => void;
   onSendFeedback: () => void;
@@ -92,6 +93,7 @@ function SettingsSheet({
   payoutReady: boolean;
   fiscalProvided: boolean;
   isArtist: boolean;
+  isAdmin: boolean;
 }) {
   const { t, locale, setLocale } = useT();
   const { handleProps, sheetStyle } = useDragToDismiss(onClose);
@@ -135,6 +137,19 @@ function SettingsSheet({
               {isArtist ? t("settings.editProfileBioPhoto") : t("settings.editProfilePhoto")}
             </span>
           </Link>
+
+          {/* Mobile entry to the web admin panel (#157) - the desktop SideNav
+              already links here, but the phone had no way in. Label stays
+              English on purpose: the admin panel is English-only by design. */}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
+            >
+              <span className="text-sm text-foreground">Admin panel</span>
+              <span className="text-xs text-muted">Manage gigs, scan at the door</span>
+            </Link>
+          )}
 
           {/* Detected from the browser on the first visit; this is the manual
               override, remembered after. */}
@@ -715,6 +730,7 @@ export default function ProfileClient({
           payoutReady={user.stripePayoutsReady}
           fiscalProvided={fiscalProvided}
           isArtist={artistTools}
+          isAdmin={user.role === "admin"}
         />
       )}
       {feedbackOpen && <FeedbackDialog onClose={() => setFeedbackOpen(false)} />}
