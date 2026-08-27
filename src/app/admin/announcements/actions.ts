@@ -132,6 +132,44 @@ export async function createAnnouncement(form: FormData): Promise<{ error: strin
   return { error: null };
 }
 
+// Add or change the Spanish variants on an announcement that already exists -
+// the "editable later" the create path promised. Lets an admin translate the
+// English-only announcements posted before addendum_043 without re-posting them
+// (which would lose their place in the feed). Scoped to event_id null so it
+// can't touch an artist's post, exactly like deleteAnnouncement.
+export async function updateAnnouncementLocale(input: {
+  id: string;
+  headlineEs: string;
+  captionEs: string;
+}): Promise<{ error: string | null }> {
+  await requireAdmin();
+
+  const headlineEs = input.headlineEs.trim();
+  const captionEs = input.captionEs.trim();
+  if (headlineEs.length > 120) return { error: "Spanish headline is a bit long - keep it punchy" };
+  if (captionEs.length > 500) return { error: "Spanish caption is over 500 characters" };
+
+  const { error } = await adminClient()
+    .from("content_posts")
+    .update({ headline_es: headlineEs || null, caption_es: captionEs || null })
+    .eq("id", input.id)
+    .is("event_id", null);
+
+  if (error) {
+    // Ship-before-SQL: if addendum_043 hasn't been run on this project yet the
+    // columns don't exist (42703). Say so plainly rather than a generic failure.
+    if (error.code === "42703") {
+      return { error: "The Spanish columns aren't in this database yet — run addendum_043, then try again." };
+    }
+    console.error("announcement locale update failed:", error);
+    return { error: "Couldn't save the Spanish. Please try again." };
+  }
+
+  revalidatePath("/admin/announcements");
+  revalidatePath("/feed");
+  return { error: null };
+}
+
 export async function deleteAnnouncement(id: string): Promise<{ error: string | null }> {
   await requireAdmin();
 

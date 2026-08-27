@@ -1,7 +1,12 @@
 "use client";
 
 import { FormEvent, useRef, useState, useTransition } from "react";
-import { createAnnouncement, createTextAnnouncement, deleteAnnouncement } from "./actions";
+import {
+  createAnnouncement,
+  createTextAnnouncement,
+  deleteAnnouncement,
+  updateAnnouncementLocale,
+} from "./actions";
 
 export interface AdminAnnouncement {
   id: string;
@@ -271,6 +276,45 @@ function Row({ item }: { item: AdminAnnouncement }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  // Text announcements carry a headline; uploads (image/video) are caption-only,
+  // matching the two composers above.
+  const isText = item.mediaType === "text";
+
+  // Local copies so the row reflects a save without a full page reload. Editing
+  // toggles the inline Spanish fields.
+  const [headlineEs, setHeadlineEs] = useState(item.headlineEs ?? "");
+  const [captionEs, setCaptionEs] = useState(item.captionEs ?? "");
+  const [editing, setEditing] = useState(false);
+  const [draftHeadline, setDraftHeadline] = useState(headlineEs);
+  const [draftCaption, setDraftCaption] = useState(captionEs);
+
+  const hasEs = Boolean(headlineEs || captionEs);
+
+  function openEditor() {
+    setDraftHeadline(headlineEs);
+    setDraftCaption(captionEs);
+    setError(null);
+    setEditing(true);
+  }
+
+  function saveEs() {
+    setError(null);
+    startTransition(async () => {
+      const result = await updateAnnouncementLocale({
+        id: item.id,
+        headlineEs: isText ? draftHeadline : "",
+        captionEs: draftCaption,
+      });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setHeadlineEs(isText ? draftHeadline.trim() : "");
+      setCaptionEs(draftCaption.trim());
+      setEditing(false);
+    });
+  }
+
   return (
     <div className="flex items-start gap-4 rounded-2xl bg-surface p-4">
       {item.mediaType === "text" ? (
@@ -294,13 +338,67 @@ function Row({ item }: { item: AdminAnnouncement }) {
       <div className="min-w-0 flex-1">
         {item.headline && <p className="text-sm font-heading text-foreground">{item.headline}</p>}
         <p className="text-sm text-muted">{item.caption}</p>
-        {(item.headlineEs || item.captionEs) && (
+
+        {!editing && hasEs && (
           <p className="mt-1 text-xs text-accent">
-            ES: {item.headlineEs ?? ""}
-            {item.headlineEs && item.captionEs ? " — " : ""}
-            {item.captionEs ?? ""}
+            ES: {headlineEs}
+            {headlineEs && captionEs ? " — " : ""}
+            {captionEs}
           </p>
         )}
+
+        {editing ? (
+          <div className="mt-2 flex flex-col gap-2 rounded-xl border border-dashed border-muted/20 p-3">
+            <span className="text-xs font-heading uppercase tracking-wide text-muted">Spanish</span>
+            {isText && (
+              <input
+                value={draftHeadline}
+                onChange={(e) => setDraftHeadline(e.target.value)}
+                maxLength={120}
+                placeholder="Titular en español"
+                className="w-full rounded-lg border border-muted/20 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            )}
+            <textarea
+              value={draftCaption}
+              onChange={(e) => setDraftCaption(e.target.value)}
+              rows={2}
+              maxLength={500}
+              placeholder={isText ? "Texto en español (opcional)" : "Texto en español"}
+              className="w-full rounded-lg border border-muted/20 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={saveEs}
+                disabled={isPending}
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-heading text-foreground hover:bg-primary-dark disabled:opacity-50"
+              >
+                {isPending ? "Saving..." : "Save Spanish"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(false);
+                  setError(null);
+                }}
+                disabled={isPending}
+                className="rounded-lg px-3 py-1.5 text-xs font-heading text-muted hover:bg-muted/20 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={openEditor}
+            className="mt-1 text-xs font-heading text-accent hover:underline"
+          >
+            {hasEs ? "Edit Spanish" : "+ Add Spanish"}
+          </button>
+        )}
+
         <p className="mt-1 text-xs text-muted">
           {new Date(item.createdAt).toLocaleString("en-GB", {
             day: "numeric",
