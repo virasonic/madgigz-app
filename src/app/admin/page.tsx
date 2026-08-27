@@ -67,7 +67,15 @@ export default async function AdminDashboardPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-7">
         <StatCard label="Users" value={String(stats.userCount)} href="/admin/users" />
         <StatCard label="Events" value={String(stats.eventCount)} href="/admin/events" />
-        <StatCard label="Tickets sold" value={String(stats.ticketsSold)} />
+        <StatCard
+          label="Tickets sold"
+          // Net of refunds, with the gross total in brackets when they differ.
+          value={
+            stats.ticketsSoldTotal !== stats.ticketsSold
+              ? `${stats.ticketsSold} (${stats.ticketsSoldTotal})`
+              : String(stats.ticketsSold)
+          }
+        />
         <StatCard label="Revenue" value={`€${stats.revenue.toFixed(2)}`} href="/admin/billing" />
         <StatCard
           label="Pending artists"

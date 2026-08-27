@@ -90,11 +90,19 @@ export async function fetchDashboardStats(admin: SupabaseClient) {
         .select("*", { count: "exact", head: true })
         .eq("role", "artist")
         .eq("artist_status", "pending"),
-      admin.from("tickets").select("quantity, price_paid, purchased_at"),
+      admin.from("tickets").select("quantity, price_paid, purchased_at, refunded"),
     ]);
 
-  const ticketsSold = (tickets ?? []).reduce((sum, t) => sum + t.quantity, 0);
-  const revenue = (tickets ?? []).reduce((sum, t) => sum + Number(t.price_paid), 0);
+  // Net tickets sold (refunds removed) is the headline; the gross total is kept
+  // for the "(N)" in brackets. Revenue already excludes refunds - that money
+  // went back to the buyer.
+  const ticketsSoldTotal = (tickets ?? []).reduce((sum, t) => sum + t.quantity, 0);
+  const ticketsSold = (tickets ?? [])
+    .filter((t) => !t.refunded)
+    .reduce((sum, t) => sum + t.quantity, 0);
+  const revenue = (tickets ?? [])
+    .filter((t) => !t.refunded)
+    .reduce((sum, t) => sum + Number(t.price_paid), 0);
 
   const { data: profileDates } = await admin.from("profiles").select("created_at");
   const signupsByDay = new Map<string, number>();
@@ -108,6 +116,7 @@ export async function fetchDashboardStats(admin: SupabaseClient) {
     eventCount: eventCount ?? 0,
     pendingArtistCount: pendingArtistCount ?? 0,
     ticketsSold,
+    ticketsSoldTotal,
     revenue,
     // Most recent day first, so the newest signups sit at the top of the list.
     signupsByDay: Array.from(signupsByDay.entries()).sort(([a], [b]) => b.localeCompare(a)),
