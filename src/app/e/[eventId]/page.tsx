@@ -3,7 +3,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { fetchEventById, fetchEventGenreNames } from "@/lib/supabase/queries";
+import {
+  fetchEventById,
+  fetchEventGenreNames,
+  fetchTaggedArtistProfiles,
+} from "@/lib/supabase/queries";
+import { buildLineupLinks, normName } from "@/lib/lineup-links";
 import { absoluteUrl, eventPath, mapsUrl } from "@/lib/site";
 import PublicEventActions from "./PublicEventActions";
 import BackButton from "@/components/ui/BackButton";
@@ -79,12 +84,17 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
   // to be told it's off, not shown a 404.
   if (!event || !event.active) notFound();
 
-  const [genres, { data: auth }] = await Promise.all([
+  const [genres, { data: auth }, tagged] = await Promise.all([
     fetchEventGenreNames(supabase, event.id),
     supabase.auth.getUser(),
+    fetchTaggedArtistProfiles(supabase, event.id),
   ]);
   const signedIn = Boolean(auth.user);
   const { t, locale } = await getServerT();
+
+  // Line-up act name -> profile id, for the ones that are tagged MadGigz artists
+  // (or the owner). Non-matching acts stay plain text.
+  const lineupLinks = buildLineupLinks(tagged, { id: event.artistId, name: event.artist });
 
   const soldOut = event.capacity - event.sold <= 0;
 
@@ -182,12 +192,24 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
               {t("eventPage.lineup")}
             </h2>
             <ol className="flex flex-col gap-1 text-sm text-foreground/90">
-              {event.lineup.map((act, index) => (
-                <li key={act}>
-                  {index + 1}. {act}
-                  {index === 0 && <span className="ml-2 text-xs text-accent">{t("ticket.headliner")}</span>}
-                </li>
-              ))}
+              {event.lineup.map((act, index) => {
+                const profileId = lineupLinks[normName(act)];
+                return (
+                  <li key={act}>
+                    {index + 1}.{" "}
+                    {profileId ? (
+                      <Link href={`/profile/${profileId}`} className="text-accent hover:underline">
+                        {act}
+                      </Link>
+                    ) : (
+                      act
+                    )}
+                    {index === 0 && (
+                      <span className="ml-2 text-xs text-accent">{t("ticket.headliner")}</span>
+                    )}
+                  </li>
+                );
+              })}
             </ol>
           </>
         )}

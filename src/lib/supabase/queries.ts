@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ARTIST_CAPABLE_ROLES } from "@/lib/roles";
+import type { TaggedArtist } from "@/lib/lineup-links";
 import {
   ContentPost,
   ContentPostRow,
@@ -477,6 +478,26 @@ export async function fetchTaggedArtistIds(
     .select("profile_id")
     .eq("event_id", eventId);
   return (data ?? []).map((row) => row.profile_id as string);
+}
+
+// The tagged artists' public identity - id + names - so a printed line-up name
+// can be linked to the artist's profile when it matches (#lineup links).
+// event_artists and the public profile columns are world-readable, so this runs
+// on the fan's own session.
+export async function fetchTaggedArtistProfiles(
+  supabase: SupabaseClient,
+  eventId: string
+): Promise<TaggedArtist[]> {
+  const { data } = await supabase
+    .from("event_artists")
+    .select("profiles(id, username, artist_name)")
+    .eq("event_id", eventId);
+  return ((data ?? []) as unknown as {
+    profiles: { id: string; username: string; artist_name: string | null } | null;
+  }[])
+    .map((row) => row.profiles)
+    .filter((p): p is NonNullable<typeof p> => !!p)
+    .map((p) => ({ id: p.id, username: p.username, artistName: p.artist_name }));
 }
 
 // Shows an artist was tagged on but doesn't own. Kept separate from

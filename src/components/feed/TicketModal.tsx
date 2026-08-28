@@ -19,6 +19,8 @@ import { useLiveEventStats } from "@/lib/realtime";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 import { openExternal } from "@/lib/native";
 import { recordEventLinkClick } from "@/lib/track";
+import { fetchTaggedArtistProfiles } from "@/lib/supabase/queries";
+import { buildLineupLinks, normName } from "@/lib/lineup-links";
 
 type Tab = "tickets" | "info";
 
@@ -84,6 +86,21 @@ export default function TicketModal({
   // still-available tier.
   const [tiers, setTiers] = useState<EventTier[]>([]);
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
+
+  // Line-up act name -> profile id, so a printed act that's a tagged MadGigz
+  // artist (or the owner) links to their profile. Fetched once per event.
+  const [lineupLinks, setLineupLinks] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const tagged = await fetchTaggedArtistProfiles(createClient(), event.id);
+      if (cancelled) return;
+      setLineupLinks(buildLineupLinks(tagged, { id: event.artistId, name: event.artist }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [event.id, event.artistId, event.artist]);
 
   useEffect(() => {
     let cancelled = false;
@@ -497,15 +514,27 @@ export default function TicketModal({
                 <div>
                   <h3 className="font-heading text-sm text-muted">{t("ticket.lineup")}</h3>
                   <ol className="mt-2 flex flex-col gap-1.5">
-                    {event.lineup.map((act, i) => (
-                      <li key={act} className="flex items-baseline gap-2 text-sm text-foreground">
-                        <span className="text-muted">{i + 1}.</span>
-                        <span className={i === 0 ? "font-heading" : undefined}>{act}</span>
-                        {i === 0 && (
-                          <span className="text-xs uppercase text-muted">{t("ticket.headliner")}</span>
-                        )}
-                      </li>
-                    ))}
+                    {event.lineup.map((act, i) => {
+                      const profileId = lineupLinks[normName(act)];
+                      return (
+                        <li key={act} className="flex items-baseline gap-2 text-sm text-foreground">
+                          <span className="text-muted">{i + 1}.</span>
+                          {profileId ? (
+                            <Link
+                              href={`/profile/${profileId}`}
+                              className={`text-accent hover:underline ${i === 0 ? "font-heading" : ""}`}
+                            >
+                              {act}
+                            </Link>
+                          ) : (
+                            <span className={i === 0 ? "font-heading" : undefined}>{act}</span>
+                          )}
+                          {i === 0 && (
+                            <span className="text-xs uppercase text-muted">{t("ticket.headliner")}</span>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ol>
                 </div>
 
