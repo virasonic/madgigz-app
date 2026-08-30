@@ -43,10 +43,24 @@ export default function SideNav({
   const { t } = useT();
   const liveUnread = useLiveUnreadCount(userId, unreadCount);
 
-  // The rail's search box hands off to Explore, which owns the actual search
-  // (its own box seeds from ?q). Enter navigates; an empty query just opens
-  // Explore. A launcher, not a second search implementation to keep in step.
+  // The rail search drives Explore's results live: as you type it updates the
+  // Explore query, and Explore re-syncs its filter from ?q (adjust-state-during-
+  // render, see ExploreClient) so results appear as you type — reusing Explore's
+  // search, not a second implementation. While already on Explore we update ?q
+  // *shallowly* via the History API (the #102 trick useUrlModal uses) so the
+  // server component doesn't re-run and scroll doesn't jump; from any other page
+  // we navigate to Explore once, then subsequent keystrokes go shallow.
   const [search, setSearch] = useState("");
+  function runSearch(value: string) {
+    setSearch(value);
+    const q = value.trim();
+    const url = q ? `/explore?q=${encodeURIComponent(q)}` : "/explore";
+    if (pathname === "/explore") {
+      window.history.replaceState(null, "", url);
+    } else {
+      router.push(url);
+    }
+  }
   function submitSearch(e: React.FormEvent) {
     e.preventDefault();
     const q = search.trim();
@@ -103,7 +117,7 @@ export default function SideNav({
           <input
             type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => runSearch(e.target.value)}
             placeholder={t("explore.searchPlaceholder")}
             aria-label={t("explore.searchPlaceholder")}
             className="w-full rounded-xl border border-muted/20 bg-surface py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"

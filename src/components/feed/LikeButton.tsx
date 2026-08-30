@@ -9,6 +9,8 @@ function HeartIcon({ filled, size }: { filled: boolean; size: number }) {
         d="M12 20.5s-7.5-4.6-10-9.3C.5 8 2 4.5 5.5 4c2-.3 3.7.6 5 2.3C11.8 4.6 13.5 3.7 15.5 4c3.5.5 5 4 3.5 7.2-2.5 4.7-10 9.3-10 9.3Z"
         stroke="currentColor"
         strokeWidth={filled ? 0 : 1.8}
+        strokeLinejoin="round"
+        strokeLinecap="round"
       />
     </svg>
   );
