@@ -130,6 +130,22 @@ export function PlusIcon(active: boolean) {
   );
 }
 
+// Settings. Desktop SideNav only — mobile reaches Settings from the gear on the
+// profile screen, so the bottom nav skips it. Opens the same ?settings=1 sheet.
+export function GearIcon(active: boolean) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+      <path
+        d="M12 2.5v2.2M12 19.3v2.2M4.2 7l1.9 1.1M17.9 15.9l1.9 1.1M4.2 17l1.9-1.1M17.9 8.1l1.9-1.1"
+        stroke="currentColor"
+        strokeWidth={active ? 2.4 : 1.8}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 // Notifications. The bell lives on the Profile tab dot on mobile, but the
 // desktop sidebar gives it its own row, so it needs its own icon.
 export function BellIcon(active: boolean) {

@@ -8,7 +8,7 @@ import { ArtistStatus, Role } from "@/lib/types";
 import { canActAsArtist, isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useLiveUnreadCount } from "@/lib/realtime";
-import { BellIcon, ExploreIcon, FeedIcon, MegaphoneIcon, NoteIcon, PersonIcon, PlusIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
+import { BellIcon, ExploreIcon, FeedIcon, GearIcon, MegaphoneIcon, NoteIcon, PersonIcon, PlusIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
 
 interface NavItem {
   href: string;
@@ -23,7 +23,7 @@ interface NavItem {
 // active-state logic with BottomNav so the two can't drift.
 // Personal rows a guest can't use - routed to sign-in (with next) instead of
 // opening a page that would just bounce them.
-const GUEST_GATED = new Set(["/saved", "/notifications", "/profile"]);
+const GUEST_GATED = new Set(["/saved", "/notifications", "/profile", "/profile?settings=1"]);
 
 export default function SideNav({
   role,
@@ -82,6 +82,12 @@ export default function SideNav({
   if (role === "admin") {
     items.push({ href: "/admin", label: "Admin panel", icon: ShieldIcon });
   }
+
+  // Settings sits last, mirroring the profile gear. It opens the same ?settings=1
+  // sheet (useUrlModal) that ProfileClient renders, so navigating here from any
+  // page lands on the profile with Settings open. Never pathname-active (its href
+  // carries a query the pathname never has) — it's an action, like Announcements.
+  items.push({ href: "/profile?settings=1", label: t("settings.title"), icon: GearIcon });
 
   return (
     <nav className="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:gap-1 lg:border-r lg:border-muted/15 lg:px-3 lg:py-5">
