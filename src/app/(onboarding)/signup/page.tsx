@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BackButton from "@/components/ui/BackButton";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
@@ -212,8 +213,14 @@ function SignUpForm() {
     router.push(`/signup/verify-email?${params.toString()}`);
   }
 
+  // Back to the landing role picker (#feedback: a fan who taps "I'm an artist"
+  // by mistake had no way back). Preserves `next` so a shared-link signup still
+  // lands where it was headed.
+  const backHref = next ? `/?next=${encodeURIComponent(next)}` : "/";
+
   return (
     <div className="flex flex-1 flex-col">
+      <BackButton href={backHref} className="mb-4" />
       <span
         className={`w-fit rounded-full px-3 py-1 text-xs font-heading uppercase tracking-wide ${
           role === "artist" ? "bg-accent-dark text-foreground" : "bg-primary text-foreground"
