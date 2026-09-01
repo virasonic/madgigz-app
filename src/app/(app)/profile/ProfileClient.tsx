@@ -260,6 +260,35 @@ function ShowRow({ show, onOpen }: { show: EventItem; onOpen: () => void }) {
   );
 }
 
+// A show the artist is tagged on but doesn't own — read-only (details + content,
+// no editing). Used both under "Tagged in" and, when upcoming, surfaced in the
+// upcoming list too (#156 follow-up).
+function TaggedShowCard({ show, onOpen }: { show: EventItem; onOpen: () => void }) {
+  const { t, locale } = useT();
+  const dl = dateLocale(locale);
+  return (
+    <button
+      onClick={onOpen}
+      className="flex items-center gap-3 rounded-2xl bg-surface p-3 text-left"
+    >
+      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-background">
+        <Image src={show.image} alt="" fill sizes="56px" className="object-cover" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-heading text-sm text-foreground">{show.title}</p>
+        <p className="truncate text-xs text-muted">
+          {new Date(show.date).toLocaleDateString(dl, {
+            day: "numeric",
+            month: "short",
+            timeZone: "UTC",
+          })}{" "}
+          · {show.venue} · {t("profile.byArtist", { artist: show.artist })}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 interface ProfileClientProps {
   user: AppUser;
   savedCount: number;
@@ -331,6 +360,13 @@ export default function ProfileClient({
   const pastShows = useMemo(
     () => shows.filter((show) => show.active && show.date < TODAY),
     [shows]
+  );
+  // Shows the artist is tagged on that are still to come — surfaced under
+  // "upcoming" as well as "tagged in" (Vir, 1 Sep 2026), so a future gig you're
+  // on the bill for isn't buried below your own shows.
+  const upcomingTagged = useMemo(
+    () => taggedShows.filter((show) => show.active && show.date >= TODAY),
+    [taggedShows]
   );
   const hiddenShows = useMemo(() => shows.filter((show) => !show.active), [shows]);
 
@@ -585,18 +621,28 @@ export default function ProfileClient({
           <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">
             {t("profile.upcomingShows")}
           </h2>
-          {shows.length === 0 ? (
+          {shows.length === 0 && upcomingTagged.length === 0 ? (
             <p className="mb-8 text-sm text-muted">{t("profile.noShows")}</p>
           ) : (
             <div className="mb-8 flex flex-col gap-3">
-              {upcomingShows.length === 0 && pastShows.length === 0 ? (
+              {upcomingShows.length === 0 && upcomingTagged.length === 0 && pastShows.length === 0 ? (
                 <p className="text-sm text-muted">{t("profile.allHidden")}</p>
-              ) : upcomingShows.length === 0 ? (
+              ) : upcomingShows.length === 0 && upcomingTagged.length === 0 ? (
                 <p className="text-sm text-muted">{t("profile.noUpcomingShows")}</p>
               ) : (
-                upcomingShows.map((show) => (
-                  <ShowRow key={show.id} show={show} onOpen={() => setActiveShow(show)} />
-                ))
+                <>
+                  {upcomingShows.map((show) => (
+                    <ShowRow key={show.id} show={show} onOpen={() => setActiveShow(show)} />
+                  ))}
+                  {/* Upcoming shows you're tagged on, shown here too (read-only). */}
+                  {upcomingTagged.map((show) => (
+                    <TaggedShowCard
+                      key={`up-tag-${show.id}`}
+                      show={show}
+                      onOpen={() => setActiveTaggedShow(show)}
+                    />
+                  ))}
+                </>
               )}
 
               {/* Past shows separated (#141): still the artist's to manage (sales,
@@ -662,26 +708,11 @@ export default function ProfileClient({
               </h2>
               <div className="mb-8 flex flex-col gap-3">
                 {taggedShows.map((show) => (
-                  <button
+                  <TaggedShowCard
                     key={show.id}
-                    onClick={() => setActiveTaggedShow(show)}
-                    className="flex items-center gap-3 rounded-2xl bg-surface p-3 text-left"
-                  >
-                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-background">
-                      <Image src={show.image} alt="" fill sizes="56px" className="object-cover" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-heading text-sm text-foreground">{show.title}</p>
-                      <p className="truncate text-xs text-muted">
-                        {new Date(show.date).toLocaleDateString(dl, {
-                          day: "numeric",
-                          month: "short",
-                          timeZone: "UTC",
-                        })}{" "}
-                        · {show.venue} · {t("profile.byArtist", { artist: show.artist })}
-                      </p>
-                    </div>
-                  </button>
+                    show={show}
+                    onOpen={() => setActiveTaggedShow(show)}
+                  />
                 ))}
               </div>
             </>
