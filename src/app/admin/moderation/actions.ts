@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
+import { logDecision } from "@/lib/decision-ledger";
 
 // Pull a post (or put it back). Soft: hidden_at is set rather than the row
 // deleted, so a mistake is reversible and the report trail survives. Runs
@@ -11,9 +12,10 @@ export async function setPostHidden(
   postId: string,
   hidden: boolean
 ): Promise<{ error: string | null }> {
-  await requireAdmin();
+  const currentAdmin = await requireAdmin();
+  const admin = adminClient();
 
-  const { error } = await adminClient()
+  const { error } = await admin
     .from("content_posts")
     .update({ hidden_at: hidden ? new Date().toISOString() : null })
     .eq("id", postId);
@@ -25,6 +27,11 @@ export async function setPostHidden(
 
   revalidatePath("/admin/moderation");
   revalidatePath("/feed");
+  await logDecision(admin, currentAdmin.id, {
+    action: hidden ? "post_hidden" : "post_unhidden",
+    subjectType: "post",
+    subjectId: postId,
+  });
   return { error: null };
 }
 
@@ -41,7 +48,8 @@ export async function setReportStatus(
   if (!(STATUSES as string[]).includes(status)) return { error: "Unknown status" };
 
   const resolved = status !== "open";
-  const { error } = await adminClient()
+  const admin = adminClient();
+  const { error } = await admin
     .from("content_reports")
     .update({
       status,
@@ -57,5 +65,15 @@ export async function setReportStatus(
 
   revalidatePath("/admin/moderation");
   revalidatePath("/admin");
+  await logDecision(admin, currentAdmin.id, {
+    action:
+      status === "actioned"
+        ? "report_actioned"
+        : status === "dismissed"
+          ? "report_dismissed"
+          : "report_reopened",
+    subjectType: "report",
+    subjectId: reportId,
+  });
   return { error: null };
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { findDeletionBlockers, purgeDueAccounts } from "@/lib/account-deletion";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
+import { logDecision } from "@/lib/decision-ledger";
 import { sendArtistStatusEmail } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { removeEventMedia } from "@/lib/supabase/storage";
@@ -10,13 +11,18 @@ import { deleteStreamVideo } from "@/lib/cloudflare-stream-server";
 import { ArtistStatus } from "@/lib/types";
 
 export async function setArtistStatus(profileId: string, email: string, status: ArtistStatus) {
-  await requireAdmin();
+  const currentAdmin = await requireAdmin();
   const admin = adminClient();
   await admin.from("profiles").update({ artist_status: status }).eq("id", profileId);
   revalidatePath("/admin/artists");
 
   if (status === "approved" || status === "rejected") {
     await sendArtistStatusEmail(email, status);
+    await logDecision(admin, currentAdmin.id, {
+      action: status === "approved" ? "artist_approved" : "artist_rejected",
+      subjectType: "artist",
+      subjectId: profileId,
+    });
   }
 }
 
@@ -37,7 +43,7 @@ export interface CancelEventResult {
 // accurate record to retry rather than a row claiming money went back when it
 // didn't. Re-running the action retries only what's still outstanding.
 export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
-  await requireAdmin();
+  const currentAdmin = await requireAdmin();
   const admin = adminClient();
 
   const { data: tickets } = await admin
@@ -71,6 +77,12 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
     await removeEventMedia(admin, [event?.image_url, ...(posts ?? []).map((p) => p.media_url)]);
     await admin.from("events").delete().eq("id", eventId);
     revalidatePath("/admin/events");
+    await logDecision(admin, currentAdmin.id, {
+      action: "event_deleted",
+      subjectType: "event",
+      subjectId: eventId,
+      reason: "No tickets sold — hard-deleted.",
+    });
     return { deleted: true, refunded: 0, failed: 0, attended: 0, errors: [] };
   }
 
@@ -158,6 +170,12 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
   await admin.from("events").update({ active: false, cancelled: true }).eq("id", eventId);
 
   revalidatePath("/admin/events");
+  await logDecision(admin, currentAdmin.id, {
+    action: "event_cancelled",
+    subjectType: "event",
+    subjectId: eventId,
+    metadata: { refunded, failed, attended },
+  });
   return { deleted: false, refunded, failed, attended, errors };
 }
 
@@ -174,7 +192,7 @@ export async function refundTicket(
   // none of them should be one accidental tap away.
   force = false
 ): Promise<{ error: string | null; blockedByCheckIn?: boolean }> {
-  await requireAdmin();
+  const currentAdmin = await requireAdmin();
   const admin = adminClient();
 
   const { data: ticket } = await admin
@@ -251,6 +269,13 @@ export async function refundTicket(
   }
 
   revalidatePath("/admin/billing");
+  await logDecision(admin, currentAdmin.id, {
+    action: "ticket_refunded",
+    subjectType: "ticket",
+    subjectId: ticket.id,
+    reason: ticket.checked_in_at ? "Refunded despite door check-in (forced)." : null,
+    metadata: { eventId: ticket.event_id, amount: Number(ticket.price_paid) },
+  });
   return { error: null };
 }
 

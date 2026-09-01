@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
+import { logDecision } from "@/lib/decision-ledger";
 
 // Tag an approved artist onto an existing gig (#153). This is the admin
 // approving a suggested match: it writes the event_artists row that puts the
@@ -10,7 +11,7 @@ export async function tagArtistToEvent(
   eventId: string,
   profileId: string
 ): Promise<{ error?: string }> {
-  await requireAdmin();
+  const currentAdmin = await requireAdmin();
   const admin = adminClient();
 
   // Re-check the artist is approved — the suggestion was computed earlier and the
@@ -34,5 +35,11 @@ export async function tagArtistToEvent(
 
   revalidatePath("/admin/matches");
   revalidatePath(`/e/${eventId}`);
+  await logDecision(admin, currentAdmin.id, {
+    action: "artist_tagged",
+    subjectType: "event",
+    subjectId: eventId,
+    metadata: { profileId },
+  });
   return {};
 }

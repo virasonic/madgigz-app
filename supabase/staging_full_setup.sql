@@ -2996,3 +2996,27 @@ create policy "Admins can check in tickets for MadGigz events" on public.tickets
       select 1 from public.events e where e.id = tickets.event_id and e.artist_id is null
     )
   );
+
+-- ############# addendum_047_admin_decisions.sql #############
+
+create table if not exists public.admin_decisions (
+  id           uuid primary key default gen_random_uuid(),
+  created_at   timestamptz not null default now(),
+  actor_id     uuid references public.profiles(id) on delete set null,
+  actor_type   text not null default 'human' check (actor_type in ('human', 'agent')),
+  action       text not null,
+  subject_type text,
+  subject_id   text,
+  reason       text,
+  confidence   real,
+  disposition  text check (disposition is null or disposition in ('auto', 'escalated')),
+  metadata     jsonb not null default '{}'::jsonb
+);
+
+create index if not exists admin_decisions_created_at_idx
+  on public.admin_decisions (created_at desc);
+create index if not exists admin_decisions_subject_idx
+  on public.admin_decisions (subject_type, subject_id);
+
+alter table public.admin_decisions enable row level security;
+revoke all on public.admin_decisions from anon, authenticated;
