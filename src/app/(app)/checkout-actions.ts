@@ -228,10 +228,20 @@ export async function createCheckout(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const descriptorSuffix = statementDescriptorSuffix(event.artist);
 
+  // Bizum (#144) is Spain's dominant consumer method, but it must be ACTIVATED
+  // in the Stripe dashboard first — listing an unactivated method here makes
+  // session creation throw and breaks checkout entirely. So it's env-gated
+  // (STRIPE_ENABLE_BIZUM=true), the same fail-safe pattern the rest of the app
+  // uses: enable Bizum in the dashboard, then set the flag, per environment.
+  // It's an async method (settles after the redirect); the webhook already only
+  // issues a ticket on payment_status "paid" / async_payment_succeeded and
+  // releases the held seat on async_payment_failed / expired.
+  const bizumEnabled = process.env.STRIPE_ENABLE_BIZUM === "true";
+
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card"],
+      payment_method_types: bizumEnabled ? ["card", "bizum"] : ["card"],
       // Abandoned checkouts release their held seats when this expires.
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       success_url: `${appUrl}/checkout/complete?session_id={CHECKOUT_SESSION_ID}`,
