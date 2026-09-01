@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
 import GenrePicker from "@/components/artist/GenrePicker";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
+import ExtraTagPicker from "@/components/artist/ExtraTagPicker";
 import { createAdminEvent, updateAdminEvent } from "../event-actions";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
@@ -90,6 +91,20 @@ export default function NewEventForm({
         }))
       : [{ name: "", profileId: null }]
   );
+  // #156: artists tagged for posting rights but NOT on the printed line-up (band
+  // members / collaborators). Seeded from any tag that isn't matched to a
+  // line-up name; merged back into taggedArtistIds on submit.
+  const [extraTaggedIds, setExtraTaggedIds] = useState<string[]>(() => {
+    const onBill = new Set(
+      (existing?.lineup ?? [])
+        .map(
+          (name) =>
+            artists.find((a) => a.artistName === name && initialTaggedIds.includes(a.id))?.id
+        )
+        .filter((id): id is string => Boolean(id))
+    );
+    return initialTaggedIds.filter((id) => !onBill.has(id));
+  });
   const [genreIds, setGenreIds] = useState<string[]>(initialGenreIds);
   const [accentColor, setAccentColor] = useState(existing?.accentColor ?? ACCENT_SWATCHES[0].value);
   const [ageRestriction, setAgeRestriction] = useState(existing?.ageRestriction ?? "18+");
@@ -122,9 +137,11 @@ export default function NewEventForm({
       }
 
       const lineup = entries.map((en) => en.name.trim()).filter(Boolean);
-      const taggedArtistIds = entries
+      const lineupTagIds = entries
         .map((en) => en.profileId)
         .filter((id): id is string => Boolean(id));
+      // Line-up tags plus the off-bill extra tags (#156), deduped.
+      const taggedArtistIds = [...new Set([...lineupTagIds, ...extraTaggedIds])];
 
       const payload = {
         title,
@@ -276,6 +293,20 @@ export default function NewEventForm({
         hint="Type any name. Pick a MadGigz artist to tag them — the show then shows on their profile and they can post about it."
       >
         <LineupEditor entries={entries} onChange={setEntries} artists={artists} compact />
+      </Field>
+
+      <Field
+        label="Also tag band members / collaborators"
+        hint="Tag approved MadGigz artists who should be able to post to this show without appearing on the ticket line-up (e.g. band members)."
+      >
+        <ExtraTagPicker
+          artists={artists}
+          selectedIds={extraTaggedIds}
+          onChange={setExtraTaggedIds}
+          excludeIds={
+            new Set(entries.map((en) => en.profileId).filter((id): id is string => Boolean(id)))
+          }
+        />
       </Field>
 
       <Field label="Description">

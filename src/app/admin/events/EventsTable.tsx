@@ -7,13 +7,22 @@ import FilterTabs from "../FilterTabs";
 import { SortHeader, useTableSort, type SortAccessor } from "../table-sort";
 import type { EventItem } from "@/lib/types";
 
-type EventFilter = "live" | "hidden" | "cancelled" | "all";
+type EventFilter = "live" | "past" | "hidden" | "cancelled" | "all";
 
-// Mirrors the Status column: cancelled wins over active, since a cancelled
-// event is left inactive too and would otherwise count as hidden.
+// Read once at module load, like the other date splits in the app (#141).
+const TODAY = new Date().toISOString().slice(0, 10);
+
+function isPast(dateIso: string): boolean {
+  return new Date(dateIso).toISOString().slice(0, 10) < TODAY;
+}
+
+// Mirrors the Status column, then splits the on-sale shows by date so gigs that
+// have already happened stop cluttering "Live". Cancelled wins over everything;
+// a hidden show stays hidden regardless of date.
 function statusOf(event: EventItem): Exclude<EventFilter, "all"> {
   if (event.cancelled) return "cancelled";
-  return event.active ? "live" : "hidden";
+  if (!event.active) return "hidden";
+  return isPast(event.date) ? "past" : "live";
 }
 
 type EventInterest = { saves: number; clicks: number; shares: number };
@@ -62,6 +71,7 @@ export default function EventsTable({
   const counts = useMemo(
     () => ({
       live: events.filter((e) => statusOf(e) === "live").length,
+      past: events.filter((e) => statusOf(e) === "past").length,
       hidden: events.filter((e) => statusOf(e) === "hidden").length,
       cancelled: events.filter((e) => statusOf(e) === "cancelled").length,
       all: events.length,
@@ -128,6 +138,7 @@ export default function EventsTable({
         onChange={setFilter}
         options={[
           { value: "live", label: "Live", count: counts.live },
+          { value: "past", label: "Past", count: counts.past },
           { value: "hidden", label: "Hidden", count: counts.hidden },
           { value: "cancelled", label: "Cancelled", count: counts.cancelled },
           { value: "all", label: "All", count: counts.all },
