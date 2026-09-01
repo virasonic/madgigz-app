@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChangeEvent, FormEvent, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useRef, useState, useTransition } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { LegalNotice } from "@/components/legal/LegalNotice";
 import { createClient } from "@/lib/supabase/client";
 import { uploadArtistEvidence } from "@/lib/supabase/storage";
+import { switchToFan } from "@/app/(app)/profile/artist-upgrade-actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
 export default function ArtistClaimForm() {
@@ -24,6 +25,10 @@ export default function ArtistClaimForm() {
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  // The "I'm actually a fan" escape hatch (#feedback): reaching this screen means
+  // the role is already committed to artist/pending, so leaving isn't navigation —
+  // switchToFan flips the account back to fan and redirects to the feed.
+  const [leaving, startLeaving] = useTransition();
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0] ?? null);
@@ -110,6 +115,14 @@ export default function ArtistClaimForm() {
 
   return (
     <div className="flex flex-1 flex-col">
+      <button
+        type="button"
+        onClick={() => startLeaving(() => switchToFan())}
+        disabled={leaving}
+        className="mb-4 flex w-fit items-center gap-1 text-sm font-heading text-muted transition-colors hover:text-foreground disabled:opacity-50"
+      >
+        <span aria-hidden="true">&larr;</span> {t("artistClaim.notAnArtist")}
+      </button>
       <span className="w-fit rounded-full bg-accent-dark px-3 py-1 text-xs font-heading uppercase tracking-wide text-foreground">
         {t("artistClaim.badge")}
       </span>

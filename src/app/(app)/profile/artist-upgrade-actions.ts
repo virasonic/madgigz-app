@@ -43,3 +43,35 @@ export async function startArtistUpgrade() {
   // evidence and puts them in front of the admin queue.
   redirect("/signup/artist-profile");
 }
+
+// The escape hatch from the claim form: someone who tapped "I'm an artist" by
+// mistake during onboarding drops back to a fan account and into the feed. Only
+// a NOT-yet-approved artist can do this — an approved artist keeps their status
+// (this must never quietly strip a real artist's approval), and a fan/admin has
+// nothing to undo. Service-role for the same reason as startArtistUpgrade: RLS
+// forbids a client changing its own role; the session-derived guard here is the
+// control.
+export async function switchToFan() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/signin");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, artist_status")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "artist" || profile?.artist_status === "approved") redirect("/feed");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("profiles")
+    .update({ role: "fan", artist_status: null })
+    .eq("id", user.id);
+  if (error) throw new Error(`Could not switch to a fan account: ${error.message}`);
+
+  redirect("/feed");
+}

@@ -536,6 +536,7 @@ export const en = {
 
   artistClaim: {
     badge: "Artist",
+    notAnArtist: "I'm actually a fan",
     title: "Claim your profile",
     subtitle: "Help us verify you're really you.",
     artistNameLabel: "Artist name",
