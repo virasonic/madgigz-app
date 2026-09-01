@@ -523,6 +523,7 @@ export const es: Messages = {
   artistClaim: {
     badge: "Artista",
     notAnArtist: "En realidad soy fan",
+    doThisLater: "Hazlo más tarde",
     title: "Reclama tu perfil",
     subtitle: "Ayúdanos a verificar que eres tú de verdad.",
     artistNameLabel: "Nombre artístico",

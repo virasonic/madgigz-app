@@ -243,6 +243,17 @@ export default function ArtistClaimForm() {
           messageKey="artistClaim.legalNotice"
           className="-mt-2 text-center text-xs text-muted"
         />
+
+        {/* Verification can wait: skipping keeps them a pending artist (they can
+            finish this later) and lets them into the app rather than trapping
+            them on the form. type="button" so it never submits. */}
+        <button
+          type="button"
+          onClick={() => router.push("/feed")}
+          className="mx-auto text-sm font-heading text-muted underline transition-colors hover:text-foreground"
+        >
+          {t("artistClaim.doThisLater")}
+        </button>
       </form>
     </div>
   );
