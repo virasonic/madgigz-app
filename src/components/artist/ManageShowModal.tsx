@@ -20,6 +20,7 @@ import { maxBytesForMediaType, mediaTypeForFile } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/types";
 import { updateShow } from "@/app/(app)/profile/show-actions";
 import LineupEditor, { LineupEntry, lineupToEntries } from "@/components/artist/LineupEditor";
+import ExtraTagPicker from "@/components/artist/ExtraTagPicker";
 import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
 import GenrePicker from "@/components/artist/GenrePicker";
 import {
@@ -109,6 +110,10 @@ export default function ManageShowModal({
   const [artists, setArtists] = useState<PublicArtistProfile[]>([]);
   const [taggedIds, setTaggedIds] = useState<string[]>([]);
   const [lineupEntries, setLineupEntries] = useState<LineupEntry[]>([]);
+  // #156: approved artists tagged for posting rights but NOT shown on the printed
+  // line-up (band members / collaborators). Kept separate from lineupEntries;
+  // merged into taggedArtistIds on save.
+  const [extraTaggedIds, setExtraTaggedIds] = useState<string[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [allGenres, setAllGenres] = useState<Genre[]>([]);
   const [genreIds, setGenreIds] = useState<string[]>([]);
@@ -307,12 +312,15 @@ export default function ManageShowModal({
   function startEditing() {
     setDraft(details);
     setVenueDraft({ name: details.venue, venueId: show.venueId });
-    setLineupEntries(
-      lineupToEntries(
-        details.lineup,
-        artists.filter((a) => taggedIds.includes(a.id))
-      )
+    const entries = lineupToEntries(
+      details.lineup,
+      artists.filter((a) => taggedIds.includes(a.id))
     );
+    setLineupEntries(entries);
+    // Any tagged artist not represented by a line-up row is an "extra" tag
+    // (band member / collaborator) — seed the separate picker with those.
+    const onBill = new Set(entries.map((e) => e.profileId).filter(Boolean));
+    setExtraTaggedIds(taggedIds.filter((id) => !onBill.has(id)));
     setEditError(undefined);
     setEditing(true);
   }
@@ -325,6 +333,13 @@ export default function ManageShowModal({
       .map((entry) => ({ ...entry, name: entry.name.trim() }))
       .filter((entry) => entry.name);
 
+    // Tags = the acts matched on the bill PLUS the extra (off-bill) tags (#156),
+    // deduped. Line-up display names are unaffected by the extra tags.
+    const lineupTagIds = cleaned
+      .map((entry) => entry.profileId)
+      .filter((id): id is string => Boolean(id));
+    const taggedArtistIds = [...new Set([...lineupTagIds, ...extraTaggedIds])];
+
     const result = await updateShow(show.id, {
       description: draft.description,
       lineup: cleaned.map((entry) => entry.name),
@@ -333,9 +348,7 @@ export default function ManageShowModal({
       venueName: venueDraft.name,
       venueId: venueDraft.venueId,
       genreIds,
-      taggedArtistIds: cleaned
-        .map((entry) => entry.profileId)
-        .filter((id): id is string => Boolean(id)),
+      taggedArtistIds,
     });
 
     setSavingEdits(false);
@@ -351,9 +364,7 @@ export default function ManageShowModal({
       lineup: cleaned.map((entry) => entry.name),
       venue: venueDraft.name.trim(),
     });
-    setTaggedIds(
-      cleaned.map((entry) => entry.profileId).filter((id): id is string => Boolean(id))
-    );
+    setTaggedIds(taggedArtistIds);
     setEditing(false);
     onChanged();
   }
@@ -607,6 +618,24 @@ export default function ManageShowModal({
                     compact
                   />
                   <p className="text-xs text-muted">{t("manageShow.lineupHint")}</p>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs text-muted">{t("manageShow.tagExtraLabel")}</span>
+                  <ExtraTagPicker
+                    artists={artists}
+                    selectedIds={extraTaggedIds}
+                    onChange={setExtraTaggedIds}
+                    excludeIds={
+                      new Set(
+                        [
+                          show.artistId ?? undefined,
+                          ...lineupEntries.map((e) => e.profileId ?? undefined),
+                        ].filter((id): id is string => Boolean(id))
+                      )
+                    }
+                  />
+                  <p className="text-xs text-muted">{t("manageShow.tagExtraHint")}</p>
                 </div>
 
                 <label className="flex flex-col gap-1.5">

@@ -705,6 +705,9 @@ export const es: Messages = {
     genres: "Géneros",
     lineupHint:
       "Los artistas etiquetados tienen este bolo en su perfil y pueden publicar sobre él. Gestionarlo sigue siendo cosa tuya.",
+    tagExtraLabel: "Etiqueta también a miembros de la banda o colaboradores",
+    tagExtraHint:
+      "Podrán publicar reels y novedades sobre este bolo, pero no aparecerán en el cartel de la entrada. Solo se puede etiquetar a artistas aprobados de MadGigz.",
     priceLockedLead:
       "El precio de la entrada no se puede cambiar tras publicar: los fans que ya compraron pagaron el precio indicado, y sus recibos y reembolsos están ligados a él. Escribe a",
     priceLockedTail: "si el precio está mal.",
@@ -786,6 +789,7 @@ export const es: Messages = {
     headliner: "Cabeza de cartel",
     supportAct: "Telonero",
     tag: "Etiquetar",
+    tagSearchPlaceholder: "Busca artistas para etiquetar...",
     removeFromLineup: "Quitar del cartel",
     taggedOnMadgigz: "Etiquetado en MadGigz",
     untag: "Quitar etiqueta",

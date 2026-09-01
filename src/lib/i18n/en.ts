@@ -719,6 +719,9 @@ export const en = {
     genres: "Genres",
     lineupHint:
       "Tagged acts get this show on their profile and can post about it. Managing it stays with you.",
+    tagExtraLabel: "Also tag band members or collaborators",
+    tagExtraHint:
+      "They can post reels and updates to this show, but won't appear on the ticket line-up. Only approved MadGigz artists can be tagged.",
     priceLockedLead:
       "Ticket price can't be changed after publishing - fans who already bought paid the listed price, and their receipts and refunds are tied to it. Email",
     priceLockedTail: "if the price is wrong.",
@@ -800,6 +803,7 @@ export const en = {
     headliner: "Headliner",
     supportAct: "Support act",
     tag: "Tag",
+    tagSearchPlaceholder: "Search artists to tag...",
     removeFromLineup: "Remove from lineup",
     taggedOnMadgigz: "Tagged on MadGigz",
     untag: "Untag",
