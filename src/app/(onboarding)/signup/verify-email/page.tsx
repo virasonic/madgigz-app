@@ -80,10 +80,12 @@ function VerifyEmailContent() {
         <Input
           label={t("verifyEmail.enterCodeLabel")}
           value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          // Length-agnostic: Supabase's email OTP length is a dashboard setting
+          // (6-10). Cap at 10 and let verifyOtp be the judge, so the field works
+          // whatever the project is set to rather than silently truncating.
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
           inputMode="numeric"
           autoComplete="one-time-code"
-          placeholder={t("verifyEmail.codePlaceholder")}
           error={codeError ?? undefined}
         />
         <Button type="submit" className="mt-3 w-full" disabled={verifying}>

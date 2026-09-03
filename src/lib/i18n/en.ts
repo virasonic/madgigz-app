@@ -504,8 +504,7 @@ export const en = {
     // title reuses common.checkInbox
     sentTo: "We sent a confirmation link to",
     clickToFinish: "Tap the link, or enter the code below to finish setting up your account.",
-    enterCodeLabel: "Enter the 6-digit code",
-    codePlaceholder: "123456",
+    enterCodeLabel: "Enter the code from the email",
     verify: "Verify",
     verifying: "Verifying...",
     codeError: "That code isn't right or has expired. Check the email or resend it.",

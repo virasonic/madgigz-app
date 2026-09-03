@@ -441,8 +441,7 @@
     "verifyEmail": {
       "sentTo": "We sent a confirmation link to",
       "clickToFinish": "Tap the link, or enter the code below to finish setting up your account.",
-      "enterCodeLabel": "Enter the 6-digit code",
-      "codePlaceholder": "123456",
+      "enterCodeLabel": "Enter the code from the email",
       "verify": "Verify",
       "verifying": "Verifying...",
       "codeError": "That code isn't right or has expired. Check the email or resend it.",
@@ -1183,8 +1182,7 @@
     "verifyEmail": {
       "sentTo": "Te enviamos un enlace de confirmación a",
       "clickToFinish": "Toca el enlace, o introduce el código de abajo para terminar de configurar tu cuenta.",
-      "enterCodeLabel": "Introduce el código de 6 dígitos",
-      "codePlaceholder": "123456",
+      "enterCodeLabel": "Introduce el código del correo",
       "verify": "Verificar",
       "verifying": "Verificando...",
       "codeError": "Ese código no es correcto o ha caducado. Revisa el correo o reenvíalo.",
