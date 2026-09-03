@@ -6,6 +6,8 @@ import LandscapeGuard from "@/components/ui/LandscapeGuard";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { createClient } from "@/lib/supabase/server";
 import { fetchUnreadCount } from "@/lib/notifications";
+import LegalUpdateNotice from "@/components/legal/LegalUpdateNotice";
+import { CURRENT_LEGAL_UPDATE, shouldSeeLegalUpdate } from "@/lib/legal-updates";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -34,6 +36,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ])
     : [null, 0];
 
+  // Whether this person is in the announcement's audience is decided here, on
+  // the server, where the role already is - the client only decides whether
+  // they have dismissed it. A fan never receives the component for an
+  // organiser-only change, so there is nothing to read in the page source
+  // either.
+  const showLegalUpdate = shouldSeeLegalUpdate(
+    CURRENT_LEGAL_UPDATE,
+    profile?.role ?? "fan",
+    isGuest
+  );
+
   // Set only while an admin is acting as this user (see impersonation-actions).
   const impersonating = (await cookies()).get("mg_impersonating")?.value;
 
@@ -56,6 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // persistent SideNav beside a full-height content column (#105).
     <div className="pt-safe mx-auto flex h-screen w-full max-w-md flex-col bg-background lg:max-w-none lg:flex-row">
       <LandscapeGuard />
+      {showLegalUpdate && <LegalUpdateNotice />}
       <SideNav
         role={profile?.role ?? "fan"}
         artistStatus={profile?.artist_status ?? null}

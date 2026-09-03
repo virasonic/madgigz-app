@@ -32,6 +32,15 @@ export const en = {
   // Labels for the legal documents on aurasonic.es. Interpolated into the
   // *.legalNotice templates as links (see components/legal/LegalNotice.tsx)
   // and listed in the Settings sheet.
+  // Rewritten each time CURRENT_LEGAL_UPDATE in lib/legal-updates.ts is bumped:
+  // `body` describes that one change in a sentence, in the reader's language.
+  legalUpdate: {
+    title: "We've updated our Organiser Terms",
+    effective: "In effect from {date}",
+    body: "Our commission is still 5% of the ticket price, but the minimum per ticket is now €0.36 instead of €0.25, plus 21% VAT on the commission. On tickets above about €7.20 nothing changes, because 5% already clears the minimum.",
+    acknowledge: "Got it",
+  },
+
   legal: {
     termsOfService: "Terms of Service",
     organiserTerms: "Organiser Terms",

@@ -29,6 +29,15 @@ export const es: Messages = {
     system: "Según mi dispositivo",
   },
 
+  // Se reescribe cada vez que se actualiza CURRENT_LEGAL_UPDATE en
+  // lib/legal-updates.ts: `body` resume ese cambio en una frase.
+  legalUpdate: {
+    title: "Hemos actualizado las Condiciones para organizadores",
+    effective: "En vigor desde el {date}",
+    body: "Nuestra comisión sigue siendo el 5% del precio de la entrada, pero el mínimo por entrada pasa a ser de 0,36 € en lugar de 0,25 €, más el 21% de IVA sobre la comisión. En entradas de más de unos 7,20 € no cambia nada, porque el 5% ya supera el mínimo.",
+    acknowledge: "Entendido",
+  },
+
   legal: {
     termsOfService: "Términos y Condiciones",
     organiserTerms: "Condiciones para organizadores",
