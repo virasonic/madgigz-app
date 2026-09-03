@@ -23,6 +23,12 @@
       "label": "Language",
       "system": "Match my device"
     },
+    "legalUpdate": {
+      "title": "We've updated our Organiser Terms",
+      "effective": "In effect from {date}",
+      "body": "Our commission is still 5% of the ticket price, but the minimum per ticket is now €0.36 instead of €0.25, plus 21% VAT on the commission. On tickets above about €7.20 nothing changes, because 5% already clears the minimum.",
+      "acknowledge": "Got it"
+    },
     "legal": {
       "termsOfService": "Terms of Service",
       "organiserTerms": "Organiser Terms",
@@ -434,7 +440,12 @@
     },
     "verifyEmail": {
       "sentTo": "We sent a confirmation link to",
-      "clickToFinish": "Click it to finish setting up your account.",
+      "clickToFinish": "Tap the link, or enter the code below to finish setting up your account.",
+      "enterCodeLabel": "Enter the 6-digit code",
+      "codePlaceholder": "123456",
+      "verify": "Verify",
+      "verifying": "Verifying...",
+      "codeError": "That code isn't right or has expired. Check the email or resend it.",
       "resend": "Resend link",
       "resent": "Link resent",
       "confirmedPrompt": "Already confirmed?",
@@ -753,6 +764,12 @@
     "language": {
       "label": "Idioma",
       "system": "Según mi dispositivo"
+    },
+    "legalUpdate": {
+      "title": "Hemos actualizado las Condiciones para organizadores",
+      "effective": "En vigor desde el {date}",
+      "body": "Nuestra comisión sigue siendo el 5% del precio de la entrada, pero el mínimo por entrada pasa a ser de 0,36 € en lugar de 0,25 €, más el 21% de IVA sobre la comisión. En entradas de más de unos 7,20 € no cambia nada, porque el 5% ya supera el mínimo.",
+      "acknowledge": "Entendido"
     },
     "legal": {
       "termsOfService": "Términos y Condiciones",
@@ -1165,7 +1182,12 @@
     },
     "verifyEmail": {
       "sentTo": "Te enviamos un enlace de confirmación a",
-      "clickToFinish": "Haz clic para terminar de configurar tu cuenta.",
+      "clickToFinish": "Toca el enlace, o introduce el código de abajo para terminar de configurar tu cuenta.",
+      "enterCodeLabel": "Introduce el código de 6 dígitos",
+      "codePlaceholder": "123456",
+      "verify": "Verificar",
+      "verifying": "Verificando...",
+      "codeError": "Ese código no es correcto o ha caducado. Revisa el correo o reenvíalo.",
       "resend": "Reenviar enlace",
       "resent": "Enlace reenviado",
       "confirmedPrompt": "¿Ya lo confirmaste?",

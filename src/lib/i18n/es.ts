@@ -489,7 +489,12 @@ export const es: Messages = {
 
   verifyEmail: {
     sentTo: "Te enviamos un enlace de confirmación a",
-    clickToFinish: "Haz clic para terminar de configurar tu cuenta.",
+    clickToFinish: "Toca el enlace, o introduce el código de abajo para terminar de configurar tu cuenta.",
+    enterCodeLabel: "Introduce el código de 6 dígitos",
+    codePlaceholder: "123456",
+    verify: "Verificar",
+    verifying: "Verificando...",
+    codeError: "Ese código no es correcto o ha caducado. Revisa el correo o reenvíalo.",
     resend: "Reenviar enlace",
     resent: "Enlace reenviado",
     confirmedPrompt: "¿Ya lo confirmaste?",
