@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import DateInput from "@/components/ui/DateInput";
 import Turnstile, { TurnstileHandle } from "@/components/ui/Turnstile";
 import AppleButton from "@/components/auth/AppleButton";
 import GoogleButton from "@/components/auth/GoogleButton";
@@ -279,13 +280,11 @@ function SignUpForm() {
           error={errors.email}
           autoComplete="email"
         />
-        <Input
+        <DateInput
           label={t("signup.dobLabel")}
-          type="date"
           value={dob}
-          onChange={(e) => setDob(e.target.value)}
+          onChange={setDob}
           error={errors.dob}
-          max={TODAY.toISOString().slice(0, 10)}
         />
         <Input
           label={t("signup.passwordLabel")}

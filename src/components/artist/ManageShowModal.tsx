@@ -21,6 +21,7 @@ import { ContentPost, EventItem } from "@/lib/types";
 import { updateShow } from "@/app/(app)/profile/show-actions";
 import LineupEditor, { LineupEntry, lineupToEntries } from "@/components/artist/LineupEditor";
 import ExtraTagPicker from "@/components/artist/ExtraTagPicker";
+import DateInput from "@/components/ui/DateInput";
 import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
 import GenrePicker from "@/components/artist/GenrePicker";
 import {
@@ -559,10 +560,9 @@ export default function ManageShowModal({
                 <div className="flex gap-2">
                   <label className="flex flex-1 flex-col gap-1.5">
                     <span className="text-xs text-muted">{t("manageShow.date")}</span>
-                    <input
-                      type="date"
+                    <DateInput
                       value={draft.date}
-                      onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))}
+                      onChange={(iso) => setDraft((d) => ({ ...d, date: iso }))}
                       className="w-full rounded-xl border border-muted/20 bg-surface px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </label>

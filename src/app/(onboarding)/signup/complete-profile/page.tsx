@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import DateInput from "@/components/ui/DateInput";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/site";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -245,13 +246,11 @@ function CompleteProfileForm() {
             <p className="-mt-3 text-xs text-muted">{t("signup.usernameHint")}</p>
           ))}
 
-        <Input
+        <DateInput
           label={t("signup.dobLabel")}
-          type="date"
           value={dob}
-          onChange={(e) => setDob(e.target.value)}
+          onChange={setDob}
           error={errors.dob}
-          max={TODAY.toISOString().slice(0, 10)}
         />
 
         {errors.form && <p className="text-sm text-danger">{errors.form}</p>}

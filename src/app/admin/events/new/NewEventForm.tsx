@@ -6,6 +6,7 @@ import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
 import GenrePicker from "@/components/artist/GenrePicker";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
 import ExtraTagPicker from "@/components/artist/ExtraTagPicker";
+import DateInput from "@/components/ui/DateInput";
 import { createAdminEvent, updateAdminEvent } from "../event-actions";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
@@ -205,7 +206,7 @@ export default function NewEventForm({
 
       <div className="grid gap-4 md:grid-cols-4">
         <Field label="Date">
-          <input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
+          <DateInput className={inputClass} value={date} onChange={setDate} />
         </Field>
         <Field label="Time">
           <input type="time" className={inputClass} value={time} onChange={(e) => setTime(e.target.value)} />

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import DateInput from "@/components/ui/DateInput";
 import BackButton from "@/components/ui/BackButton";
 import TierRowsEditor, {
   type TierRow,
@@ -387,11 +388,10 @@ export default function AddShowPage() {
         {/* Date + Time are short values — side by side at half width each so
             they read as an app form, not full-width web fields. */}
         <div className="grid grid-cols-2 gap-3">
-          <Input
+          <DateInput
             label={t("addShow.date")}
-            type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={setDate}
             error={errors.date}
           />
           <Input
