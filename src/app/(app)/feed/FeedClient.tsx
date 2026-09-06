@@ -70,10 +70,14 @@ function buildForYouFeed(
   // with "3 of 3" and finished on "Welcome to MadGigz".
   const announcements = allPosts.filter((post) => !post.eventId).reverse();
 
+  // Date-only compare in UTC, the same "today" fetchEvents' upcomingOnly uses.
+  const today = new Date().toISOString().slice(0, 10);
   const entries = allPosts.flatMap((post) => {
     if (!post.eventId) return [];
     const event = allEvents.find((e) => e.id === post.eventId);
-    return event ? [{ post, event }] : [];
+    // Drop reels for gigs that have already happened — a past show has nothing
+    // left to sell, so it shouldn't ride the For You feed (Vir, 6 Sep 2026).
+    return event && event.date >= today ? [{ post, event }] : [];
   });
 
   // Followed artists first, newest-first within each half. A stable sort keeps
