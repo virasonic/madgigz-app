@@ -7,7 +7,11 @@
 // and seeing it once more on a laptop is fine for a nudge (same trade as
 // seen-legal-update.ts / seen-announcements.ts).
 
-const KEY = "madgigz_seen_intro_nudge";
+// _v2: the first cut marked "seen" on ANY dismiss. The nudge now reappears each
+// app open unless the "don't show this again" box is ticked, so those earlier
+// auto-dismissals were never a real opt-out - bumping the key clears them so
+// everyone gets a fresh start under the new behaviour.
+const KEY = "madgigz_seen_intro_nudge_v2";
 
 export function getIntroNudgeSeen(): boolean {
   if (typeof window === "undefined") return false;
