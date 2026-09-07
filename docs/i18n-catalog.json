@@ -544,6 +544,12 @@
       "uploadingPercent": "Uploading {pct}%",
       "post": "Post"
     },
+    "introNudge": {
+      "title": "Add an intro reel",
+      "body": "Let fans get to know you — post a short \"this is me, this is my sound\" clip on your profile, even when you've no show coming up.",
+      "cta": "Add intro reel",
+      "dismiss": "Maybe later"
+    },
     "introReel": {
       "label": "Intro",
       "open": "Watch intro reel",
@@ -1284,6 +1290,12 @@
       "posting": "Publicando...",
       "uploadingPercent": "Subiendo {pct}%",
       "post": "Publicar"
+    },
+    "introNudge": {
+      "title": "Añade un reel de presentación",
+      "body": "Deja que los fans te conozcan: sube a tu perfil un clip corto de \"este soy yo, este es mi sonido\", aunque no tengas ningún bolo a la vista.",
+      "cta": "Añadir reel",
+      "dismiss": "Quizás más tarde"
     },
     "introReel": {
       "label": "Intro",

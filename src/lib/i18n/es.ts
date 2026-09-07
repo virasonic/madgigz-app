@@ -601,6 +601,12 @@ export const es: Messages = {
     post: "Publicar",
   },
 
+  introNudge: {
+    title: "Añade un reel de presentación",
+    body: "Deja que los fans te conozcan: sube a tu perfil un clip corto de \"este soy yo, este es mi sonido\", aunque no tengas ningún bolo a la vista.",
+    cta: "Añadir reel",
+    dismiss: "Quizás más tarde",
+  },
   introReel: {
     label: "Intro",
     open: "Ver reel de presentación",

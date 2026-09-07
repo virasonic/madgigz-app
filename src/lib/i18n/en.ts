@@ -615,6 +615,12 @@ export const en = {
     post: "Post",
   },
 
+  introNudge: {
+    title: "Add an intro reel",
+    body: "Let fans get to know you — post a short \"this is me, this is my sound\" clip on your profile, even when you've no show coming up.",
+    cta: "Add intro reel",
+    dismiss: "Maybe later",
+  },
   introReel: {
     label: "Intro",
     open: "Watch intro reel",
