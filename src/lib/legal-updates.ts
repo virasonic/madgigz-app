@@ -34,12 +34,11 @@ export interface LegalUpdate {
   audience: "everyone" | "artists";
 }
 
-export const CURRENT_LEGAL_UPDATE: LegalUpdate | null = {
-  id: "2026-08-21-commission-floor",
-  date: "2026-08-21",
-  docs: ["organiserTerms"],
-  audience: "artists",
-};
+// Retired 6 Sep 2026 (Vir): the commission-floor change only needed announcing
+// to accounts that predate it - new organisers accept the updated terms at
+// signup directly. Set back to a LegalUpdate object (and bump `id`) to announce
+// the next material change.
+export const CURRENT_LEGAL_UPDATE: LegalUpdate | null = null;
 
 export function shouldSeeLegalUpdate(update: LegalUpdate | null, role: Role, isGuest: boolean) {
   if (!update || isGuest) return false;          // no account, no terms to have changed

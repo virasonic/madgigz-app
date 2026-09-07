@@ -26,6 +26,9 @@ export default function IntroReelNudge({
 }) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
+  // Default is to nudge again on the next app open (Vir: "show every time").
+  // Only an explicit "don't show this again" tick persists the suppression.
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // localStorage can't be read during render (no window on the server), so read
   // after mount - closed on first paint, opening a beat later. Same shape as
@@ -44,7 +47,7 @@ export default function IntroReelNudge({
   }, [legalNoticePending]);
 
   function dismiss() {
-    markIntroNudgeSeen();
+    if (dontShowAgain) markIntroNudgeSeen();
     setOpen(false);
   }
 
@@ -73,7 +76,17 @@ export default function IntroReelNudge({
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-foreground/85">{t("introNudge.body")}</p>
 
-        <Link href="/profile" onClick={dismiss} className="mt-6 block">
+        <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={dontShowAgain}
+            onChange={(e) => setDontShowAgain(e.target.checked)}
+            className="h-4 w-4 accent-primary"
+          />
+          {t("introNudge.dontShowAgain")}
+        </label>
+
+        <Link href="/profile" onClick={dismiss} className="mt-5 block">
           <Button className="w-full">{t("introNudge.cta")}</Button>
         </Link>
         <button

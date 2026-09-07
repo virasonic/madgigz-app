@@ -606,6 +606,7 @@ export const es: Messages = {
     body: "Deja que los fans te conozcan: sube a tu perfil un clip corto de \"este soy yo, este es mi sonido\", aunque no tengas ningún bolo a la vista.",
     cta: "Añadir reel",
     dismiss: "Quizás más tarde",
+    dontShowAgain: "No volver a mostrar",
   },
   introReel: {
     label: "Intro",

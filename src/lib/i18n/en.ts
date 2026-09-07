@@ -620,6 +620,7 @@ export const en = {
     body: "Let fans get to know you — post a short \"this is me, this is my sound\" clip on your profile, even when you've no show coming up.",
     cta: "Add intro reel",
     dismiss: "Maybe later",
+    dontShowAgain: "Don't show this again",
   },
   introReel: {
     label: "Intro",
