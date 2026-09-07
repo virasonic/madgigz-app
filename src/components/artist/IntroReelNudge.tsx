@@ -6,6 +6,8 @@ import Button from "@/components/ui/Button";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 import { getIntroNudgeSeen, markIntroNudgeSeen } from "@/lib/seen-intro-nudge";
+import { CURRENT_LEGAL_UPDATE } from "@/lib/legal-updates";
+import { getSeenLegalUpdate } from "@/lib/seen-legal-update";
 
 // A one-time pop-up nudging an artist with no intro reel to add one (#143),
 // mirroring LegalUpdateNotice's shape - a bottom sheet, drag/tap to dismiss,
@@ -13,7 +15,15 @@ import { getIntroNudgeSeen, markIntroNudgeSeen } from "@/lib/seen-intro-nudge";
 // artist, with no intro yet) is decided on the server in the app layout; by the
 // time this mounts the only question left is whether they've already dismissed
 // it. The CTA sends them to their profile, where the "Add intro reel" card is.
-export default function IntroReelNudge() {
+export default function IntroReelNudge({
+  // True when this artist is in the legal notice's audience. Whether that notice
+  // ACTUALLY shows also depends on a per-device dismissal, checked here - so the
+  // nudge only defers when the legal notice will really take the screen, not
+  // merely because the person is in its audience.
+  legalNoticePending = false,
+}: {
+  legalNoticePending?: boolean;
+}) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
 
@@ -21,10 +31,17 @@ export default function IntroReelNudge() {
   // after mount - closed on first paint, opening a beat later. Same shape as
   // LegalUpdateNotice.
   useEffect(() => {
+    if (getIntroNudgeSeen()) return;
+    // Don't stack under the legal notice: if it's pending AND unseen on this
+    // device it takes the screen first, so defer to a later launch. Once it's
+    // been dismissed (or the person isn't in its audience), this opens.
+    const legalWillShow =
+      legalNoticePending && getSeenLegalUpdate() !== (CURRENT_LEGAL_UPDATE?.id ?? null);
+    if (legalWillShow) return;
     /* eslint-disable react-hooks/set-state-in-effect -- client-only storage read; see LegalUpdateNotice */
-    if (!getIntroNudgeSeen()) setOpen(true);
+    setOpen(true);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, []);
+  }, [legalNoticePending]);
 
   function dismiss() {
     markIntroNudgeSeen();

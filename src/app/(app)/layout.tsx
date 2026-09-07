@@ -63,11 +63,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   // Nudge a fully-onboarded artist who has no intro reel to add one (#143).
-  // Computed after the completion redirect so a mid-signup artist isn't nagged,
-  // and gated behind the legal notice so two bottom sheets never stack. The
-  // query only runs for an artist who isn't already seeing the legal notice.
+  // Computed after the completion redirect so a mid-signup artist isn't nagged.
+  // Audience only (artist + no intro yet); the "don't stack on the legal notice"
+  // decision is made on the CLIENT (via legalNoticePending below), because
+  // whether that notice actually shows depends on a per-device dismissal the
+  // server can't see - gating on the server flag here suppressed the nudge for
+  // anyone who'd already dismissed the legal notice.
   const showIntroNudge =
-    !showLegalUpdate &&
     profile?.role === "artist" &&
     user != null &&
     !(await fetchArtistIntro(supabase, user.id));
@@ -82,7 +84,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="pt-safe mx-auto flex h-screen w-full max-w-md flex-col bg-background lg:max-w-none lg:flex-row">
       <LandscapeGuard />
       {showLegalUpdate && <LegalUpdateNotice />}
-      {showIntroNudge && <IntroReelNudge />}
+      {showIntroNudge && <IntroReelNudge legalNoticePending={showLegalUpdate} />}
       <SideNav
         role={profile?.role ?? "fan"}
         artistStatus={profile?.artist_status ?? null}
