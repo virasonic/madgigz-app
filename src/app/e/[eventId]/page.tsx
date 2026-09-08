@@ -58,19 +58,20 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: url },
+    // og:image / twitter:image come from the generated card in
+    // opengraph-image.tsx + twitter-image.tsx (#172) - don't also set images
+    // here or the page emits two of each.
     openGraph: {
       type: "website",
       title,
       description,
       url,
       siteName: "MadGigz",
-      images: event.image ? [{ url: event.image, alt: event.title }] : undefined,
     },
     twitter: {
-      card: event.image ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title,
       description,
-      images: event.image ? [event.image] : undefined,
     },
   };
 }
