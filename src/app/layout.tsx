@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { getLocale } from "@/lib/i18n/server";
+import { siteOrigin } from "@/lib/site";
 import { StripeModeProvider } from "@/lib/stripe-mode";
 import ServiceWorkerRegistrar from "@/components/pwa/ServiceWorkerRegistrar";
 import AppDownloadBanner from "@/components/pwa/AppDownloadBanner";
@@ -28,6 +29,11 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
+  // The app's own origin, so file-based OG/Twitter images (e.g. the /e event
+  // card, #172) resolve to madgigz.aurasonic.es. Without it Next infers the
+  // wrong Vercel alias (aurasonic.es) and the card 404s for crawlers. siteOrigin
+  // never throws, so this is safe at module scope.
+  metadataBase: new URL(siteOrigin()),
   title: "MadGigz",
   description: "Local Gigs & Concerts",
   applicationName: "MadGigz",
