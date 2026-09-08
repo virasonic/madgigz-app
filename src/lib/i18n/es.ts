@@ -601,6 +601,12 @@ export const es: Messages = {
     post: "Publicar",
   },
 
+  appBanner: {
+    title: "Disfruta de MadGigz al completo",
+    body: "Más reels, entradas y funciones en la app.",
+    download: "Descargar la app",
+    continueWeb: "Seguir en la web",
+  },
   introNudge: {
     title: "Añade un reel de presentación",
     body: "Deja que los fans te conozcan: sube a tu perfil un clip corto de \"este soy yo, este es mi sonido\", aunque no tengas ningún bolo a la vista.",

@@ -615,6 +615,12 @@ export const en = {
     post: "Post",
   },
 
+  appBanner: {
+    title: "Get the full MadGigz experience",
+    body: "More reels, tickets and features live in the app.",
+    download: "Download the app",
+    continueWeb: "Continue on web",
+  },
   introNudge: {
     title: "Add an intro reel",
     body: "Let fans get to know you — post a short \"this is me, this is my sound\" clip on your profile, even when you've no show coming up.",

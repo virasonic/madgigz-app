@@ -6,6 +6,7 @@ import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { getLocale } from "@/lib/i18n/server";
 import { StripeModeProvider } from "@/lib/stripe-mode";
 import ServiceWorkerRegistrar from "@/components/pwa/ServiceWorkerRegistrar";
+import AppDownloadBanner from "@/components/pwa/AppDownloadBanner";
 import BootSplash from "@/components/pwa/BootSplash";
 import NativeBridge from "@/components/native/NativeBridge";
 
@@ -30,6 +31,10 @@ export const metadata: Metadata = {
   title: "MadGigz",
   description: "Local Gigs & Concerts",
   applicationName: "MadGigz",
+  // iOS Safari Smart App Banner (the "MadGigz — OPEN" strip). Renders
+  // <meta name="apple-itunes-app" content="app-id=6800783921">. Safari-only,
+  // and ignored inside our own WKWebView shell, so it never shows in the app.
+  itunes: { appId: "6800783921" },
   icons: {
     icon: "/favicon.ico",
     // iOS ignores the manifest's icons for the home screen and uses this one.
@@ -67,6 +72,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <LocaleProvider locale={locale}>
           <StripeModeProvider testMode={stripeTestMode}>{children}</StripeModeProvider>
+          {/* Inside LocaleProvider: it reads useT for its copy. */}
+          <AppDownloadBanner />
         </LocaleProvider>
         <BootSplash />
         <ServiceWorkerRegistrar />
