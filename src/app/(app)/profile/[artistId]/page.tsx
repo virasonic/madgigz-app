@@ -67,13 +67,20 @@ export default async function PublicArtistProfilePage({
     <div className="p-4">
       <BackButton className="mb-4" />
 
+      {/* Follow sits top-right, filling the space beside the name rather than
+          on its own line under the bio (#feedback). */}
       <div className="flex items-center gap-4">
         <Avatar photoUrl={artist.artistPhotoUrl} name={artist.artistName} size={72} />
-        <div className="min-w-0">
-          <h1 className="font-display truncate text-2xl text-foreground">{artist.artistName}</h1>
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+          <h1 className="font-display max-w-full truncate text-2xl text-foreground">
+            {artist.artistName}
+          </h1>
           <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-heading uppercase tracking-wide text-muted">
             Artist
           </span>
+        </div>
+        <div className="shrink-0">
+          <FollowButton artistId={artist.id} initialFollowing={followedIds.includes(artist.id)} />
         </div>
       </div>
 
@@ -94,13 +101,6 @@ export default async function PublicArtistProfilePage({
           <p className="mt-4 text-sm leading-relaxed text-foreground/90">{artist.artistBio}</p>
         )
       )}
-
-      <div className="mt-4">
-        <FollowButton
-          artistId={artist.id}
-          initialFollowing={followedIds.includes(artist.id)}
-        />
-      </div>
 
       <SocialLinks source={artist} className="mt-4" />
 

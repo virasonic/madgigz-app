@@ -196,6 +196,7 @@ export const es: Messages = {
 
   eventPage: {
     homeAria: "Inicio de MadGigz",
+    shareBuy: "Compra tu entrada en MadGigz",
     cancelledNotice:
       "Este bolo se ha cancelado. Las entradas compradas por MadGigz han sido reembolsadas.",
     doors: "Apertura",

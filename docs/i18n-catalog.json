@@ -172,6 +172,7 @@
     },
     "eventPage": {
       "homeAria": "MadGigz home",
+      "shareBuy": "Buy tickets on MadGigz",
       "cancelledNotice": "This show has been cancelled. Any tickets bought through MadGigz have been refunded.",
       "doors": "Doors",
       "freeEntry": "Free entry",
@@ -926,6 +927,7 @@
     },
     "eventPage": {
       "homeAria": "Inicio de MadGigz",
+      "shareBuy": "Compra tu entrada en MadGigz",
       "cancelledNotice": "Este bolo se ha cancelado. Las entradas compradas por MadGigz han sido reembolsadas.",
       "doors": "Apertura",
       "freeEntry": "Entrada gratis",

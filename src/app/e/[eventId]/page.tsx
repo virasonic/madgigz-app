@@ -45,12 +45,13 @@ export async function generateMetadata({
     return { title: t("eventPage.notFoundTitle") };
   }
 
-  const { locale } = await getServerT();
+  const { t, locale } = await getServerT();
   // This is the part that makes a link worth sending. Pasted into WhatsApp or
   // iMessage, what sells the gig is the poster and the line underneath it - a
-  // bare URL converts nothing.
-  const title = `${event.title} - ${event.artist}`;
-  const description = `${event.venue}, Madrid · ${formatDate(event.date, dateLocale(locale))} · ${event.time}`;
+  // bare URL converts nothing. Title = the concert itself; the line under it
+  // leads with the call to action, then the where/when (#feedback).
+  const title = event.title;
+  const description = `${t("eventPage.shareBuy")} · ${event.venue} · ${formatDate(event.date, dateLocale(locale))}`;
   const url = absoluteUrl(eventPath(event.id));
 
   return {

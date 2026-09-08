@@ -202,6 +202,7 @@ export const en = {
 
   eventPage: {
     homeAria: "MadGigz home",
+    shareBuy: "Buy tickets on MadGigz",
     cancelledNotice:
       "This show has been cancelled. Any tickets bought through MadGigz have been refunded.",
     doors: "Doors",
