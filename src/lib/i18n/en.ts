@@ -210,6 +210,10 @@ export const en = {
     about: "About",
     lineup: "Line-up",
     notFoundTitle: "Event not found - MadGigz",
+    notFoundHeading: "This gig's no longer around",
+    notFoundBody:
+      "It may have been removed or cancelled. There's plenty more live music happening in Madrid.",
+    notFoundCta: "Browse gigs",
   },
 
   publicEvent: {

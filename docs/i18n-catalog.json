@@ -178,7 +178,10 @@
       "freeEntry": "Free entry",
       "about": "About",
       "lineup": "Line-up",
-      "notFoundTitle": "Event not found - MadGigz"
+      "notFoundTitle": "Event not found - MadGigz",
+      "notFoundHeading": "This gig's no longer around",
+      "notFoundBody": "It may have been removed or cancelled. There's plenty more live music happening in Madrid.",
+      "notFoundCta": "Browse gigs"
     },
     "publicEvent": {
       "getTickets": "Get tickets",
@@ -933,7 +936,10 @@
       "freeEntry": "Entrada gratis",
       "about": "Acerca de",
       "lineup": "Cartel",
-      "notFoundTitle": "Evento no encontrado - MadGigz"
+      "notFoundTitle": "Evento no encontrado - MadGigz",
+      "notFoundHeading": "Este bolo ya no está disponible",
+      "notFoundBody": "Puede que se haya eliminado o cancelado. Hay mucha más música en directo en Madrid.",
+      "notFoundCta": "Explorar bolos"
     },
     "publicEvent": {
       "getTickets": "Conseguir entradas",

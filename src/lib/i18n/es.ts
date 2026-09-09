@@ -204,6 +204,10 @@ export const es: Messages = {
     about: "Acerca de",
     lineup: "Cartel",
     notFoundTitle: "Evento no encontrado - MadGigz",
+    notFoundHeading: "Este bolo ya no está disponible",
+    notFoundBody:
+      "Puede que se haya eliminado o cancelado. Hay mucha más música en directo en Madrid.",
+    notFoundCta: "Explorar bolos",
   },
 
   publicEvent: {
