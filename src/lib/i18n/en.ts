@@ -56,6 +56,28 @@ export const en = {
     profile: "Profile",
   },
 
+  // Search-result copy for the three public pages that had none - "/", /explore
+  // and /feed all inherited the root layout's bare "MadGigz" title, so every
+  // one of them showed the same generic snippet on Google. Kept out of the UI
+  // catalogs above on purpose: these strings are written for a search result,
+  // not for a screen, and nothing renders them.
+  //
+  // Titles stay under ~60 characters and descriptions under ~155, past which
+  // Google truncates. Each title carries "MadGigz" itself, because the root
+  // layout has no title template (the /e/ pages deliberately title themselves
+  // after the concert alone).
+  seo: {
+    homeTitle: "MadGigz - Live Gigs & Concerts in Madrid",
+    homeDescription:
+      "Discover live music in Madrid. Browse upcoming gigs from independent artists and venues, and buy tickets in seconds.",
+    exploreTitle: "What's On in Madrid - Upcoming Gigs | MadGigz",
+    exploreDescription:
+      "Every upcoming gig in Madrid on MadGigz: independent artists, local venues and live music you can book in seconds.",
+    feedTitle: "Live Music Feed - Madrid Artists | MadGigz",
+    feedDescription:
+      "New videos, announcements and shows from independent artists in Madrid. See what's happening this week on MadGigz.",
+  },
+
   feed: {
     forYou: "For You",
     thisWeek: "This Week",

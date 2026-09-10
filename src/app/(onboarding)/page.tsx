@@ -1,8 +1,9 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import RoleCard from "@/components/ui/RoleCard";
-import { safeNext } from "@/lib/site";
+import { absoluteUrl, safeNext } from "@/lib/site";
 import { getServerT } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 
@@ -31,6 +32,21 @@ function NoteIcon() {
       />
     </svg>
   );
+}
+
+// generateMetadata rather than a static export, because the language this page
+// renders in is decided per request (cookie, then Accept-Language) - a static
+// English title over Spanish body copy is the mismatch Google penalises. A
+// crawler sends no cookie, so it gets Spanish, and so does this.
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerT();
+  return {
+    title: t("seo.homeTitle"),
+    description: t("seo.homeDescription"),
+    // The ?next= round-trip from a shared event link would otherwise put a
+    // dozen distinct URLs in the index, all rendering this same screen.
+    alternates: { canonical: absoluteUrl("/") },
+  };
 }
 
 export default async function LandingPage({ searchParams }: PageProps<"/">) {

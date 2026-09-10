@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import {
   fetchApprovedArtists,
@@ -9,6 +10,19 @@ import {
 } from "@/lib/supabase/queries";
 import ExploreClient from "./ExploreClient";
 import { CURRENT_CITY } from "@/lib/city";
+import { getServerT } from "@/lib/i18n/server";
+import { absoluteUrl } from "@/lib/site";
+
+// Guest-readable, in the sitemap, and the hub every /e/ page hangs off - so it
+// is worth a real search snippet rather than the root layout's bare "MadGigz".
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerT();
+  return {
+    title: t("seo.exploreTitle"),
+    description: t("seo.exploreDescription"),
+    alternates: { canonical: absoluteUrl("/explore") },
+  };
+}
 
 export default async function ExplorePage() {
   const supabase = await createClient();

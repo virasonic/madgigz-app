@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import {
   fetchContentPosts,
@@ -11,6 +12,20 @@ import {
 import FeedClient from "./FeedClient";
 import { isArtistRole } from "@/lib/roles";
 import { CURRENT_CITY } from "@/lib/city";
+import { getServerT } from "@/lib/i18n/server";
+import { absoluteUrl } from "@/lib/site";
+
+// Not in the sitemap - the feed is a moving target with no stable content of
+// its own - but it is guest-readable and gets linked to, so a crawler that
+// finds it should still see what it is.
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerT();
+  return {
+    title: t("seo.feedTitle"),
+    description: t("seo.feedDescription"),
+    alternates: { canonical: absoluteUrl("/feed") },
+  };
+}
 
 export default async function FeedPage() {
   const supabase = await createClient();

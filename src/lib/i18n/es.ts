@@ -53,6 +53,18 @@ export const es: Messages = {
     profile: "Perfil",
   },
 
+  seo: {
+    homeTitle: "MadGigz - Conciertos y bolos en Madrid",
+    homeDescription:
+      "Descubre música en directo en Madrid. Explora los próximos bolos de artistas y salas independientes y compra tus entradas en segundos.",
+    exploreTitle: "Qué hay en Madrid - Próximos conciertos | MadGigz",
+    exploreDescription:
+      "Todos los próximos bolos en Madrid: artistas independientes, salas locales y música en directo con entradas al instante.",
+    feedTitle: "Música en directo - Artistas de Madrid | MadGigz",
+    feedDescription:
+      "Vídeos, novedades y bolos de artistas independientes de Madrid. Descubre qué pasa esta semana en MadGigz.",
+  },
+
   feed: {
     forYou: "Para ti",
     thisWeek: "Esta semana",
