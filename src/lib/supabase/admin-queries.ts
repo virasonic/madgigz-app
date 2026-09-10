@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { toCents } from "@/lib/pricing";
@@ -45,8 +45,27 @@ export interface AdminUserRow {
   artistPhotoUrl: string | null;
 }
 
+// auth.admin.listUsers() is paginated and returns only the FIRST page (50 users
+// by default). Called bare it silently truncates the admin user list - which is
+// exactly what made the Users page show 49 while the dashboard (which counts the
+// profiles table directly) showed 77. Walk every page via `nextPage` so we get
+// them all. `nextPage` is null on the last page, and stays correct even if the
+// server clamps perPage below what we ask for.
+async function listAllAuthUsers(admin: SupabaseClient): Promise<User[]> {
+  const all: User[] = [];
+  let page = 1;
+  for (;;) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) break;
+    all.push(...data.users);
+    if (data.nextPage == null) break;
+    page = data.nextPage;
+  }
+  return all;
+}
+
 export async function fetchAllUsers(admin: SupabaseClient): Promise<AdminUserRow[]> {
-  const { data: authData } = await admin.auth.admin.listUsers();
+  const authUsers = await listAllAuthUsers(admin);
   const { data: profileRows } = await admin
     .from("profiles")
     .select(
@@ -61,7 +80,7 @@ export async function fetchAllUsers(admin: SupabaseClient): Promise<AdminUserRow
 
   const profileById = new Map((profileRows ?? []).map((p) => [p.id, p]));
 
-  return (authData?.users ?? []).map((u) => {
+  return authUsers.map((u) => {
     const profile = profileById.get(u.id);
     return {
       id: u.id,
