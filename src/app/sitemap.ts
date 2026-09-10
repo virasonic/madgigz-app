@@ -70,6 +70,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Madrid" hub - it links out to every /e/ page, so it is also how a
     // crawler finds shows between sitemap regenerations.
     { url: `${origin}/explore`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    // The supply-side ads landing page. High priority because it is one of only
+    // two pages here written to be found by someone who doesn't know MadGigz.
+    {
+      url: `${origin}/for-artists`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
     { url: `${origin}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
     {
       url: `${origin}/delete-account`,

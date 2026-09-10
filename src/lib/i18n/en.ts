@@ -66,6 +66,68 @@ export const en = {
   // Google truncates. Each title carries "MadGigz" itself, because the root
   // layout has no title template (the /e/ pages deliberately title themselves
   // after the concert alone).
+  // The /for-artists landing page - the destination for the supply-side Google
+  // Ads campaign. Every figure here is quoted from the live Organiser Terms
+  // (aurasonic.es/organiser-terms); if that document changes, this changes with
+  // it, because an ad landing page making a pricing claim the contract doesn't
+  // back is the expensive kind of mistake.
+  forArtists: {
+    metaTitle: "Sell Your Gig Tickets in Madrid | MadGigz",
+    metaDescription:
+      "Publish your show and sell tickets directly to fans. 5% commission, no monthly fees, payout 7 days after the show.",
+    eyebrow: "For artists, venues and promoters",
+    title: "Sell your own tickets in Madrid",
+    subtitle:
+      "Publish a show in minutes and sell tickets directly to fans. 5% commission, no monthly fee, no lock-in.",
+    cta: "Publish your first show",
+    haveAccount: "Already have an account?",
+
+    statCommission: "5% + €0.36",
+    statCommissionLabel: "Commission per ticket",
+    statCommissionNote:
+      "Minimum €0.36, plus 21% VAT on the commission. Deducted automatically — the fan pays exactly the price you set.",
+    statFee: "€0",
+    statFeeLabel: "Monthly fee",
+    statFeeNote: "No subscription, no listing fee, no lock-in. You only pay when you sell.",
+    statPayout: "7 days",
+    statPayoutLabel: "Until your payout",
+    statPayoutNote:
+      "Ticket money sits in your own Stripe account. The payout is released 7 days after the show.",
+
+    howTitle: "How it works",
+    step1Title: "Create your account",
+    step1Body:
+      "Sign up as an artist, venue or promoter. We may ask you to verify your identity — a fraud check, not a curation step.",
+    step2Title: "Connect Stripe",
+    step2Body:
+      "Your ticket money accumulates in your own Stripe account, never in ours.",
+    step3Title: "Publish your show",
+    step3Body:
+      "You set the price, the capacity and the conditions. You are the seller; we are the technical and payment intermediary.",
+    step4Title: "Scan at the door",
+    step4Body:
+      "Fans arrive with a QR ticket on their phone. Scan them from yours. Your payout releases 7 days later.",
+
+    getTitle: "What you get",
+    get1: "QR tickets delivered to the fan's phone, with Apple and Google Wallet passes",
+    get2: "Door scanning from your own phone — no extra hardware",
+    get3: "Live capacity and sold counts while the show is on sale",
+    get4: "Your show in front of Madrid fans, on the MadGigz feed and Explore",
+    get5: "A monthly commission invoice, ready for your accountant",
+
+    honestTitle: "Worth knowing first",
+    honest1:
+      "You are the seller. The sale contract is between you and each fan, and you are responsible for the show itself.",
+    honest2:
+      "You issue your own invoices to your customers. We invoice you monthly for our commission.",
+    honest3:
+      "Before your first payout we need your tax details: a VAT number if you are in the EU, a government ID if you are outside it.",
+    honestLink: "Read the full Organiser Terms",
+
+    closeTitle: "Got a show coming up?",
+    closeBody: "Publishing it takes a few minutes and costs nothing until a ticket sells.",
+  },
+
   seo: {
     homeTitle: "MadGigz - Live Gigs & Concerts in Madrid",
     homeDescription:

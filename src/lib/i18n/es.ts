@@ -53,6 +53,64 @@ export const es: Messages = {
     profile: "Perfil",
   },
 
+  forArtists: {
+    metaTitle: "Vende las entradas de tu concierto | MadGigz",
+    metaDescription:
+      "Publica tu concierto y vende entradas directamente a los fans. 5% de comisión, sin cuotas, cobras 7 días después del show.",
+    eyebrow: "Para artistas, salas y promotores",
+    title: "Vende tus propias entradas en Madrid",
+    subtitle:
+      "Publica tu concierto en minutos y vende entradas directamente a los fans. 5% de comisión, sin cuotas y sin permanencia.",
+    cta: "Publica tu primer concierto",
+    haveAccount: "¿Ya tienes cuenta?",
+
+    statCommission: "5% + 0,36 €",
+    statCommissionLabel: "Comisión por entrada",
+    statCommissionNote:
+      "Mínimo 0,36 €, más 21% de IVA sobre la comisión. Se descuenta automáticamente: el fan paga exactamente el precio que tú pongas.",
+    statFee: "0 €",
+    statFeeLabel: "Cuota mensual",
+    statFeeNote:
+      "Sin suscripción, sin coste por publicar y sin permanencia. Solo pagas cuando vendes.",
+    statPayout: "7 días",
+    statPayoutLabel: "Hasta cobrar",
+    statPayoutNote:
+      "El dinero de las entradas está en tu propia cuenta de Stripe. El pago se libera 7 días después del concierto.",
+
+    howTitle: "Cómo funciona",
+    step1Title: "Crea tu cuenta",
+    step1Body:
+      "Regístrate como artista, sala o promotor. Puede que te pidamos verificar tu identidad: es una medida antifraude, no un filtro artístico.",
+    step2Title: "Conecta Stripe",
+    step2Body:
+      "El dinero de tus entradas se acumula en tu propia cuenta de Stripe, nunca en la nuestra.",
+    step3Title: "Publica tu concierto",
+    step3Body:
+      "Tú pones el precio, el aforo y las condiciones. Tú eres el vendedor; nosotros, el intermediario técnico y de pago.",
+    step4Title: "Escanea en la puerta",
+    step4Body:
+      "Los fans llegan con su entrada QR en el móvil. Escanéalas desde el tuyo. Cobras 7 días después.",
+
+    getTitle: "Qué incluye",
+    get1: "Entradas QR en el móvil del fan, con pases para Apple y Google Wallet",
+    get2: "Escaneo en puerta desde tu propio móvil, sin aparatos extra",
+    get3: "Aforo y entradas vendidas en tiempo real mientras el concierto está a la venta",
+    get4: "Tu concierto delante de los fans de Madrid, en el feed y en Explorar",
+    get5: "Una factura mensual de comisiones, lista para tu gestoría",
+
+    honestTitle: "Conviene saberlo antes",
+    honest1:
+      "Tú eres el vendedor. El contrato de venta es entre tú y cada fan, y tú respondes del concierto.",
+    honest2:
+      "Tú emites tus propias facturas a tus clientes. Nosotros te facturamos la comisión cada mes.",
+    honest3:
+      "Antes del primer pago necesitamos tus datos fiscales: NIF o número de IVA si estás en la UE, o un documento oficial si estás fuera.",
+    honestLink: "Lee los Términos para Organizadores",
+
+    closeTitle: "¿Tienes un concierto a la vista?",
+    closeBody: "Publicarlo lleva unos minutos y no cuesta nada hasta que se venda una entrada.",
+  },
+
   seo: {
     homeTitle: "MadGigz - Conciertos y bolos en Madrid",
     homeDescription:
