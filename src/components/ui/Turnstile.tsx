@@ -44,7 +44,15 @@ const Turnstile = forwardRef<TurnstileHandle, TurnstileProps>(function Turnstile
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
+  // Seed from whether Cloudflare's global is already on the page. On a re-mount
+  // - e.g. the user went back to the role picker and returned - api.js is
+  // already loaded, and next/script's onLoad does NOT fire a second time (it
+  // early-returns on a LoadCache hit). Relying on onLoad alone left scriptLoaded
+  // stuck false, so the widget never rendered and the form could never be
+  // submitted (no token). Checking the global covers the already-loaded case.
+  const [scriptLoaded, setScriptLoaded] = useState(
+    () => typeof window !== "undefined" && Boolean(window.turnstile)
+  );
 
   useImperativeHandle(ref, () => ({
     reset() {
