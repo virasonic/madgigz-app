@@ -162,7 +162,10 @@ export default function FeedClient({
 }: FeedClientProps) {
   const { t, locale } = useT();
   const { promptSignup, sheet: guestSheet } = useGuestGate();
-  const [pane, setPane] = useState<Pane>("forYou");
+  // Open on This Week, not For You (#174): For You is thin on content for now,
+  // and This Week is the populated schedule. Temporary product call - revisit
+  // once For You carries enough to be the landing pane again.
+  const [pane, setPane] = useState<Pane>("thisWeek");
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
   // #102: the open ticket and the announcements sheet live in the URL now, so
   // the back button closes them, they survive a refresh, and a ticket link is
@@ -367,7 +370,12 @@ export default function FeedClient({
   // after the browser's own scroll restoration.
   const restoredRef = useRef(false);
   useEffect(() => {
-    if (!seenLoaded || restoredRef.current) return;
+    // Only when For You is actually showing (#174 defaults to This Week, so the
+    // For You pane - and its scroll node - isn't mounted at first). Guarding on
+    // pane means the restore runs the first time For You is opened, not on mount,
+    // and the restoredRef keeps it a one-shot so it never yanks the list while
+    // someone is browsing.
+    if (!seenLoaded || restoredRef.current || pane !== "forYou") return;
     const el = forYouScrollRef.current;
     if (!el) return;
     restoredRef.current = true;
@@ -379,7 +387,7 @@ export default function FeedClient({
       if (target > 0) setActiveIndex(target);
     });
     return () => cancelAnimationFrame(raf);
-  }, [seenLoaded, forYouFeed]);
+  }, [seenLoaded, forYouFeed, pane]);
   // groupByDay re-sorts by date, and Array.sort is stable, so pre-sorting
   // followed-first keeps the days in order while lifting followed artists
   // within each one. This Week is a schedule; it can't stop being chronological.

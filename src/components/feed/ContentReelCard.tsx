@@ -7,6 +7,7 @@ import { ContentPost, EventItem } from "@/lib/types";
 import ShareEventButton from "./ShareEventButton";
 import LikeButton from "./LikeButton";
 import ReportButton from "./ReportButton";
+import ClampText from "@/components/ui/ClampText";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
 import { streamHlsUrl, streamThumbnailUrl } from "@/lib/cloudflare-stream";
@@ -242,14 +243,20 @@ export default function ContentReelCard({
           </p>
         </div>
 
-        {post.caption && <p className="text-sm text-foreground">{post.caption}</p>}
+        {post.caption && (
+          <ClampText text={post.caption} lines={4} className="text-sm text-foreground" />
+        )}
 
         <button
           onClick={onOpen}
           className="flex items-center justify-between rounded-2xl px-5 py-3.5"
           style={{ backgroundColor: event.accentColor }}
         >
-          <span className="font-display text-foreground">{t("feed.getTickets")}</span>
+          {/* Externally-ticketed shows aren't sold through MadGigz, so the button
+              is informational, not a buy (#173). */}
+          <span className="font-display text-foreground">
+            {event.ticketing?.mode === "external" ? t("feed.moreInfo") : t("feed.getTickets")}
+          </span>
           <span className="font-heading text-foreground">€{event.price}</span>
         </button>
       </div>

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import RoleCard from "@/components/ui/RoleCard";
+import LanguageToggle from "@/components/ui/LanguageToggle";
 import { absoluteUrl, safeNext } from "@/lib/site";
 import { getServerT } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
@@ -79,7 +80,14 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
   // all the spare height, pinning the logo to the top and the cards to the
   // bottom with a dead gap between them.
   return (
-    <div className="flex flex-1 flex-col justify-center">
+    <div className="flex flex-1 flex-col">
+      {/* First-screen language switch (#176): a user who opened the app in the
+          wrong language can fix it before signing up. Writes the same locale
+          cookie the in-app Settings toggle uses, so the choice sticks. */}
+      <div className="flex justify-end">
+        <LanguageToggle />
+      </div>
+      <div className="flex flex-1 flex-col justify-center">
       <div className="flex flex-col items-center text-center">
         <Image
           src="/logos/madgigz-wordmark.png"
@@ -129,6 +137,7 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
           {t("landing.browse")}
         </Link>
       </p>
+      </div>
     </div>
   );
 }

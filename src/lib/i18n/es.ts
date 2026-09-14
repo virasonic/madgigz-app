@@ -22,6 +22,8 @@ export const es: Messages = {
     show: "Mostrar",
     hide: "Ocultar",
     why: "¿Por qué?",
+    more: "Más",
+    less: "Menos",
   },
 
   language: {
@@ -137,6 +139,7 @@ export const es: Messages = {
     mute: "Silenciar",
     artistContent: "Contenido de artista",
     getTickets: "Comprar entradas",
+    moreInfo: "Más información",
     previousReel: "Anterior",
     nextReel: "Siguiente",
     newArtist: "Artista nuevo",

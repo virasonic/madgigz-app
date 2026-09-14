@@ -22,6 +22,8 @@ export const en = {
     show: "Show",
     hide: "Hide",
     why: "Why?",
+    more: "More",
+    less: "Less",
   },
 
   language: {
@@ -154,6 +156,9 @@ export const en = {
     mute: "Mute",
     artistContent: "Artist Content",
     getTickets: "Get Tickets",
+    // Externally-ticketed shows don't sell through MadGigz - the button opens
+    // info / the external site, so it reads "More Info" not "Get Tickets" (#173).
+    moreInfo: "More Info",
     previousReel: "Previous",
     nextReel: "Next",
     newArtist: "New artist",
