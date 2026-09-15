@@ -143,6 +143,11 @@ export default function TicketModal({
   const remaining = Math.max(capacity - sold, 0);
   const soldOut = remaining <= 0;
   const almostGone = !soldOut && soldPercent >= 90;
+  // Hide the capacity bar until the room is more than half sold. A near-empty
+  // bar reads as "nobody's coming" and kills the scarcity signal; once it's
+  // past halfway it does the opposite, so only show it from there on (soldOut
+  // is 100% and always qualifies, so the sold-out state still surfaces).
+  const showCapacityBar = sold * 2 > capacity;
 
   // With tiers, the seats that matter for the stepper and the buy button are the
   // chosen tier's, not the event aggregate. A tier that's sold out or past its
@@ -416,23 +421,25 @@ export default function TicketModal({
                   </div>
                 </div>
 
-                <div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/20">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${soldPercent}%`, backgroundColor: event.accentColor }}
-                    />
+                {showCapacityBar && (
+                  <div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/20">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${soldPercent}%`, backgroundColor: event.accentColor }}
+                      />
+                    </div>
+                    {soldOut ? (
+                      <p className="mt-2 text-xs text-danger">{t("ticket.soldOutBar")}</p>
+                    ) : (
+                      almostGone && (
+                        <p className="mt-2 text-xs text-danger">
+                          {t("ticket.almostGone", { remaining })}
+                        </p>
+                      )
+                    )}
                   </div>
-                  {soldOut ? (
-                    <p className="mt-2 text-xs text-danger">{t("ticket.soldOutBar")}</p>
-                  ) : (
-                    almostGone && (
-                      <p className="mt-2 text-xs text-danger">
-                        {t("ticket.almostGone", { remaining })}
-                      </p>
-                    )
-                  )}
-                </div>
+                )}
 
                 {!buyBlocked && !isGuest && (
                   <div className="flex flex-col gap-1.5">
