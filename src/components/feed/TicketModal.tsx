@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
+import ClampText from "@/components/ui/ClampText";
 import { LegalNotice } from "@/components/legal/LegalNotice";
 import { createCheckout, previewPromoCode } from "@/app/(app)/checkout-actions";
 import TicketEmailPrompt from "./TicketEmailPrompt";
@@ -509,7 +510,13 @@ export default function TicketModal({
               </div>
             ) : (
               <div className="mt-6 flex flex-col gap-5">
-                <p className="text-sm text-foreground/90">{event.description}</p>
+                {event.description && (
+                  <ClampText
+                    text={event.description}
+                    lines={4}
+                    className="text-sm text-foreground/90"
+                  />
+                )}
 
                 <div>
                   <h3 className="font-heading text-sm text-muted">{t("ticket.lineup")}</h3>

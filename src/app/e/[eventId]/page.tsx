@@ -12,6 +12,7 @@ import { buildLineupLinks, normName } from "@/lib/lineup-links";
 import { absoluteUrl, eventPath, mapsUrl } from "@/lib/site";
 import PublicEventActions from "./PublicEventActions";
 import BackButton from "@/components/ui/BackButton";
+import ClampText from "@/components/ui/ClampText";
 import { getServerT } from "@/lib/i18n/server";
 import { dateLocale } from "@/lib/dates";
 
@@ -184,7 +185,11 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
             <h2 className="mb-2 mt-8 font-heading text-sm uppercase tracking-wide text-muted">
               {t("eventPage.about")}
             </h2>
-            <p className="text-sm leading-relaxed text-foreground/90">{event.description}</p>
+            <ClampText
+              text={event.description}
+              lines={4}
+              className="text-sm leading-relaxed text-foreground/90"
+            />
           </>
         )}
 
