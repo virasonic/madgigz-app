@@ -96,20 +96,21 @@ export function ShieldIcon(active: boolean) {
 // keeps the small megaphone in the feed header. Same active-stroke treatment as
 // the rest of the rail so it sits naturally beside them.
 export function MegaphoneIcon(active: boolean) {
+  // A real bullhorn (Lucide "megaphone") - the old glyph was a speaker cone that
+  // read as a volume control (#feedback).
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M4 10v4a1 1 0 0 0 1 1h2.5l5 4V5l-5 4H5a1 1 0 0 0-1 1Z"
-        stroke="currentColor"
-        strokeWidth={active ? 2.4 : 1.8}
-        strokeLinejoin="round"
-      />
-      <path
-        d="M17 8.5s1.5 1 1.5 3.5-1.5 3.5-1.5 3.5"
-        stroke="currentColor"
-        strokeWidth={active ? 2.4 : 1.8}
-        strokeLinecap="round"
-      />
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={active ? 2.4 : 1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m3 11 18-5v12L3 14v-3z" />
+      <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
     </svg>
   );
 }

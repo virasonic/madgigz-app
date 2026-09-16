@@ -750,19 +750,23 @@ function RefreshIcon({ spinning, angle }: { spinning: boolean; angle: number }) 
 }
 
 function MegaphoneIcon() {
+  // A real bullhorn (Lucide "megaphone"): a horn opening to the right with a
+  // small handle - the old icon was a speaker cone + sound waves, which read as
+  // a volume control.
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6L6 10H4a1 1 0 0 0-1 1Z"
-        fill="currentColor"
-      />
-      <path
-        d="M14 8s2 1 2 4-2 4-2 4M17 5s3 2 3 7-3 7-3 7"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        fill="none"
-      />
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="m3 11 18-5v12L3 14v-3z" />
+      <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
     </svg>
   );
 }
