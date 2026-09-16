@@ -850,7 +850,7 @@ export const en = {
       "Ticket price can't be changed after publishing - fans who already bought paid the listed price, and their receipts and refunds are tied to it. Email",
     priceLockedTail: "if the price is wrong.",
     saveChanges: "Save changes",
-    addContentBtn: "Add Content",
+    addContentBtn: "+ Content",
     removeFromProfile: "Remove from my profile",
     removing: "Removing...",
     removeFromProfileHint:

@@ -820,7 +820,7 @@ export const es: Messages = {
       "El precio de la entrada no se puede cambiar tras publicar: los fans que ya compraron pagaron el precio indicado, y sus recibos y reembolsos están ligados a él. Escribe a",
     priceLockedTail: "si el precio está mal.",
     saveChanges: "Guardar cambios",
-    addContentBtn: "Añadir contenido",
+    addContentBtn: "+ Contenido",
     removeFromProfile: "Quitar de mi perfil",
     removing: "Quitando...",
     removeFromProfileHint:
