@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import EventCard from "@/components/feed/EventCard";
 import TicketModal from "@/components/feed/TicketModal";
 import { createClient } from "@/lib/supabase/client";
@@ -21,6 +22,7 @@ export default function ArtistShowsGrid({
   initialSavedIds: string[];
 }) {
   const { t } = useT();
+  const router = useRouter();
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   // #102: open ticket sheet is ?ticket=<id>, resolved from this artist's shows.
   const ticketModal = useUrlModal("ticket");
@@ -37,7 +39,11 @@ export default function ArtistShowsGrid({
     const ok = await toggleSavedEvent(supabase, userId, eventId, wasSaved);
     if (!ok) {
       setSavedIds((ids) => (wasSaved ? [...ids, eventId] : ids.filter((id) => id !== eventId)));
+      return;
     }
+    // #185: refresh so the profile's Saved grid/count don't serve a stale
+    // (up to 30s) cached payload after this client-only save.
+    router.refresh();
   }
 
   return (

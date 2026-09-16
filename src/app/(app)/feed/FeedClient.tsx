@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import TicketModal from "@/components/feed/TicketModal";
 import ContentReelCard from "@/components/feed/ContentReelCard";
@@ -162,6 +163,7 @@ export default function FeedClient({
   followedEventIds,
 }: FeedClientProps) {
   const { t, locale } = useT();
+  const router = useRouter();
   const { promptSignup, sheet: guestSheet } = useGuestGate();
   // Open on This Week, not For You (#174): For You is thin on content for now,
   // and This Week is the populated schedule. Temporary product call - revisit
@@ -429,7 +431,11 @@ export default function FeedClient({
     // showing a like that doesn't exist.
     if (!ok) {
       setSavedIds((ids) => (wasLiked ? [...ids, eventId] : ids.filter((id) => id !== eventId)));
+      return;
     }
+    // #185: refresh so the profile's Saved grid/count (server-rendered) don't
+    // serve a stale cached payload for up to 30s after this client-only save.
+    router.refresh();
   }
 
   // Only ever read inside the artist-only "post an update" flow, which a guest

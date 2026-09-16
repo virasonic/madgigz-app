@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import TicketModal from "@/components/feed/TicketModal";
 import TicketQRModal from "@/components/feed/TicketQRModal";
@@ -63,6 +64,7 @@ export default function SavedClient({
   appleWalletEnabled,
 }: SavedClientProps) {
   const { t, locale } = useT();
+  const router = useRouter();
   const dl = dateLocale(locale);
   const [subTab, setSubTab] = useState<SubTab>("tickets");
   // #102: a tapped liked-event opens ?ticket=<id> so back closes the sheet and
@@ -162,7 +164,11 @@ export default function SavedClient({
     // stored rather than only correcting itself on the next load.
     if (!ok) {
       setSavedIds((ids) => (wasSaved ? [...ids, eventId] : ids.filter((id) => id !== eventId)));
+      return;
     }
+    // #185: invalidate the router cache so the profile's Saved grid/count re-fetch
+    // on the next visit instead of serving a stale (up to 30s) payload.
+    router.refresh();
   }
 
   // Keep the pending-transfer map in step with links created/cancelled from the

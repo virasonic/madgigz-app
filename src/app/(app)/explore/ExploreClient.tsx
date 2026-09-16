@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import EventCard from "@/components/feed/EventCard";
 import TicketModal from "@/components/feed/TicketModal";
@@ -38,6 +38,7 @@ export default function ExploreClient({
   preferences,
 }: ExploreClientProps) {
   const { t } = useT();
+  const router = useRouter();
   const { promptSignup, sheet: guestSheet } = useGuestGate();
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   // #102: the open ticket sheet lives in ?ticket=<id> so back closes it and the
@@ -131,7 +132,12 @@ export default function ExploreClient({
     const ok = await toggleSavedEvent(supabase, userId, eventId, wasSaved);
     if (!ok) {
       setSavedIds((ids) => (wasSaved ? [...ids, eventId] : ids.filter((id) => id !== eventId)));
+      return;
     }
+    // #185: the save is a client-only write, so the profile's Saved grid/count
+    // (server-rendered) would show a stale value for up to 30s (staleTimes). A
+    // refresh invalidates the client router cache so the next visit re-fetches.
+    router.refresh();
   }
 
   return (
