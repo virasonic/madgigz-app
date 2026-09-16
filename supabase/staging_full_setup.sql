@@ -3020,3 +3020,25 @@ create index if not exists admin_decisions_subject_idx
 
 alter table public.admin_decisions enable row level security;
 revoke all on public.admin_decisions from anon, authenticated;
+
+-- ############# addendum_048_fan_preferences.sql #############
+
+create table if not exists public.fan_preferences (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  genre_ids uuid[] not null default '{}',
+  weekdays smallint[] not null default '{}',
+  time_buckets text[] not null default '{}',
+  capacity_buckets text[] not null default '{}',
+  updated_at timestamptz not null default now()
+);
+
+alter table public.fan_preferences enable row level security;
+
+create policy "Users can view their own preferences" on public.fan_preferences
+  for select using (auth.uid() = user_id);
+create policy "Users can set their own preferences" on public.fan_preferences
+  for insert with check (auth.uid() = user_id);
+create policy "Users can update their own preferences" on public.fan_preferences
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Users can clear their own preferences" on public.fan_preferences
+  for delete using (auth.uid() = user_id);

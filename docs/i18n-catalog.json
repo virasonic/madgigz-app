@@ -331,6 +331,24 @@
       "switchLegalNotice": "By continuing you accept the {organiserTerms}.",
       "switching": "Switching..."
     },
+    "preferences": {
+      "title": "Preferences",
+      "subtitle": "Tell us what you're into and we'll bump matching gigs up in Explore.",
+      "genres": "Favourite genres",
+      "days": "Preferred days",
+      "time": "Time of show",
+      "capacity": "Venue size",
+      "time_afternoon": "Daytime",
+      "time_evening": "Evening",
+      "time_late": "Late night",
+      "capacity_small": "Intimate (under 150)",
+      "capacity_medium": "Mid-size (150–500)",
+      "capacity_large": "Big (500+)",
+      "save": "Save preferences",
+      "saved": "Saved ✓",
+      "saveError": "Couldn't save — please try again.",
+      "settingsHint": "Genres, days, venue size"
+    },
     "profile": {
       "attended": "Attended",
       "saved": "Saved",
@@ -1142,6 +1160,24 @@
       "switchConfirmBody": "Configurarás tu perfil de artista y lo verificaremos antes de que puedas vender entradas. Tus entradas y los artistas que sigues se quedan igual.",
       "switchLegalNotice": "Al continuar aceptas las {organiserTerms}.",
       "switching": "Cambiando..."
+    },
+    "preferences": {
+      "title": "Preferencias",
+      "subtitle": "Cuéntanos qué te gusta y subiremos los bolos que encajen en Explorar.",
+      "genres": "Géneros favoritos",
+      "days": "Días preferidos",
+      "time": "Hora del bolo",
+      "capacity": "Tamaño de la sala",
+      "time_afternoon": "De día",
+      "time_evening": "Tarde-noche",
+      "time_late": "Madrugada",
+      "capacity_small": "Íntima (menos de 150)",
+      "capacity_medium": "Mediana (150–500)",
+      "capacity_large": "Grande (500+)",
+      "save": "Guardar preferencias",
+      "saved": "Guardado ✓",
+      "saveError": "No se pudo guardar. Inténtalo de nuevo.",
+      "settingsHint": "Géneros, días, tamaño de sala"
     },
     "profile": {
       "attended": "Asistidos",

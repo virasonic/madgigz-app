@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import TicketModal from "@/components/feed/TicketModal";
 import ContentReelCard from "@/components/feed/ContentReelCard";
@@ -474,6 +475,17 @@ export default function FeedClient({
             +
           </button>
         )}
+        {/* #170: fans get a quick way into their discovery preferences from the
+            feed. Artists use this spot for the post "+", so fans only. */}
+        {user && !canActAsArtist(user) && (
+          <Link
+            href="/preferences"
+            aria-label={t("preferences.title")}
+            className="absolute right-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface text-muted"
+          >
+            <TuneIcon />
+          </Link>
+        )}
         {(
           [
             ["forYou", t("feed.forYou")],
@@ -745,6 +757,23 @@ function MegaphoneIcon() {
         strokeLinecap="round"
         fill="none"
       />
+    </svg>
+  );
+}
+
+// Sliders / tune icon for the fan preferences shortcut (#170).
+function TuneIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h8M16 18h4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <circle cx="15" cy="6" r="2.2" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="7" cy="12" r="2.2" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="13" cy="18" r="2.2" stroke="currentColor" strokeWidth="1.8" />
     </svg>
   );
 }

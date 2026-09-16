@@ -2,6 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ARTIST_CAPABLE_ROLES } from "@/lib/roles";
 import type { TaggedArtist } from "@/lib/lineup-links";
 import {
+  EMPTY_PREFERENCES,
+  type CapacityBucket,
+  type FanPreferences,
+  type TimeBucket,
+} from "@/lib/fan-preferences";
+import {
   ContentPost,
   ContentPostRow,
   Discount,
@@ -127,6 +133,40 @@ export async function fetchGenresByEvent(
     }
   );
   return byEvent;
+}
+
+// Genre ids per event (the id form of fetchGenresByEvent), for the #170 Explore
+// preference boost - the fan's saved genre ids are matched against these.
+export async function fetchGenreIdsByEvent(
+  supabase: SupabaseClient
+): Promise<Record<string, string[]>> {
+  const { data } = await supabase.from("event_genres").select("event_id, genre_id");
+  const byEvent: Record<string, string[]> = {};
+  ((data ?? []) as { event_id: string; genre_id: string }[]).forEach((row) => {
+    byEvent[row.event_id] = [...(byEvent[row.event_id] ?? []), row.genre_id];
+  });
+  return byEvent;
+}
+
+// A fan's discovery preferences (#170). Owner-scoped by RLS. Degrades gracefully
+// before addendum_048 runs: a missing table (42P01) or no row both return empty
+// preferences, so Explore simply doesn't boost rather than throwing.
+export async function fetchFanPreferences(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<FanPreferences> {
+  const { data, error } = await supabase
+    .from("fan_preferences")
+    .select("genre_ids, weekdays, time_buckets, capacity_buckets")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) return EMPTY_PREFERENCES;
+  return {
+    genreIds: (data.genre_ids as string[] | null) ?? [],
+    weekdays: (data.weekdays as number[] | null) ?? [],
+    timeBuckets: (data.time_buckets as TimeBucket[] | null) ?? [],
+    capacityBuckets: (data.capacity_buckets as CapacityBucket[] | null) ?? [],
+  };
 }
 
 // Only approved artists, matching what the public profile page will actually

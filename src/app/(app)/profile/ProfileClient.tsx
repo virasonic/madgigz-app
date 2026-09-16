@@ -190,6 +190,18 @@ function SettingsSheet({
             </span>
           </Link>
 
+          {/* #170: fan discovery preferences. Fan-facing (artists get their own
+              tools in this sheet), so gated to non-artists. */}
+          {!isArtist && (
+            <Link
+              href="/preferences"
+              className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
+            >
+              <span className="text-sm text-foreground">{t("preferences.title")}</span>
+              <span className="text-xs text-muted">{t("preferences.settingsHint")}</span>
+            </Link>
+          )}
+
           {/* Mobile entry to the web admin panel (#157) - the desktop SideNav
               already links here, but the phone had no way in. Label stays
               English on purpose: the admin panel is English-only by design. */}

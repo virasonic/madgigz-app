@@ -386,6 +386,25 @@ export const es: Messages = {
     switching: "Cambiando...",
   },
 
+  preferences: {
+    title: "Preferencias",
+    subtitle: "Cuéntanos qué te gusta y subiremos los bolos que encajen en Explorar.",
+    genres: "Géneros favoritos",
+    days: "Días preferidos",
+    time: "Hora del bolo",
+    capacity: "Tamaño de la sala",
+    time_afternoon: "De día",
+    time_evening: "Tarde-noche",
+    time_late: "Madrugada",
+    capacity_small: "Íntima (menos de 150)",
+    capacity_medium: "Mediana (150–500)",
+    capacity_large: "Grande (500+)",
+    save: "Guardar preferencias",
+    saved: "Guardado ✓",
+    saveError: "No se pudo guardar. Inténtalo de nuevo.",
+    settingsHint: "Géneros, días, tamaño de sala",
+  },
+
   profile: {
     attended: "Asistidos",
     saved: "Guardados",

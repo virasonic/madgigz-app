@@ -412,6 +412,25 @@ export const en = {
     switching: "Switching...",
   },
 
+  preferences: {
+    title: "Preferences",
+    subtitle: "Tell us what you're into and we'll bump matching gigs up in Explore.",
+    genres: "Favourite genres",
+    days: "Preferred days",
+    time: "Time of show",
+    capacity: "Venue size",
+    time_afternoon: "Daytime",
+    time_evening: "Evening",
+    time_late: "Late night",
+    capacity_small: "Intimate (under 150)",
+    capacity_medium: "Mid-size (150–500)",
+    capacity_large: "Big (500+)",
+    save: "Save preferences",
+    saved: "Saved ✓",
+    saveError: "Couldn't save — please try again.",
+    settingsHint: "Genres, days, venue size",
+  },
+
   profile: {
     attended: "Attended",
     saved: "Saved",

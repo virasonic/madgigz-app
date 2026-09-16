@@ -4,10 +4,13 @@ import {
   fetchApprovedArtists,
   fetchCurrentUser,
   fetchEvents,
+  fetchFanPreferences,
   fetchFollowedEventIds,
+  fetchGenreIdsByEvent,
   fetchGenresByEvent,
   fetchSavedEventIds,
 } from "@/lib/supabase/queries";
+import { EMPTY_PREFERENCES } from "@/lib/fan-preferences";
 import ExploreClient from "./ExploreClient";
 import { CURRENT_CITY } from "@/lib/city";
 import { getServerT } from "@/lib/i18n/server";
@@ -30,13 +33,18 @@ export default async function ExplorePage() {
   // and the per-user saved/followed sets come back empty without a session.
   const user = await fetchCurrentUser(supabase);
 
-  const [events, savedIds, artists, genresByEvent, followedEventIds] = await Promise.all([
-    fetchEvents(supabase, { activeOnly: true, city: CURRENT_CITY, upcomingOnly: true }),
-    user ? fetchSavedEventIds(supabase, user.id) : Promise.resolve<string[]>([]),
-    fetchApprovedArtists(supabase),
-    fetchGenresByEvent(supabase),
-    user ? fetchFollowedEventIds(supabase, user.id) : Promise.resolve(new Set<string>()),
-  ]);
+  const [events, savedIds, artists, genresByEvent, genreIdsByEvent, followedEventIds, preferences] =
+    await Promise.all([
+      fetchEvents(supabase, { activeOnly: true, city: CURRENT_CITY, upcomingOnly: true }),
+      user ? fetchSavedEventIds(supabase, user.id) : Promise.resolve<string[]>([]),
+      fetchApprovedArtists(supabase),
+      fetchGenresByEvent(supabase),
+      fetchGenreIdsByEvent(supabase),
+      user ? fetchFollowedEventIds(supabase, user.id) : Promise.resolve(new Set<string>()),
+      // #170: the fan's saved discovery preferences boost matching shows. Guests
+      // (and pre-migration) get empty preferences, so ordering is unchanged.
+      user ? fetchFanPreferences(supabase, user.id) : Promise.resolve(EMPTY_PREFERENCES),
+    ]);
 
   return (
     <ExploreClient
@@ -45,7 +53,9 @@ export default async function ExplorePage() {
       initialSavedIds={savedIds}
       artists={artists}
       genresByEvent={genresByEvent}
+      genreIdsByEvent={genreIdsByEvent}
       followedEventIds={[...followedEventIds]}
+      preferences={preferences}
     />
   );
 }

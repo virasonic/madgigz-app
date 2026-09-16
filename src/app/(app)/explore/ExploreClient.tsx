@@ -10,6 +10,7 @@ import { useGuestGate } from "@/components/auth/GuestGate";
 import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem, PublicArtistProfile } from "@/lib/types";
+import { scoreEvent, type FanPreferences } from "@/lib/fan-preferences";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import CityBadge from "@/components/ui/CityBadge";
@@ -21,7 +22,9 @@ interface ExploreClientProps {
   initialSavedIds: string[];
   artists: PublicArtistProfile[];
   genresByEvent: Record<string, string[]>;
+  genreIdsByEvent: Record<string, string[]>;
   followedEventIds: string[];
+  preferences: FanPreferences;
 }
 
 export default function ExploreClient({
@@ -30,7 +33,9 @@ export default function ExploreClient({
   initialSavedIds,
   artists,
   genresByEvent,
+  genreIdsByEvent,
   followedEventIds,
+  preferences,
 }: ExploreClientProps) {
   const { t } = useT();
   const { promptSignup, sheet: guestSheet } = useGuestGate();
@@ -81,13 +86,29 @@ export default function ExploreClient({
           .includes(trimmedQuery)
       );
     }
-    // Artists you follow float to the top. Explore is discovery rather than a
+    // Artists you follow float to the top, then shows matching your preferences
+    // (#170) float up within the rest. Explore is discovery rather than a
     // schedule, so unlike This Week it can afford to break date order - and a
-    // stable sort keeps everything else in the date order it arrived in.
-    return [...list].sort(
-      (a, b) => Number(followed.has(b.id)) - Number(followed.has(a.id))
-    );
-  }, [initialEvents, trimmedQuery, activeGenre, genresByEvent, followed]);
+    // stable sort keeps everything else in the date order it arrived in. A fan
+    // with no preferences scores 0 everywhere, so this is a no-op for them.
+    return [...list].sort((a, b) => {
+      const byFollowed = Number(followed.has(b.id)) - Number(followed.has(a.id));
+      if (byFollowed !== 0) return byFollowed;
+      const scoreA = scoreEvent(preferences, {
+        genreIds: genreIdsByEvent[a.id] ?? [],
+        dateIso: a.date,
+        timeStr: a.time,
+        capacity: a.capacity,
+      });
+      const scoreB = scoreEvent(preferences, {
+        genreIds: genreIdsByEvent[b.id] ?? [],
+        dateIso: b.date,
+        timeStr: b.time,
+        capacity: b.capacity,
+      });
+      return scoreB - scoreA;
+    });
+  }, [initialEvents, trimmedQuery, activeGenre, genresByEvent, genreIdsByEvent, followed, preferences]);
 
   // Artists only appear once someone searches - listing every artist above the
   // grid by default would bury the shows Explore exists to surface.
