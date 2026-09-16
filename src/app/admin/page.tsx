@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   adminClient,
-  fetchAllUsers,
   fetchDashboardStats,
   fetchOpenFeedbackCount,
   fetchOpenReportCount,
@@ -43,19 +42,14 @@ function StatCard({ label, value, href }: { label: string; value: string; href?:
 export default async function AdminDashboardPage() {
   await requireAdmin();
   const admin = adminClient();
-  const [stats, users, openFeedback, openReports, storage] = await Promise.all([
+  const [stats, openFeedback, openReports, storage] = await Promise.all([
     fetchDashboardStats(admin),
-    fetchAllUsers(admin),
     fetchOpenFeedbackCount(admin),
     fetchOpenReportCount(admin),
     fetchStorageUsage(admin),
   ]);
 
   const storagePercent = (storage.totalBytes / STORAGE_QUOTA_BYTES) * 100;
-
-  const recentUsers = [...users]
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, 5);
 
   return (
     <div className="flex flex-col gap-8">
@@ -117,28 +111,30 @@ export default async function AdminDashboardPage() {
             (run <code className="text-foreground">addendum_034</code>).
           </p>
         ) : (
-          <table className="mt-5 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-muted/15 text-muted">
-                <th className="pb-2 font-heading">Bucket</th>
-                <th className="pb-2 text-right font-heading">Files</th>
-                <th className="pb-2 text-right font-heading">Size</th>
-              </tr>
-            </thead>
-            <tbody>
-              {storage.buckets.map((b) => (
-                <tr key={b.bucket} className="border-b border-muted/10 last:border-0">
-                  <td className="py-2 text-foreground">{b.bucket}</td>
-                  <td className="py-2 text-right text-muted tabular-nums">
-                    {b.files.toLocaleString()}
-                  </td>
-                  <td className="py-2 text-right text-foreground tabular-nums">
-                    {formatBytes(b.bytes)}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="mt-5 w-full min-w-[360px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-muted/15 text-muted">
+                  <th className="pb-2 font-heading">Bucket</th>
+                  <th className="pb-2 text-right font-heading">Files</th>
+                  <th className="pb-2 text-right font-heading">Size</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {storage.buckets.map((b) => (
+                  <tr key={b.bucket} className="border-b border-muted/10 last:border-0">
+                    <td className="py-2 text-foreground">{b.bucket}</td>
+                    <td className="py-2 text-right text-muted tabular-nums">
+                      {b.files.toLocaleString()}
+                    </td>
+                    <td className="py-2 text-right text-foreground tabular-nums">
+                      {formatBytes(b.bytes)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -162,30 +158,6 @@ export default async function AdminDashboardPage() {
             ))}
           </div>
         )}
-      </div>
-
-      <div className="rounded-2xl bg-surface p-5">
-        <h2 className="mb-4 font-heading text-lg text-foreground">Recent users</h2>
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-muted/15 text-muted">
-              <th className="pb-2 font-heading">Username</th>
-              <th className="pb-2 font-heading">Email</th>
-              <th className="pb-2 font-heading">Role</th>
-              <th className="pb-2 font-heading">Joined</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentUsers.map((u) => (
-              <tr key={u.id} className="border-b border-muted/10 last:border-0">
-                <td className="py-2 text-foreground">{u.username}</td>
-                <td className="py-2 text-muted">{u.email}</td>
-                <td className="py-2 text-muted capitalize">{u.role}</td>
-                <td className="py-2 text-muted">{new Date(u.createdAt).toLocaleDateString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   );

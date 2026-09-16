@@ -181,7 +181,8 @@ export default async function AdminEventDetailPage({
         {discountUsage.length === 0 ? (
           <p className="text-sm text-muted">No discount codes used on this event.</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-left text-sm">
             <thead>
               <tr className="border-b border-muted/15 text-muted">
                 <th className="pb-2 font-heading">Code</th>
@@ -203,6 +204,7 @@ export default async function AdminEventDetailPage({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -211,7 +213,8 @@ export default async function AdminEventDetailPage({
         {orders.length === 0 ? (
           <p className="text-sm text-muted">No orders yet.</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[780px] text-left text-sm">
             <thead>
               <tr className="border-b border-muted/15 text-muted">
                 <th className="pb-2 font-heading">Buyer</th>
@@ -264,6 +267,7 @@ export default async function AdminEventDetailPage({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

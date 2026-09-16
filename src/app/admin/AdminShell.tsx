@@ -97,9 +97,14 @@ export default function AdminShell({
   );
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    // Lock the shell to the viewport so the content area scrolls, not the whole
+    // page: that keeps the header/sidebar frozen (#162 feedback) and, with main
+    // clipping its x-axis, kills the whole-page side scroll — every wide table
+    // scrolls inside its own overflow-x-auto box instead (the Users-tab feel Vir
+    // liked). h-dvh tracks the mobile browser chrome.
+    <div className="flex h-dvh overflow-hidden bg-background text-foreground">
       {/* Desktop sidebar (lg+) */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-muted/15 px-3 py-5 lg:flex">
+      <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-muted/15 px-3 py-5 lg:flex">
         <Link href="/feed" className="mb-6 px-2" aria-label="MadGigz Admin">
           <Wordmark />
         </Link>
@@ -108,9 +113,9 @@ export default function AdminShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile top bar (below lg) - sticky so the menu is always reachable, and
-            pt-safe-page so it clears the notch/status bar like the app shell. */}
-        <header className="pt-safe-page sticky top-0 z-20 flex items-center gap-3 border-b border-muted/15 bg-background px-4 pb-3 lg:hidden">
+        {/* Mobile top bar (below lg) - a shrink-0 sibling above the scroll area,
+            so it's frozen while main scrolls; pt-safe-page clears the notch. */}
+        <header className="pt-safe-page flex shrink-0 items-center gap-3 border-b border-muted/15 bg-background px-4 pb-3 lg:hidden">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
@@ -124,7 +129,7 @@ export default function AdminShell({
           <Wordmark />
         </header>
 
-        <main className="min-w-0 flex-1 overflow-x-auto p-4 lg:p-8">{children}</main>
+        <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8">{children}</main>
       </div>
 
       {/* Mobile drawer */}
