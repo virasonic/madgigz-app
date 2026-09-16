@@ -192,7 +192,8 @@ export default function VenuesTable({ venues }: { venues: AdminVenue[] }) {
         </div>
       )}
 
-      <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[720px] text-left text-sm">
         <thead>
           <tr className="border-b border-muted/15 text-muted">
             <SortHeader label="Venue" sortKey="name" sort={sort} onSort={toggle} />
@@ -270,6 +271,7 @@ export default function VenuesTable({ venues }: { venues: AdminVenue[] }) {
           ))}
         </tbody>
       </table>
+      </div>
     </>
   );
 }

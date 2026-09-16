@@ -46,7 +46,8 @@ export default function DiscountsTable({
   }
 
   return (
-    <table className="w-full text-left text-sm">
+    <div className="overflow-x-auto">
+    <table className="w-full min-w-[680px] text-left text-sm">
       <thead>
         <tr className="border-b border-muted/15 text-muted">
           <SortHeader label="Code" sortKey="code" sort={sort} onSort={toggle} />
@@ -95,5 +96,6 @@ export default function DiscountsTable({
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

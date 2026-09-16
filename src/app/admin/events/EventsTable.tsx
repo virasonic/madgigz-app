@@ -145,7 +145,8 @@ export default function EventsTable({
         ]}
       />
 
-      <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[900px] text-left text-sm">
       <thead>
         <tr className="border-b border-muted/15 text-muted">
           <SortHeader label="Title" sortKey="title" sort={sort} onSort={toggle} />
@@ -237,6 +238,7 @@ export default function EventsTable({
         ))}
         </tbody>
       </table>
+      </div>
     </>
   );
 }

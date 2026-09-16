@@ -83,7 +83,8 @@ export default function UsersTable({ users }: { users: AdminUserRow[] }) {
 
       {message && <p className="text-sm text-primary">{message}</p>}
 
-      <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[760px] text-left text-sm">
         <thead>
           <tr className="border-b border-muted/15 text-muted">
             <SortHeader label="Username" sortKey="username" sort={sort} onSort={toggle} />
@@ -181,6 +182,7 @@ export default function UsersTable({ users }: { users: AdminUserRow[] }) {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

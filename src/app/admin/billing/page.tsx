@@ -91,7 +91,8 @@ export default async function AdminBillingPage() {
         {tickets.length === 0 ? (
           <p className="text-sm text-muted">No orders yet.</p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-muted/15 text-muted">
                 <th className="pb-2 font-heading">User</th>
@@ -132,6 +133,7 @@ export default async function AdminBillingPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>
