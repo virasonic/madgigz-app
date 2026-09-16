@@ -5,7 +5,7 @@ import {
   fetchAttendedEvents,
   fetchCurrentUser,
   fetchMadGigzShows,
-  fetchSavedEventIds,
+  fetchSavedEvents,
   fetchShowsByArtist,
   fetchTaggedShows,
   fetchTickets,
@@ -21,7 +21,7 @@ export default async function ProfilePage() {
   if (!user) redirect("/");
 
   const [
-    savedIds,
+    savedEvents,
     tickets,
     ownShows,
     taggedShows,
@@ -31,7 +31,10 @@ export default async function ProfilePage() {
     intro,
     fiscalProvided,
   ] = await Promise.all([
-      fetchSavedEventIds(supabase, user.id),
+      // Fan-only, like the attended wall below: the saved grid is a fan surface,
+      // and the count now reflects what the grid shows (upcoming saved), so a
+      // tapped "3" never opens onto a different number.
+      user.role === "fan" ? fetchSavedEvents(supabase, user.id) : Promise.resolve([]),
       fetchTickets(supabase, user.id),
       isArtistRole(user.role) ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
       isArtistRole(user.role) ? fetchTaggedShows(supabase, user.id) : Promise.resolve([]),
@@ -64,10 +67,11 @@ export default async function ProfilePage() {
   return (
     <ProfileClient
       user={user}
-      savedCount={savedIds.length}
+      savedCount={savedEvents.length}
       attendedCount={attendedCount}
       shows={shows}
       taggedShows={taggedShows}
+      savedEvents={savedEvents}
       attendedEvents={attendedEvents}
       unreadCount={unreadCount}
       initialIntro={intro}

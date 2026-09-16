@@ -4,6 +4,7 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { uploadContentMedia } from "@/lib/content-upload";
+import UploadProgressBar from "@/components/ui/UploadProgressBar";
 import { maxBytesForMediaType, mediaTypeForFile } from "@/lib/media";
 import { saveIntroReel } from "@/app/(app)/profile/intro-actions";
 import { ContentPost } from "@/lib/types";
@@ -168,6 +169,7 @@ export default function IntroReelModal({ onClose, onSaved }: IntroReelModalProps
           />
           {error && <p className="text-sm text-danger">{error}</p>}
 
+          {posting && progress !== null && <UploadProgressBar pct={progress} />}
           <Button onClick={handlePost} disabled={posting}>
             {posting
               ? progress !== null

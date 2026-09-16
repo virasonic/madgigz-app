@@ -418,6 +418,8 @@ export const en = {
     // The past-events poster wall (#116) - shows you were scanned in to.
     pastShowsTitle: "Where you've been",
     pastShowsSubtitle: "The shows you turned up to.",
+    savedShowsTitle: "Saved shows",
+    savedShowsSubtitle: "Upcoming gigs you've saved.",
     logOut: "Log Out",
     deleteAccount: "Delete my account",
     // Settings sheet "coming soon" rows
@@ -886,6 +888,7 @@ export const en = {
     deletePostConfirm: "Delete this post? This can't be undone.",
     deletingPost: "Deleting...",
     deletePost: "Delete",
+    viewPost: "View post",
   },
 
   scan: {

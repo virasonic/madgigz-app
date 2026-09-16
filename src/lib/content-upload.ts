@@ -22,6 +22,33 @@ const TUS_CHUNK_BYTES = 50 * 1024 * 1024;
 // server-side (createStreamTusUpload mints the one-time Location); tus-js-client
 // resumes into it, so the secret token never reaches the browser. Dynamically
 // imported so tus-js-client only loads when a big file is actually posted.
+// POSTs the file to Cloudflare's one-time direct_upload URL over XHR rather than
+// fetch, because fetch gives no upload-progress events. XHR's upload.onprogress
+// does, so a normal sub-200MB clip (the common case) now drives a real progress
+// bar instead of a dead "Posting…" (#183). Upload-progress events fire even
+// cross-origin (only reading the response is gated), so this is safe here.
+function uploadViaDirectPost(
+  uploadURL: string,
+  file: File,
+  onProgress?: UploadProgress
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const form = new FormData();
+    form.append("file", file);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", uploadURL);
+    xhr.upload.onprogress = (e) => {
+      if (onProgress && e.lengthComputable && e.total > 0) onProgress(e.loaded / e.total);
+    };
+    xhr.onload = () =>
+      xhr.status >= 200 && xhr.status < 300
+        ? resolve()
+        : reject(new Error(`Stream upload failed (${xhr.status})`));
+    xhr.onerror = () => reject(new Error("Stream upload failed"));
+    xhr.send(form);
+  });
+}
+
 async function uploadVideoViaTus(
   uploadURL: string,
   file: File,
@@ -85,10 +112,7 @@ export async function uploadContentMedia(
     }
     if ("error" in upload) throw new Error(upload.error);
 
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch(upload.uploadURL, { method: "POST", body: form });
-    if (!res.ok) throw new Error(`Stream upload failed (${res.status})`);
+    await uploadViaDirectPost(upload.uploadURL, file, onProgress);
     return { mediaUrl: null, streamUid: upload.uid };
   }
 

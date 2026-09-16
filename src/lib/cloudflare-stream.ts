@@ -21,3 +21,10 @@ export function streamHlsUrl(uid: string): string {
 export function streamThumbnailUrl(uid: string): string {
   return `${origin}/${uid}/thumbnails/thumbnail.jpg`;
 }
+
+/** Self-contained Stream player in an iframe — handles HLS + controls itself, so
+ *  a one-off player (e.g. the #184 "view my post" lightbox) needs no hls.js. The
+ *  feed's reel card uses the raw HLS URL + hls.js instead, for autoplay control. */
+export function streamIframeUrl(uid: string): string {
+  return `${origin}/${uid}/iframe`;
+}

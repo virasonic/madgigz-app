@@ -15,6 +15,9 @@ import {
 } from "@/lib/supabase/queries";
 import { removeEventMedia } from "@/lib/supabase/storage";
 import { uploadContentMedia } from "@/lib/content-upload";
+import UploadProgressBar from "@/components/ui/UploadProgressBar";
+import PostViewerModal from "@/components/artist/PostViewerModal";
+import { streamThumbnailUrl } from "@/lib/cloudflare-stream";
 import { deleteReelStreamVideo } from "@/app/(app)/feed/stream-actions";
 import { maxBytesForMediaType, mediaTypeForFile } from "@/lib/media";
 import { ContentPost, EventItem } from "@/lib/types";
@@ -88,6 +91,8 @@ export default function ManageShowModal({
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | undefined>();
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  // #184: the post being viewed full-size / played in the lightbox, or null.
+  const [viewingPost, setViewingPost] = useState<ContentPost | null>(null);
   const [buyers, setBuyers] = useState<ShowBuyer[] | null>(null);
   const [ticketCounts, setTicketCounts] = useState<ShowTicketCounts | null>(null);
   const [active, setActive] = useState(show.active);
@@ -406,6 +411,7 @@ export default function ManageShowModal({
   }
 
   return (
+    <>
     <div
       className="fixed inset-0 z-30 flex items-end justify-center bg-black/60"
       onClick={onClose}
@@ -888,6 +894,7 @@ export default function ManageShowModal({
                 className="w-full rounded-2xl border border-muted/20 bg-background px-4 py-3 text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {error && <p className="text-sm text-danger">{error}</p>}
+              {posting && progress !== null && <UploadProgressBar pct={progress} />}
               <Button onClick={handlePost} disabled={posting}>
                 {posting
                   ? progress !== null
@@ -903,18 +910,47 @@ export default function ManageShowModal({
               ) : (
                 [...posts].reverse().map((post) => (
                   <div key={post.id} className="flex items-center gap-3 rounded-2xl bg-background p-3">
-                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface">
+                    {/* #184: the thumbnail (and caption) open the post full-size /
+                        play it, instead of being a dead 56px square. */}
+                    <button
+                      type="button"
+                      onClick={() => setViewingPost(post)}
+                      aria-label={t("manageShow.viewPost")}
+                      className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
                       {post.mediaType === "video" ? (
-                        <video src={post.videoUrl} className="h-full w-full object-cover" muted />
+                        post.streamUid ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- remote Stream thumbnail
+                          <img
+                            src={streamThumbnailUrl(post.streamUid)}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <video src={post.videoUrl} className="h-full w-full object-cover" muted />
+                        )
                       ) : (
                         // eslint-disable-next-line @next/next/no-img-element -- remote content image
                         <img src={post.image} alt="" className="h-full w-full object-cover" />
                       )}
-                    </div>
+                      {post.mediaType === "video" && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black/50">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </span>
+                        </span>
+                      )}
+                    </button>
                     {post.caption && (
-                      <p className="min-w-0 flex-1 self-center text-sm text-foreground">
+                      <button
+                        type="button"
+                        onClick={() => setViewingPost(post)}
+                        className="min-w-0 flex-1 self-center text-left text-sm text-foreground"
+                      >
                         {post.caption}
-                      </p>
+                      </button>
                     )}
                     <button
                       onClick={() => handleDeletePost(post)}
@@ -931,5 +967,9 @@ export default function ManageShowModal({
         )}
       </div>
     </div>
+    {viewingPost && (
+      <PostViewerModal post={viewingPost} onClose={() => setViewingPost(null)} />
+    )}
+    </>
   );
 }

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Avatar from "@/components/ui/Avatar";
 import SocialLinks from "@/components/ui/SocialLinks";
 import { buildSocialLinks } from "@/lib/socials";
@@ -295,6 +295,8 @@ interface ProfileClientProps {
   attendedCount: number;
   shows: EventItem[];
   taggedShows: EventItem[];
+  /** Upcoming shows the fan has saved (#180), for the tappable Saved grid. */
+  savedEvents: EventItem[];
   attendedEvents: EventItem[];
   unreadCount: number;
   /** The artist's pinned intro reel (#143), or null. Null for fans. */
@@ -309,6 +311,7 @@ export default function ProfileClient({
   attendedCount,
   shows,
   taggedShows,
+  savedEvents,
   attendedEvents,
   unreadCount,
   initialIntro,
@@ -321,6 +324,8 @@ export default function ProfileClient({
   // Kept separate from activeShow so the modal knows which one it is looking at:
   // the artist's own show is managed, a show they are only tagged on is not.
   const [activeTaggedShow, setActiveTaggedShow] = useState<EventItem | null>(null);
+  // #180: tapping the "Saved" stat scrolls down to the saved-shows grid.
+  const savedGridRef = useRef<HTMLDivElement>(null);
   // #102: the settings sheet lives in ?settings=1 so the back button closes it
   // instead of leaving the profile. The Stripe payout round-trip (below) and the
   // gear button both open it through this.
@@ -460,11 +465,71 @@ export default function ProfileClient({
               <p className="font-display text-3xl text-foreground">{attendedCount}</p>
               <p className="text-sm text-muted">{t("profile.attended")}</p>
             </div>
-            <div className="rounded-2xl bg-surface p-4 text-center">
-              <p className="font-display text-3xl text-foreground">{savedCount}</p>
-              <p className="text-sm text-muted">{t("profile.saved")}</p>
-            </div>
+            {savedEvents.length > 0 ? (
+              <button
+                type="button"
+                onClick={() =>
+                  savedGridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+                className="rounded-2xl bg-surface p-4 text-center transition hover:bg-surface/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label={t("profile.savedShowsTitle")}
+              >
+                <p className="font-display text-3xl text-foreground">{savedCount}</p>
+                <p className="text-sm text-muted">{t("profile.saved")}</p>
+              </button>
+            ) : (
+              <div className="rounded-2xl bg-surface p-4 text-center">
+                <p className="font-display text-3xl text-foreground">{savedCount}</p>
+                <p className="text-sm text-muted">{t("profile.saved")}</p>
+              </div>
+            )}
           </div>
+
+          {/* The shows the fan hearted that are still to come (#180). The Saved
+              stat above scrolls here. Same poster-grid pattern as the attended
+              wall below, but soonest-first (a to-do list, not a memory) and
+              upcoming-only, so a passed saved show drops off. */}
+          {savedEvents.length > 0 && (
+            <div ref={savedGridRef} className="mb-8 scroll-mt-4">
+              <h2 className="font-heading text-sm uppercase tracking-wide text-muted">
+                {t("profile.savedShowsTitle")}
+              </h2>
+              <p className="mt-1 text-xs text-muted">{t("profile.savedShowsSubtitle")}</p>
+              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {savedEvents.map((event) => (
+                  <Link
+                    key={event.id}
+                    href={`/e/${event.id}`}
+                    className="group relative aspect-[3/4] overflow-hidden rounded-xl bg-surface"
+                  >
+                    {event.image ? (
+                      <Image
+                        src={event.image}
+                        alt={event.title}
+                        fill
+                        sizes="(min-width: 640px) 160px, 33vw"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center p-2 text-center">
+                        <span className="line-clamp-3 font-heading text-xs text-muted">
+                          {event.title}
+                        </span>
+                      </div>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 pt-6">
+                      <p className="truncate font-heading text-[11px] leading-tight text-white">
+                        {event.title}
+                      </p>
+                      <p className="truncate text-[10px] text-white/70">
+                        {formatDate(event.date, dl)}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Past-events poster wall (#116): the DICE "memories" pattern - the
               posters of shows the fan was scanned in to, newest first. It's the

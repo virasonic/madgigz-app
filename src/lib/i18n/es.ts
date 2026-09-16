@@ -392,6 +392,8 @@ export const es: Messages = {
     // El muro de carteles de eventos pasados (#116).
     pastShowsTitle: "Dónde has estado",
     pastShowsSubtitle: "Los conciertos a los que fuiste.",
+    savedShowsTitle: "Bolos guardados",
+    savedShowsSubtitle: "Próximos bolos que has guardado.",
     logOut: "Cerrar sesión",
     deleteAccount: "Eliminar mi cuenta",
     promotions: "Promociones",
@@ -856,6 +858,7 @@ export const es: Messages = {
     deletePostConfirm: "¿Eliminar esta publicación? No se puede deshacer.",
     deletingPost: "Eliminando...",
     deletePost: "Eliminar",
+    viewPost: "Ver publicación",
   },
 
   scan: {

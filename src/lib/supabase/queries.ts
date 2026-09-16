@@ -551,6 +551,37 @@ export async function fetchAttendedEvents(
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
+// The shows a fan hearted (saved_events) that are still to come, for the
+// tappable "Saved" grid on the fan profile (#180). Mirrors fetchAttendedEvents:
+// embed the event row, dedup, map. Two differences: it's keyed on the save, not
+// a scanned ticket, and it drops shows whose date has passed (Vir's call) - a
+// saved gig that's over is no longer something to go to, so it falls off. Same
+// UTC date-only "today" and >= (live through its own day) as fetchEvents/#141.
+// Soonest-first, because this is a to-do list, not a memory wall.
+export async function fetchSavedEvents(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<EventItem[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from("saved_events")
+    .select("events(*, venues(address))")
+    .eq("user_id", userId);
+
+  const seen = new Set<string>();
+  return ((data ?? []) as unknown as { events: EventRow | null }[])
+    .map((row) => row.events)
+    .filter((event): event is EventRow => Boolean(event))
+    .filter((event) => event.active !== false && event.event_date >= today)
+    .filter((event) => {
+      if (seen.has(event.id)) return false;
+      seen.add(event.id);
+      return true;
+    })
+    .map(mapEvent)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export async function fetchShowsByArtist(
   supabase: SupabaseClient,
   artistId: string

@@ -336,6 +336,8 @@
       "saved": "Saved",
       "pastShowsTitle": "Where you've been",
       "pastShowsSubtitle": "The shows you turned up to.",
+      "savedShowsTitle": "Saved shows",
+      "savedShowsSubtitle": "Upcoming gigs you've saved.",
       "logOut": "Log Out",
       "deleteAccount": "Delete my account",
       "promotions": "Promotions",
@@ -758,7 +760,8 @@
       "statusGoing": "Going",
       "deletePostConfirm": "Delete this post? This can't be undone.",
       "deletingPost": "Deleting...",
-      "deletePost": "Delete"
+      "deletePost": "Delete",
+      "viewPost": "View post"
     },
     "scan": {
       "cameraError": "Camera access is needed to scan tickets. Check your browser's permissions and try again.",
@@ -1145,6 +1148,8 @@
       "saved": "Guardados",
       "pastShowsTitle": "Dónde has estado",
       "pastShowsSubtitle": "Los conciertos a los que fuiste.",
+      "savedShowsTitle": "Bolos guardados",
+      "savedShowsSubtitle": "Próximos bolos que has guardado.",
       "logOut": "Cerrar sesión",
       "deleteAccount": "Eliminar mi cuenta",
       "promotions": "Promociones",
@@ -1567,7 +1572,8 @@
       "statusGoing": "Va a ir",
       "deletePostConfirm": "¿Eliminar esta publicación? No se puede deshacer.",
       "deletingPost": "Eliminando...",
-      "deletePost": "Eliminar"
+      "deletePost": "Eliminar",
+      "viewPost": "Ver publicación"
     },
     "scan": {
       "cameraError": "Se necesita acceso a la cámara para escanear entradas. Revisa los permisos de tu navegador e inténtalo de nuevo.",
