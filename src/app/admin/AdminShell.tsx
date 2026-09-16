@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -29,6 +30,8 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+// Nav pills styled like the app's SideNav (#162 feedback: "fit the vibe of the
+// MadGigz app") - rounded-2xl, orange text-primary on surface when active.
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-1">
@@ -38,16 +41,25 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
           href={item.href}
           onClick={onNavigate}
           aria-current={isActive(pathname, item.href) ? "page" : undefined}
-          className={`rounded-xl px-3 py-2 text-sm font-heading transition-colors ${
+          className={`rounded-2xl px-3 py-2.5 text-sm font-heading transition-colors ${
             isActive(pathname, item.href)
-              ? "bg-surface text-foreground"
-              : "text-muted hover:bg-surface hover:text-foreground"
+              ? "bg-surface text-primary"
+              : "text-muted hover:bg-surface/60 hover:text-foreground"
           }`}
         >
           {item.label}
         </Link>
       ))}
     </nav>
+  );
+}
+
+function Wordmark() {
+  return (
+    <div className="flex items-center gap-2">
+      <Image src="/logos/madgigz-wordmark.png" alt="MadGigz" width={148} height={47} className="w-28" priority />
+      <span className="font-heading text-[10px] uppercase tracking-widest text-muted">Admin</span>
+    </div>
   );
 }
 
@@ -87,32 +99,29 @@ export default function AdminShell({
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Desktop sidebar (lg+) */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-muted/15 p-6 lg:flex">
-        <div className="mb-8">
-          <p className="font-display text-xl text-foreground">MadGigz</p>
-          <p className="text-xs uppercase tracking-wide text-muted">Admin</p>
-        </div>
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-muted/15 px-3 py-5 lg:flex">
+        <Link href="/feed" className="mb-6 px-2" aria-label="MadGigz Admin">
+          <Wordmark />
+        </Link>
         <NavLinks pathname={pathname} />
         {footer}
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile top bar (below lg) */}
-        <header className="flex items-center gap-3 border-b border-muted/15 p-4 lg:hidden">
+        {/* Mobile top bar (below lg) - sticky so the menu is always reachable, and
+            pt-safe-page so it clears the notch/status bar like the app shell. */}
+        <header className="pt-safe-page sticky top-0 z-20 flex items-center gap-3 border-b border-muted/15 bg-background px-4 pb-3 lg:hidden">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label="Open admin menu"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-muted/30 text-foreground"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-foreground"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
-          <div>
-            <span className="font-display text-lg text-foreground">MadGigz</span>{" "}
-            <span className="text-xs uppercase tracking-wide text-muted">Admin</span>
-          </div>
+          <Wordmark />
         </header>
 
         <main className="min-w-0 flex-1 overflow-x-auto p-4 lg:p-8">{children}</main>
@@ -127,17 +136,14 @@ export default function AdminShell({
           aria-label="Admin menu"
         >
           <div className="absolute inset-0 bg-black/60" onClick={() => setDrawerOpen(false)} />
-          <aside className="relative flex w-64 max-w-[80%] flex-col overflow-y-auto border-r border-muted/15 bg-background p-6">
-            <div className="mb-8 flex items-start justify-between">
-              <div>
-                <p className="font-display text-xl text-foreground">MadGigz</p>
-                <p className="text-xs uppercase tracking-wide text-muted">Admin</p>
-              </div>
+          <aside className="pt-safe-page relative flex w-64 max-w-[80%] flex-col overflow-y-auto border-r border-muted/15 bg-background px-3 pb-6">
+            <div className="mb-6 flex items-start justify-between gap-2 px-2">
+              <Wordmark />
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
                 aria-label="Close admin menu"
-                className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-muted hover:text-foreground"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-muted hover:text-foreground"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
