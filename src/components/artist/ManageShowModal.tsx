@@ -683,11 +683,11 @@ export default function ManageShowModal({
             ) : (
               <div className="flex gap-3">
                 {canManage && (
-                  <Button variant="ghost" className="flex-1" onClick={startEditing}>
+                  <Button variant="ghost" className="flex-1 text-lg" onClick={startEditing}>
                     {t("manageShow.editDetails")}
                   </Button>
                 )}
-                <Button className="flex-1" onClick={() => setTab("content")}>
+                <Button className="flex-1 text-lg" onClick={() => setTab("content")}>
                   {t("manageShow.addContentBtn")}
                 </Button>
               </div>
