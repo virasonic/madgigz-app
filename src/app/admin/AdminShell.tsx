@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/admin/feedback", label: "Feedback" },
   { href: "/admin/moderation", label: "Moderation" },
   { href: "/admin/decisions", label: "Decisions" },
+  { href: "/admin/attribution", label: "Attribution" },
   { href: "/admin/announcements", label: "Announcements" },
 ];
 

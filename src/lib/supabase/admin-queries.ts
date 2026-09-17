@@ -961,3 +961,100 @@ export async function fetchTagSuggestions(admin: SupabaseClient): Promise<TagSug
   // Soonest shows first — the ones an artist most wants to post about.
   return out.sort((a, b) => a.event.date.localeCompare(b.event.date));
 }
+
+// ---------------------------------------------------------------- attribution
+
+export interface AttributionFunnelRow {
+  campaign: string;
+  source: string;
+  /** The specific ad, from utm_content. */
+  ad: string;
+  signups: number;
+  /** Of those signups, how many chose the artist role. */
+  artists: number;
+  /** Of those artists, how many we have approved. */
+  approved: number;
+  /** Of those artists, how many actually listed a show — the outcome the artist
+   *  campaign is really buying. */
+  listed: number;
+  lastSignup: string;
+}
+
+export interface AttributionSummary {
+  rows: AttributionFunnelRow[];
+  /** Signups that arrived carrying a campaign tag. */
+  attributed: number;
+  /** Every account, so the tagged share reads as a proportion, not a bare count. */
+  totalUsers: number;
+}
+
+// The funnel per ad, assembled from three small reads rather than a database
+// view: the volumes here are tens of rows, and keeping the joins in TypeScript
+// means no second migration every time this table wants another column.
+export async function fetchSignupAttribution(admin: SupabaseClient): Promise<AttributionSummary> {
+  const [{ data: attribution }, { data: eventArtists }, { count: totalUsers }] = await Promise.all([
+    admin
+      .from("signup_attribution")
+      .select("user_id, source, campaign, content, created_at, profiles!inner(role, artist_status)")
+      .order("created_at", { ascending: false }),
+    // Who has ever listed a show. Tickets sold would be the better outcome, but
+    // listing is the thing the artist ads actually ask for.
+    admin.from("events").select("artist_id").not("artist_id", "is", null),
+    admin.from("profiles").select("*", { count: "exact", head: true }).is("deleted_at", null),
+  ]);
+
+  const hasListed = new Set((eventArtists ?? []).map((e) => e.artist_id as string));
+
+  type EmbeddedProfile = { role: string; artist_status: string | null };
+  type Joined = {
+    user_id: string;
+    source: string | null;
+    campaign: string | null;
+    content: string | null;
+    created_at: string;
+    // PostgREST can type an embedded to-one either way through the JS client.
+    profiles: EmbeddedProfile | EmbeddedProfile[];
+  };
+
+  const byAd = new Map<string, AttributionFunnelRow>();
+
+  for (const raw of (attribution ?? []) as unknown as Joined[]) {
+    const profile = Array.isArray(raw.profiles) ? raw.profiles[0] : raw.profiles;
+    if (!profile) continue;
+
+    const campaign = raw.campaign ?? "(no campaign)";
+    const source = raw.source ?? "(unknown)";
+    const ad = raw.content ?? "(no ad tag)";
+    // JSON rather than a delimiter: campaign and ad names come from Meta and
+    // may contain anything a person typed into Ads Manager.
+    const key = JSON.stringify([campaign, source, ad]);
+
+    const row = byAd.get(key) ?? {
+      campaign,
+      source,
+      ad,
+      signups: 0,
+      artists: 0,
+      approved: 0,
+      listed: 0,
+      // Rows arrive newest-first, so the first one seen for a key is the latest.
+      lastSignup: raw.created_at,
+    };
+
+    row.signups += 1;
+    const isArtist = profile.role === "artist" || profile.role === "admin";
+    if (isArtist) {
+      row.artists += 1;
+      if (profile.artist_status === "approved") row.approved += 1;
+      if (hasListed.has(raw.user_id)) row.listed += 1;
+    }
+    byAd.set(key, row);
+  }
+
+  const rows = [...byAd.values()].sort((a, b) => b.signups - a.signups);
+  return {
+    rows,
+    attributed: rows.reduce((sum, r) => sum + r.signups, 0),
+    totalUsers: totalUsers ?? 0,
+  };
+}
