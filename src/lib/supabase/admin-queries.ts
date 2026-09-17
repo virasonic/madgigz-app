@@ -967,6 +967,10 @@ export async function fetchTagSuggestions(admin: SupabaseClient): Promise<TagSug
 export interface AttributionFunnelRow {
   campaign: string;
   source: string;
+  /** The audience, from utm_term = Meta's {{adset.name}}. Kept as its own
+   *  dimension because "which audience worked" is the question a campaign with
+   *  more than one ad set is actually asking. */
+  adSet: string;
   /** The specific ad, from utm_content. */
   ad: string;
   signups: number;
@@ -995,7 +999,7 @@ export async function fetchSignupAttribution(admin: SupabaseClient): Promise<Att
   const [{ data: attribution }, { data: eventArtists }, { count: totalUsers }] = await Promise.all([
     admin
       .from("signup_attribution")
-      .select("user_id, source, campaign, content, created_at, profiles!inner(role, artist_status)")
+      .select("user_id, source, campaign, content, term, created_at, profiles!inner(role, artist_status)")
       .order("created_at", { ascending: false }),
     // Who has ever listed a show. Tickets sold would be the better outcome, but
     // listing is the thing the artist ads actually ask for.
@@ -1005,12 +1009,27 @@ export async function fetchSignupAttribution(admin: SupabaseClient): Promise<Att
 
   const hasListed = new Set((eventArtists ?? []).map((e) => e.artist_id as string));
 
+  // Meta URL-encodes the names it substitutes into {{campaign.name}} and
+  // friends, so an ad set called "New Traffic Ad Set" arrives as
+  // "New%20Traffic%20Ad%20Set". Decode for display rather than making people
+  // read percent escapes, and fall back to the raw value if it is not valid
+  // encoding (a stray % in a campaign name would otherwise throw).
+  const decodeTag = (value: string | null): string | null => {
+    if (!value) return null;
+    try {
+      return decodeURIComponent(value.replace(/\+/g, " "));
+    } catch {
+      return value;
+    }
+  };
+
   type EmbeddedProfile = { role: string; artist_status: string | null };
   type Joined = {
     user_id: string;
     source: string | null;
     campaign: string | null;
     content: string | null;
+    term: string | null;
     created_at: string;
     // PostgREST can type an embedded to-one either way through the JS client.
     profiles: EmbeddedProfile | EmbeddedProfile[];
@@ -1022,16 +1041,18 @@ export async function fetchSignupAttribution(admin: SupabaseClient): Promise<Att
     const profile = Array.isArray(raw.profiles) ? raw.profiles[0] : raw.profiles;
     if (!profile) continue;
 
-    const campaign = raw.campaign ?? "(no campaign)";
-    const source = raw.source ?? "(unknown)";
-    const ad = raw.content ?? "(no ad tag)";
-    // JSON rather than a delimiter: campaign and ad names come from Meta and
-    // may contain anything a person typed into Ads Manager.
-    const key = JSON.stringify([campaign, source, ad]);
+    const campaign = decodeTag(raw.campaign) ?? "(no campaign)";
+    const source = decodeTag(raw.source) ?? "(unknown)";
+    const adSet = decodeTag(raw.term) ?? "(no ad set tag)";
+    const ad = decodeTag(raw.content) ?? "(no ad tag)";
+    // JSON rather than a delimiter: these names come from Meta and may contain
+    // anything a person typed into Ads Manager.
+    const key = JSON.stringify([campaign, source, adSet, ad]);
 
     const row = byAd.get(key) ?? {
       campaign,
       source,
+      adSet,
       ad,
       signups: 0,
       artists: 0,

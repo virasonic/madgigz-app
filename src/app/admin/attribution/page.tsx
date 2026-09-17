@@ -34,6 +34,7 @@ function Row({ row }: { row: AttributionFunnelRow }) {
         <p className="text-foreground">{row.campaign}</p>
         <p className="text-xs text-muted">{row.source}</p>
       </td>
+      <td className="py-3 pr-4 text-foreground">{row.adSet}</td>
       <td className="py-3 pr-4 text-muted">{row.ad}</td>
       <td className="py-3 pr-4 font-heading text-foreground">{row.signups}</td>
       <td className="py-3 pr-4">
@@ -94,10 +95,11 @@ export default async function AdminAttributionPage() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl bg-surface p-5">
-          <table className="w-full min-w-[46rem] text-left text-sm">
+          <table className="w-full min-w-[54rem] text-left text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-wide text-muted">
                 <th className="pb-2 pr-4 font-normal">Campaign</th>
+                <th className="pb-2 pr-4 font-normal">Ad set</th>
                 <th className="pb-2 pr-4 font-normal">Ad</th>
                 <th className="pb-2 pr-4 font-normal">Signups</th>
                 <th className="pb-2 pr-4 font-normal">Artists</th>
@@ -108,7 +110,7 @@ export default async function AdminAttributionPage() {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <Row key={`${row.campaign}-${row.source}-${row.ad}`} row={row} />
+                <Row key={`${row.campaign}-${row.source}-${row.adSet}-${row.ad}`} row={row} />
               ))}
             </tbody>
           </table>
