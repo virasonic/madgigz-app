@@ -10,6 +10,7 @@ import ServiceWorkerRegistrar from "@/components/pwa/ServiceWorkerRegistrar";
 import AppDownloadBanner from "@/components/pwa/AppDownloadBanner";
 import BootSplash from "@/components/pwa/BootSplash";
 import NativeBridge from "@/components/native/NativeBridge";
+import AttributionCapture from "@/components/analytics/AttributionCapture";
 
 const galdernExtraBold = localFont({
   src: "./fonts/Galdern-ExtraBold.otf",
@@ -84,6 +85,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <BootSplash />
         <ServiceWorkerRegistrar />
         <NativeBridge />
+        <AttributionCapture />
       </body>
     </html>
   );
