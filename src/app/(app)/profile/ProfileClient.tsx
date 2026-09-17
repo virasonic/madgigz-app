@@ -14,6 +14,7 @@ import FiscalIdentityCard from "@/components/artist/FiscalIdentityCard";
 import IntroReel from "@/components/artist/IntroReel";
 import IntroReelModal from "@/components/artist/IntroReelModal";
 import { removeIntroReel } from "./intro-actions";
+import { markAttended } from "./attendance-actions";
 import { createClient } from "@/lib/supabase/client";
 import { clearOfflineTickets } from "@/lib/offline-tickets";
 import { clearNativeOfflineTickets } from "@/lib/offline-tickets-native";
@@ -361,6 +362,8 @@ interface ProfileClientProps {
   /** Upcoming shows the fan has saved (#180), for the tappable Saved grid. */
   savedEvents: EventItem[];
   attendedEvents: EventItem[];
+  /** Past saved shows not yet on the wall - the "Were you there?" prompt (#116). */
+  attendanceCandidates: EventItem[];
   unreadCount: number;
   /** The artist's pinned intro reel (#143), or null. Null for fans. */
   initialIntro: ContentPost | null;
@@ -376,6 +379,7 @@ export default function ProfileClient({
   taggedShows,
   savedEvents,
   attendedEvents,
+  attendanceCandidates,
   unreadCount,
   initialIntro,
   fiscalProvided,
@@ -383,6 +387,20 @@ export default function ProfileClient({
   const { t, locale } = useT();
   const dl = dateLocale(locale);
   const router = useRouter();
+  // #116 manual attendance: the "Were you there?" prompt list. Marking one drops
+  // it from here and (via refresh) moves it onto the wall above.
+  const [candidates, setCandidates] = useState<EventItem[]>(attendanceCandidates);
+  const [markingId, setMarkingId] = useState<string | null>(null);
+
+  async function handleWent(eventId: string) {
+    setMarkingId(eventId);
+    const { ok } = await markAttended(eventId);
+    setMarkingId(null);
+    if (!ok) return;
+    // Drop it from the prompt and refresh so the wall above picks it up.
+    setCandidates((list) => list.filter((e) => e.id !== eventId));
+    router.refresh();
+  }
   const [activeShow, setActiveShow] = useState<EventItem | null>(null);
   // Kept separate from activeShow so the modal knows which one it is looking at:
   // the artist's own show is managed, a show they are only tagged on is not.
@@ -573,6 +591,57 @@ export default function ProfileClient({
               events={attendedEvents}
               dl={dl}
             />
+          )}
+
+          {/* #116 manual attendance: past shows the fan saved but wasn't scanned
+              in to (e.g. tickets bought outside the app). "Yes, I went" adds one
+              to the wall above. Only appears when there's something to ask about. */}
+          {candidates.length > 0 && (
+            <div className="mb-8">
+              <h2 className="font-heading text-sm uppercase tracking-wide text-muted">
+                {t("profile.wereYouThereTitle")}
+              </h2>
+              <p className="mt-1 text-xs text-muted">{t("profile.wereYouThereSubtitle")}</p>
+              <div className="mt-3 flex flex-col gap-2">
+                {candidates.map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex items-center gap-3 rounded-2xl bg-surface p-2.5"
+                  >
+                    <Link
+                      href={`/e/${event.id}`}
+                      className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-background"
+                    >
+                      {event.image ? (
+                        <Image
+                          src={event.image}
+                          alt={event.title}
+                          fill
+                          sizes="56px"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center p-1 text-center font-heading text-[10px] text-muted">
+                          {event.title}
+                        </span>
+                      )}
+                    </Link>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-foreground">{event.title}</p>
+                      <p className="truncate text-xs text-muted">{formatDate(event.date, dl)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleWent(event.id)}
+                      disabled={markingId === event.id}
+                      className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-heading text-foreground disabled:opacity-50"
+                    >
+                      {markingId === event.id ? t("common.saving") : t("profile.wereYouThereYes")}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </>
       ) : user.artistStatus !== "approved" ? (

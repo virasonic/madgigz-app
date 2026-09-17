@@ -303,6 +303,8 @@ export const en = {
     notFoundBody:
       "It may have been removed or cancelled. There's plenty more live music happening in Madrid.",
     notFoundCta: "Browse gigs",
+    attendedMark: "Were you here? Add it to your wall",
+    attendedYes: "You were here",
   },
 
   publicEvent: {
@@ -439,6 +441,9 @@ export const en = {
     pastShowsSubtitle: "The shows you turned up to.",
     savedShowsTitle: "Saved shows",
     savedShowsSubtitle: "Upcoming gigs you've saved.",
+    wereYouThereTitle: "Were you there?",
+    wereYouThereSubtitle: "Past shows you saved — add the ones you went to.",
+    wereYouThereYes: "Yes, I went",
     logOut: "Log Out",
     deleteAccount: "Delete my account",
     // Settings sheet "coming soon" rows

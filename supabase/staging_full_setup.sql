@@ -3042,3 +3042,21 @@ create policy "Users can update their own preferences" on public.fan_preferences
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "Users can clear their own preferences" on public.fan_preferences
   for delete using (auth.uid() = user_id);
+
+-- ############# addendum_049_attended_events.sql #############
+
+create table if not exists public.attended_events (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  event_id uuid not null references public.events(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, event_id)
+);
+
+alter table public.attended_events enable row level security;
+
+create policy "Users can view their own attendance" on public.attended_events
+  for select using (auth.uid() = user_id);
+create policy "Users can mark their own attendance" on public.attended_events
+  for insert with check (auth.uid() = user_id);
+create policy "Users can unmark their own attendance" on public.attended_events
+  for delete using (auth.uid() = user_id);

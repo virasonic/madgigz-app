@@ -281,6 +281,8 @@ export const es: Messages = {
     notFoundBody:
       "Puede que se haya eliminado o cancelado. Hay mucha más música en directo en Madrid.",
     notFoundCta: "Explorar bolos",
+    attendedMark: "¿Estuviste aquí? Añádelo a tu muro",
+    attendedYes: "Estuviste aquí",
   },
 
   publicEvent: {
@@ -413,6 +415,9 @@ export const es: Messages = {
     pastShowsSubtitle: "Los conciertos a los que fuiste.",
     savedShowsTitle: "Bolos guardados",
     savedShowsSubtitle: "Próximos bolos que has guardado.",
+    wereYouThereTitle: "¿Estuviste allí?",
+    wereYouThereSubtitle: "Bolos que guardaste — añade los que fuiste.",
+    wereYouThereYes: "Sí, fui",
     logOut: "Cerrar sesión",
     deleteAccount: "Eliminar mi cuenta",
     promotions: "Promociones",

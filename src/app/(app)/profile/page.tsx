@@ -5,6 +5,7 @@ import {
   fetchAttendedEvents,
   fetchCurrentUser,
   fetchMadGigzShows,
+  fetchPastSavedEvents,
   fetchSavedEvents,
   fetchShowsByArtist,
   fetchTaggedShows,
@@ -27,6 +28,7 @@ export default async function ProfilePage() {
     taggedShows,
     madgigzShows,
     attendedEvents,
+    pastSaved,
     unreadCount,
     intro,
     fiscalProvided,
@@ -44,6 +46,8 @@ export default async function ProfilePage() {
       // The poster wall (#116) is a fan surface; artists/admins get their own tools
       // in place of the fan stats, so there's no need to run this for them.
       user.role === "fan" ? fetchAttendedEvents(supabase, user.id) : Promise.resolve([]),
+      // Past saved shows -> candidates for the "Were you there?" prompt.
+      user.role === "fan" ? fetchPastSavedEvents(supabase, user.id) : Promise.resolve([]),
       fetchUnreadCount(supabase, user.id),
       isArtistRole(user.role) ? fetchArtistIntro(supabase, user.id) : Promise.resolve(null),
       // Fiscal details (#97) are an organiser concern; fans never see the card.
@@ -56,13 +60,15 @@ export default async function ProfilePage() {
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
-  // Scanned at the door, not "the date has passed". A ticket bought and never
-  // used isn't a gig you attended, and this number sits on the same screen as
-  // the Tickets tab's "Where you've been", which counts the same thing.
-  //
-  // It also means this page no longer reads the whole events table: the old
-  // version fetched every event solely to look up each ticket's date.
-  const attendedCount = tickets.filter((ticket) => ticket.checkedInAt).length;
+  // The wall now counts scanned-in tickets AND manual "I was there" marks, so the
+  // stat tracks the wall (attendedEvents is already that union, deduped).
+  const attendedCount = attendedEvents.length;
+
+  // "Were you there?" candidates: past shows the fan saved that aren't already on
+  // the wall (scanned or manually marked). Those are exactly the ones worth
+  // asking about.
+  const attendedIds = new Set(attendedEvents.map((e) => e.id));
+  const attendanceCandidates = pastSaved.filter((e) => !attendedIds.has(e.id));
 
   return (
     <ProfileClient
@@ -73,6 +79,7 @@ export default async function ProfilePage() {
       taggedShows={taggedShows}
       savedEvents={savedEvents}
       attendedEvents={attendedEvents}
+      attendanceCandidates={attendanceCandidates}
       unreadCount={unreadCount}
       initialIntro={intro}
       fiscalProvided={fiscalProvided}

@@ -567,20 +567,33 @@ export async function fetchTaggedShows(
 // hidden_at is respected so the wall matches the count, and events are
 // de-duplicated (two tickets to one show is still one memory) and shown newest
 // first.
+// The poster wall (#116): shows the fan attended, newest-first. Two sources,
+// unioned and de-duplicated: MadGigz tickets that were SCANNED IN at the door,
+// and shows the fan MANUALLY marked "I was there" (attended_events) - the latter
+// is how a gig bought outside the app reaches the wall. Degrades gracefully
+// before addendum_049: the manual read errors (42P01) and just contributes
+// nothing, leaving the scanned-in tickets.
 export async function fetchAttendedEvents(
   supabase: SupabaseClient,
   userId: string
 ): Promise<EventItem[]> {
-  const { data } = await supabase
-    .from("tickets")
-    .select("checked_in_at, events(*, venues(address))")
-    .eq("user_id", userId)
-    .not("checked_in_at", "is", null)
-    .is("hidden_at", null);
+  const [ticketsRes, manualRes] = await Promise.all([
+    supabase
+      .from("tickets")
+      .select("checked_in_at, events(*, venues(address))")
+      .eq("user_id", userId)
+      .not("checked_in_at", "is", null)
+      .is("hidden_at", null),
+    supabase.from("attended_events").select("events(*, venues(address))").eq("user_id", userId),
+  ]);
+
+  const rows: (EventRow | null)[] = [
+    ...((ticketsRes.data ?? []) as unknown as { events: EventRow | null }[]).map((r) => r.events),
+    ...((manualRes.data ?? []) as unknown as { events: EventRow | null }[]).map((r) => r.events),
+  ];
 
   const seen = new Set<string>();
-  return ((data ?? []) as unknown as { events: EventRow | null }[])
-    .map((row) => row.events)
+  return rows
     .filter((event): event is EventRow => Boolean(event))
     .filter((event) => {
       if (seen.has(event.id)) return false;
@@ -589,6 +602,50 @@ export async function fetchAttendedEvents(
     })
     .map(mapEvent)
     .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// Shows the fan saved whose date has already passed - the candidates for the
+// profile's "Were you there?" prompt. The complement of the upcoming-only Saved
+// grid (#180). Caller subtracts the ones already on the wall.
+export async function fetchPastSavedEvents(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<EventItem[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from("saved_events")
+    .select("events(*, venues(address))")
+    .eq("user_id", userId);
+
+  const seen = new Set<string>();
+  return ((data ?? []) as unknown as { events: EventRow | null }[])
+    .map((row) => row.events)
+    .filter((event): event is EventRow => Boolean(event))
+    .filter((event) => event.active !== false && event.event_date < today)
+    .filter((event) => {
+      if (seen.has(event.id)) return false;
+      seen.add(event.id);
+      return true;
+    })
+    .map(mapEvent)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// Whether the fan has manually marked this one show "I was there" (#116 manual
+// path). Only reflects the manual mark, which is what the toggle controls; a
+// scanned-in ticket puts a show on the wall independently. Graceful pre-migration.
+export async function fetchIsManuallyAttended(
+  supabase: SupabaseClient,
+  userId: string,
+  eventId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("attended_events")
+    .select("event_id")
+    .eq("user_id", userId)
+    .eq("event_id", eventId)
+    .maybeSingle();
+  return Boolean(data);
 }
 
 // The shows a fan hearted (saved_events) that are still to come, for the

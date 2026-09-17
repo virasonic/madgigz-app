@@ -6,11 +6,13 @@ import { createClient } from "@/lib/supabase/server";
 import {
   fetchEventById,
   fetchEventGenreNames,
+  fetchIsManuallyAttended,
   fetchTaggedArtistProfiles,
 } from "@/lib/supabase/queries";
 import { buildLineupLinks, normName } from "@/lib/lineup-links";
 import { absoluteUrl, eventPath, mapsUrl } from "@/lib/site";
 import PublicEventActions from "./PublicEventActions";
+import AttendedToggle from "./AttendedToggle";
 import BackButton from "@/components/ui/BackButton";
 import ClampText from "@/components/ui/ClampText";
 import { getServerT } from "@/lib/i18n/server";
@@ -94,6 +96,13 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
   ]);
   const signedIn = Boolean(auth.user);
   const { t, locale } = await getServerT();
+
+  // #116 manual attendance: a signed-in fan can mark a PAST show "I was there".
+  const isPast = event.date < new Date().toISOString().slice(0, 10);
+  const attendedThis =
+    signedIn && isPast && auth.user
+      ? await fetchIsManuallyAttended(supabase, auth.user.id, event.id)
+      : false;
 
   // Line-up act name -> profile id, for the ones that are tagged MadGigz artists
   // (or the owner). Non-matching acts stay plain text.
@@ -179,6 +188,10 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
         </p>
 
         <PublicEventActions event={event} signedIn={signedIn} soldOut={soldOut} />
+
+        {signedIn && isPast && (
+          <AttendedToggle eventId={event.id} initialAttended={attendedThis} />
+        )}
 
         {event.description && (
           <>
