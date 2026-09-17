@@ -125,15 +125,42 @@ export function clearAttribution(): void {
  * — exactly the graceful-degradation case CLAUDE.md calls for.
  */
 export async function recordSignupAttribution(): Promise<void> {
+  // The overwhelmingly common case - no ad click pending - costs nothing and,
+  // crucially, makes no network request. Only a visitor who actually arrived
+  // from a campaign and has not been recorded yet gets as far as getUser().
   const attribution = storedAttribution();
   if (!attribution) return;
 
   try {
     const { createClient } = await import("@/lib/supabase/client");
-    const { error } = await createClient().rpc("record_signup_attribution", {
+    const supabase = createClient();
+
+    const { data } = await supabase.auth.getUser();
+    const user = data.user;
+    // Signed out: they clicked the ad but have not made an account yet. Keep the
+    // click and try again after they do.
+    if (!user) return;
+
+    // Only credit the ad for accounts created *after* the click. Without this,
+    // an existing user who clicks the ad out of curiosity is written in as a
+    // new signup and the campaign looks better than it was.
+    //
+    // The six-hour slack absorbs clock skew between the visitor's device and
+    // the server; it is still nowhere near enough to let a week-old account
+    // through.
+    const clickedAt = typeof attribution.at === "number" ? attribution.at : 0;
+    const createdAt = Date.parse(user.created_at ?? "");
+    if (Number.isFinite(createdAt) && createdAt < clickedAt - 6 * 60 * 60 * 1000) {
+      // Not ours to attribute. Drop it so this does not re-check on every load.
+      clearAttribution();
+      return;
+    }
+
+    const { error } = await supabase.rpc("record_signup_attribution", {
       p_attribution: attribution,
     });
     if (error) {
+      // Kept, not cleared: a transient failure gets another go on the next load.
       console.warn("record_signup_attribution failed:", error.message);
       return;
     }

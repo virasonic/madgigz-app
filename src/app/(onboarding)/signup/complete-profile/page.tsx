@@ -8,7 +8,6 @@ import DateInput from "@/components/ui/DateInput";
 import { createClient } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/site";
 import { useT } from "@/lib/i18n/LocaleProvider";
-import { recordSignupAttribution } from "@/lib/attribution";
 
 type Role = "fan" | "artist";
 
@@ -189,12 +188,6 @@ function CompleteProfileForm() {
       }
       return;
     }
-
-    // The account exists now, so the ad click that led here can be recorded
-    // against it (addendum_050). Awaited, but never allowed to block or fail the
-    // signup: recordSignupAttribution swallows everything, including the
-    // "function does not exist" it returns until the addendum has been run.
-    await recordSignupAttribution();
 
     // An artist still has to claim their profile and submit evidence - Google
     // vouching for an email address says nothing about who plays the gig.
