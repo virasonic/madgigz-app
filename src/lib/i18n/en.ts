@@ -1052,6 +1052,28 @@ export const en = {
       "It goes live in the MadGigz app as soon as you save. Acts already on MadGigz can be tagged in the line-up — the show then appears on their profile and they can post about it, while you stay the only one who manages it.",
 
     payoutsSubtitle: "Ticket money for your shows is collected into your own Stripe account.",
+
+    dueTitle: "Ready to release",
+
+    dueHint: "Earned on shows that have happened. MadGigz sends this to your bank.",
+
+    heldTitle: "Held for upcoming shows",
+
+    heldHint: "Released {days} days after each show takes place.",
+
+    paidOut: "Paid out so far",
+
+    perShow: "Show by show",
+
+    showDue: "ready",
+
+    showHeld: "held until {date}",
+
+    afterShowBanner: "You are paid per show, after it happens.",
+
+    afterShowBody: "Money for a show is released {days} days after that show takes place \u2014 not when the tickets sell. So a night that has already happened can be paid out while another one is still selling: the two are counted separately, and only the settled one is sent.",
+
+    noEarnings: "Nothing yet. Takings appear here as tickets sell.",
     yourStripe: "Your Stripe account",
     stripeConnected: "Connected",
     stripeUnfinished: "Setup unfinished",
@@ -1071,8 +1093,7 @@ export const en = {
     moneyStep1:
       "A fan buys a ticket. The money goes straight into your Stripe account, minus MadGigz's commission of",
     moneyStep1Rate: "{pct}% (minimum {min}) plus {vat}% IVA",
-    moneyStep2:
-      "Your balance is held on a manual schedule and released after the show has happened, so refunds always have something to reverse against.",
+    moneyStep2: "Your balance is held on a manual schedule and released show by show: each night's takings are sent {days} days after that show has happened, so a show still selling never pays out early and refunds always have something to reverse against.",
     moneyStep3:
       "Refunds, including a cancelled show, reverse the transfer and the commission automatically.",
     splitTitleVenue: "Splitting with your artists",

@@ -1023,6 +1023,28 @@ export const es: Messages = {
       "Se publica en la app de MadGigz en cuanto guardes. Puedes etiquetar en el cartel a artistas que ya estén en MadGigz — el concierto aparece en su perfil y pueden publicar sobre él, mientras tú sigues siendo quien lo gestiona.",
 
     payoutsSubtitle: "El dinero de las entradas de tus conciertos se recauda en tu propia cuenta de Stripe.",
+
+    dueTitle: "Listo para cobrar",
+
+    dueHint: "Ganado en conciertos que ya se han celebrado. MadGigz lo env\u00eda a tu banco.",
+
+    heldTitle: "Retenido para pr\u00f3ximos conciertos",
+
+    heldHint: "Se libera {days} d\u00edas despu\u00e9s de cada concierto.",
+
+    paidOut: "Cobrado hasta ahora",
+
+    perShow: "Concierto a concierto",
+
+    showDue: "listo",
+
+    showHeld: "retenido hasta el {date}",
+
+    afterShowBanner: "Cobras por concierto, una vez celebrado.",
+
+    afterShowBody: "El dinero de un concierto se libera {days} d\u00edas despu\u00e9s de que se celebre, no cuando se venden las entradas. As\u00ed que una noche que ya ha pasado puede cobrarse mientras otra sigue vendiendo: se cuentan por separado y solo se env\u00eda la ya liquidada.",
+
+    noEarnings: "Todav\u00eda nada. La recaudaci\u00f3n aparece aqu\u00ed segun se venden entradas.",
     yourStripe: "Tu cuenta de Stripe",
     stripeConnected: "Conectada",
     stripeUnfinished: "Configuración sin terminar",
@@ -1042,8 +1064,7 @@ export const es: Messages = {
     moneyStep1:
       "Un fan compra una entrada. El dinero entra directamente en tu cuenta de Stripe, menos la comisión de MadGigz de",
     moneyStep1Rate: "{pct}% (mínimo {min}) más {vat}% de IVA",
-    moneyStep2:
-      "Tu saldo se retiene en modo manual y se libera después del concierto, para que un reembolso siempre tenga contra qué revertirse.",
+    moneyStep2: "Tu saldo se retiene en modo manual y se libera concierto a concierto: la recaudaci\u00f3n de cada noche se env\u00eda {days} d\u00edas despu\u00e9s de que se haya celebrado, as\u00ed que un concierto que sigue vendiendo nunca cobra por adelantado y un reembolso siempre tiene contra qu\u00e9 revertirse.",
     moneyStep3:
       "Los reembolsos, incluida la cancelación de un concierto, revierten la transferencia y la comisión automáticamente.",
     splitTitleVenue: "Repartir con tus artistas",

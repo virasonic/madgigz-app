@@ -2,20 +2,13 @@ import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import { stripe } from "@/lib/stripe";
 import { formatEuros } from "@/lib/pricing";
 import { getFiscalIdentity, type StoredFiscalIdentity } from "@/lib/fiscal-server";
+import { fetchOrganiserSettlement, PAYOUT_HOLD_DAYS, type OrganiserSettlement } from "@/lib/payouts";
 import ReleaseButton from "./ReleaseButton";
 
 // Money can only be judged releasable against the calendar, so each artist's
 // balance is shown next to their event dates: release once the show has
 // happened, hold while one is still upcoming.
 const TODAY = new Date().toISOString().slice(0, 10);
-
-// The Organiser Terms commit to a specific date, not a vibe: "the payout to
-// your bank is released 7 days after the show has taken place". Releasing is
-// still a manual click, so the least this page can do is work out *when* that
-// promise falls due and say so - otherwise honouring it depends on an admin
-// remembering which shows happened when. Automating the release itself is the
-// follow-up; this is the part that stops a date being missed silently.
-const PAYOUT_HOLD_DAYS = 7;
 
 function addDays(isoDate: string, days: number): string {
   const d = new Date(`${isoDate}T00:00:00Z`);
@@ -41,6 +34,8 @@ interface PayoutRow {
   overdueDays: number;
   balanceError: string | null;
   fiscal: StoredFiscalIdentity | null;
+  /** Per-show ledger: what is due, what is still held, what has been sent. */
+  settlement: OrganiserSettlement;
 }
 
 export default async function AdminPayoutsPage() {
@@ -54,11 +49,24 @@ export default async function AdminPayoutsPage() {
 
   const rows: PayoutRow[] = [];
   for (const artist of artists ?? []) {
-    const { data: events } = await admin
+    // artist_id OR pro_account_id (#88). A promoter's shows have no artist_id,
+    // so the artist-only query this used to run showed them a connected account
+    // with no events at all - "nothing is due" on an organiser who was owed
+    // money. Falls back to artist-only on a database without addendum_051.
+    const { data: bothKinds, error: eventsError } = await admin
       .from("events")
       .select("title, event_date, cancelled")
-      .eq("artist_id", artist.id)
+      .or(`artist_id.eq.${artist.id},pro_account_id.eq.${artist.id}`)
       .order("event_date");
+    const events = eventsError
+      ? (
+          await admin
+            .from("events")
+            .select("title, event_date, cancelled")
+            .eq("artist_id", artist.id)
+            .order("event_date")
+        ).data
+      : bothKinds;
 
     let availableCents = 0;
     let pendingCents = 0;
@@ -89,6 +97,11 @@ export default async function AdminPayoutsPage() {
     // Tax details (#97) — the lawyer requires them on file before a payout, and
     // they're what a monthly commission invoice is raised against.
     const fiscal = await getFiscalIdentity(artist.id);
+    const settlement = await fetchOrganiserSettlement(
+      admin,
+      artist.id,
+      artist.stripe_account_id
+    );
     rows.push({
       profileId: artist.id,
       name: artist.artist_name ?? artist.username,
@@ -100,32 +113,36 @@ export default async function AdminPayoutsPage() {
       overdueDays,
       balanceError,
       fiscal,
+      settlement,
     });
   }
 
   // Anything owed floats to the top, longest-overdue first - the whole point is
   // that a due payout can't sit unnoticed below a screenful of quiet accounts.
   rows.sort((a, b) => {
-    const owed = (r: PayoutRow) => (r.overdueDays > 0 && r.availableCents > 0 ? 1 : 0);
+    const owed = (r: PayoutRow) => (r.settlement.releasableCents > 0 ? 1 : 0);
     return owed(b) - owed(a) || b.overdueDays - a.overdueDays;
   });
 
-  const dueCount = rows.filter((r) => r.overdueDays > 0 && r.availableCents > 0).length;
+  const dueCount = rows.filter((r) => r.settlement.releasableCents > 0).length;
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="font-display text-2xl text-foreground">Payouts</h1>
         <p className="text-sm text-muted">
-          Artist earnings are held in Stripe until released here — release only after the event
-          has taken place. &quot;Pending&quot; is money still settling with Stripe and becomes
-          available on its own within a few days. The Organiser Terms promise release{" "}
-          {PAYOUT_HOLD_DAYS} days after the show, so each artist shows the date that falls due.
+          Organiser earnings sit in their Stripe account until released here. Stripe keeps one
+          balance per account with no idea which show funded it, so <strong>Due</strong> is worked
+          out from our own ticket rows — takings on shows more than {PAYOUT_HOLD_DAYS} days past,
+          minus payouts already sent — and the Release button sends exactly that, never the whole
+          balance. <strong>Held</strong> is money for shows that haven&apos;t happened yet.
+          &quot;Pending&quot; is money still settling with Stripe, which becomes available on its
+          own within a few days.
         </p>
         {dueCount > 0 && (
           <p className="mt-2 rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">
-            {dueCount} {dueCount === 1 ? "artist is" : "artists are"} past the{" "}
-            {PAYOUT_HOLD_DAYS}-day release date with a balance waiting.
+            {dueCount} {dueCount === 1 ? "organiser has" : "organisers have"} money due to
+            release.
           </p>
         )}
       </div>
@@ -142,18 +159,35 @@ export default async function AdminPayoutsPage() {
                   {row.balanceError ? (
                     <p className="text-sm text-danger">{row.balanceError}</p>
                   ) : (
-                    <p className="text-sm text-muted">
-                      Available{" "}
-                      <span className="text-accent">{formatEuros(row.availableCents)}</span>
-                      {" · "}Pending{" "}
-                      <span className="text-foreground">{formatEuros(row.pendingCents)}</span>
-                    </p>
+                    <>
+                      <p className="text-sm text-muted">
+                        Due{" "}
+                        <span className="text-accent">
+                          {formatEuros(row.settlement.releasableCents)}
+                        </span>
+                        {" · "}Held{" "}
+                        <span className="text-foreground">
+                          {formatEuros(row.settlement.heldCents)}
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted">
+                        Stripe balance: available {formatEuros(row.availableCents)} · pending{" "}
+                        {formatEuros(row.pendingCents)} · paid out to date{" "}
+                        {formatEuros(row.settlement.paidOutCents)}
+                      </p>
+                      {row.settlement.payoutHistoryError && (
+                        <p className="text-xs text-danger">
+                          {row.settlement.payoutHistoryError} — Due is unreliable until this
+                          loads, so releasing is blocked.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
                 <ReleaseButton
                   profileId={row.profileId}
                   artistName={row.name}
-                  availableCents={row.availableCents}
+                  availableCents={Math.min(row.settlement.releasableCents, row.availableCents)}
                 />
               </div>
 
@@ -173,10 +207,10 @@ export default async function AdminPayoutsPage() {
                   ) : (
                     <p className="text-foreground">Holds until {row.dueDate}</p>
                   )}
-                  {row.upcoming.length > 0 && row.overdueDays > 0 && (
+                  {row.settlement.heldCents > 0 && (
                     <p className="text-muted">
-                      Balance may also cover the upcoming show(s) below — check before releasing
-                      in full.
+                      {formatEuros(row.settlement.heldCents)} of their balance is for shows that
+                      haven&apos;t happened — it is excluded from Due automatically.
                     </p>
                   )}
                 </div>
@@ -206,6 +240,32 @@ export default async function AdminPayoutsPage() {
                   )}
                 </div>
               </div>
+
+              {row.settlement.shows.length > 0 && (
+                <div className="mt-3 overflow-x-auto rounded-xl bg-background p-3 text-xs">
+                  <p className="mb-2 text-muted">Per show</p>
+                  <table className="w-full min-w-[420px] text-left">
+                    <tbody>
+                      {row.settlement.shows.map((show) => (
+                        <tr key={show.eventId}>
+                          <td className="py-1 pr-3 text-foreground">{show.title}</td>
+                          <td className="py-1 pr-3 text-muted">{show.eventDate}</td>
+                          <td className="py-1 pr-3 text-right tabular-nums text-foreground">
+                            {formatEuros(show.netCents)}
+                          </td>
+                          <td className="py-1 text-right">
+                            {show.due ? (
+                              <span className="text-accent">due</span>
+                            ) : (
+                              <span className="text-muted">held until {show.dueDate}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               <div className="mt-3 rounded-xl bg-background p-3 text-xs">
                 {row.fiscal ? (

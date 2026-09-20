@@ -3,6 +3,9 @@ import { Suspense } from "react";
 import { stripe } from "@/lib/stripe";
 import { FEE_PERCENT, MIN_FEE_CENTS, VAT_PERCENT, toEuros } from "@/lib/pricing";
 import { proClient, requirePro } from "@/lib/supabase/pro-queries";
+import { fetchOrganiserSettlement, PAYOUT_HOLD_DAYS } from "@/lib/payouts";
+import { formatEuros } from "@/lib/pricing";
+import { dateLocale } from "@/lib/dates";
 import PayoutConnect from "./PayoutConnect";
 
 function euros(amount: number): string {
@@ -27,7 +30,7 @@ async function fetchBalance(accountId: string | null) {
 }
 
 export default async function ProPayoutsPage() {
-  const { userId, account, t } = await requirePro();
+  const { userId, account, locale, t } = await requirePro();
 
   const { data: profile } = await proClient()
     .from("profiles")
@@ -37,7 +40,16 @@ export default async function ProPayoutsPage() {
 
   const accountId = (profile?.stripe_account_id as string | null) ?? null;
   const ready = Boolean(profile?.stripe_payouts_ready);
-  const balance = ready ? await fetchBalance(accountId) : null;
+  const [balance, settlement] = await Promise.all([
+    ready ? fetchBalance(accountId) : Promise.resolve(null),
+    fetchOrganiserSettlement(proClient(), userId, accountId),
+  ]);
+
+  const showDate = (iso: string) =>
+    new Date(`${iso}T12:00:00`).toLocaleDateString(dateLocale(locale), {
+      day: "numeric",
+      month: "short",
+    });
 
   return (
     <div className="flex flex-col gap-8">
@@ -77,6 +89,70 @@ export default async function ProPayoutsPage() {
         </Suspense>
       </div>
 
+      {/* Vir, 20 Sept 2026: say plainly that the money comes AFTER the show, and
+          that one settled night can be paid while another is still selling -
+          which is the question a promoter running two shows at once will ask. */}
+      <div className="rounded-2xl border border-accent/30 bg-accent/5 p-5">
+        <h2 className="font-heading text-sm text-foreground">{t("pro.afterShowBanner")}</h2>
+        <p className="mt-1 text-sm text-muted">
+          {t("pro.afterShowBody", { days: PAYOUT_HOLD_DAYS })}
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl bg-surface p-5">
+          <p className="text-xs uppercase tracking-wide text-muted">{t("pro.dueTitle")}</p>
+          <p className="mt-2 font-display text-3xl text-accent">
+            {formatEuros(settlement.releasableCents)}
+          </p>
+          <p className="mt-1 text-xs text-muted">{t("pro.dueHint")}</p>
+        </div>
+        <div className="rounded-2xl bg-surface p-5">
+          <p className="text-xs uppercase tracking-wide text-muted">{t("pro.heldTitle")}</p>
+          <p className="mt-2 font-display text-3xl text-foreground">
+            {formatEuros(settlement.heldCents)}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            {t("pro.heldHint", { days: PAYOUT_HOLD_DAYS })}
+          </p>
+        </div>
+      </div>
+
+      {/* The per-show ledger is what makes the two numbers above checkable
+          rather than something they have to take on trust. */}
+      <div className="rounded-2xl bg-surface p-5">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+          <h2 className="font-heading text-lg text-foreground">{t("pro.perShow")}</h2>
+          <span className="text-xs text-muted">
+            {t("pro.paidOut")}: {formatEuros(settlement.paidOutCents)}
+          </span>
+        </div>
+        {settlement.shows.length === 0 ? (
+          <p className="text-sm text-muted">{t("pro.noEarnings")}</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {settlement.shows.map((show) => (
+              <div key={show.eventId} className="flex flex-wrap items-baseline gap-x-3 text-sm">
+                <span className="min-w-0 flex-1 truncate text-foreground">{show.title}</span>
+                <span className="text-muted">{showDate(show.eventDate)}</span>
+                <span className="w-20 text-right tabular-nums text-foreground">
+                  {formatEuros(show.netCents)}
+                </span>
+                <span className="w-40 text-right text-xs">
+                  {show.due ? (
+                    <span className="text-accent">{t("pro.showDue")}</span>
+                  ) : (
+                    <span className="text-muted">
+                      {t("pro.showHeld", { date: showDate(show.dueDate) })}
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {balance && (
         <div className="grid grid-cols-2 gap-4">
           <div className="rounded-2xl bg-surface p-5">
@@ -106,7 +182,7 @@ export default async function ProPayoutsPage() {
             </span>
             .
           </li>
-          <li>{t("pro.moneyStep2")}</li>
+          <li>{t("pro.moneyStep2", { days: PAYOUT_HOLD_DAYS })}</li>
           <li>{t("pro.moneyStep3")}</li>
         </ul>
       </div>

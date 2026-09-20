@@ -6,6 +6,7 @@ import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import { logDecision } from "@/lib/decision-ledger";
 import { sendArtistStatusEmail } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
+import { fetchOrganiserSettlement } from "@/lib/payouts";
 import { removeEventMedia } from "@/lib/supabase/storage";
 import { deleteStreamVideo } from "@/lib/cloudflare-stream-server";
 import { ArtistStatus } from "@/lib/types";
@@ -296,6 +297,18 @@ export async function releaseArtistPayout(
   if (!profile?.stripe_account_id) return { paidCents: 0, error: "No payout account connected" };
 
   try {
+    // Recomputed here rather than taken from the page: this is a Server Action,
+    // i.e. a public POST endpoint, and the amount of money to send is the last
+    // thing that should arrive from a caller.
+    const settlement = await fetchOrganiserSettlement(
+      admin,
+      profileId,
+      profile.stripe_account_id
+    );
+    if (settlement.payoutHistoryError) {
+      return { paidCents: 0, error: "Couldn't read their payout history - try again in a moment" };
+    }
+
     const balance = await stripe.balance.retrieve({}, { stripeAccount: profile.stripe_account_id });
     const available = balance.available.find((b) => b.currency === "eur")?.amount ?? 0;
     if (available <= 0) {
@@ -304,18 +317,39 @@ export async function releaseArtistPayout(
       return { paidCents: 0, error: "Nothing available to pay out yet" };
     }
 
+    // The heart of it (Vir, 20 Sept 2026): pay what this organiser has EARNED on
+    // shows that have already happened, not whatever is sitting in the account.
+    // Stripe keeps one balance per account with no idea which show funded it, so
+    // releasing `available` on a promoter who has last week's gig settled and
+    // next month's still selling hands over money for a show that hasn't
+    // happened. The settlement figure is computed from our own ticket rows,
+    // which do know.
+    //
+    // Capped at `available` because settled money can still be mid-clearing at
+    // Stripe; the remainder releases on the next click, once it lands.
+    const amount = Math.min(settlement.releasableCents, available);
+    if (amount <= 0) {
+      return {
+        paidCents: 0,
+        error:
+          settlement.heldCents > 0
+            ? "Nothing due yet - their balance is for shows that haven't happened"
+            : "Nothing due to release",
+      };
+    }
+
     await stripe.payouts.create(
-      { amount: available, currency: "eur" },
+      { amount, currency: "eur" },
       {
         stripeAccount: profile.stripe_account_id,
         // Same account + same amount + same day = one payout, so an accidental
         // double-click can't pay twice.
-        idempotencyKey: `payout_${profile.stripe_account_id}_${available}_${new Date().toISOString().slice(0, 10)}`,
+        idempotencyKey: `payout_${profile.stripe_account_id}_${amount}_${new Date().toISOString().slice(0, 10)}`,
       }
     );
 
     revalidatePath("/admin/payouts");
-    return { paidCents: available, error: null };
+    return { paidCents: amount, error: null };
   } catch (error) {
     console.error(`Payout failed for profile ${profileId}:`, error);
     return { paidCents: 0, error: "Payout failed - nothing was sent. Check the logs and retry." };
