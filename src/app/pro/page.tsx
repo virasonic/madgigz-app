@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { proClient, fetchProDashboardStats, requirePro } from "@/lib/supabase/pro-queries";
 import { dateLocale } from "@/lib/dates";
+import { hasFiscalIdentity } from "@/lib/fiscal-server";
 
 function StatCard({ label, value, hint, href }: { label: string; value: string; hint?: string; href?: string }) {
   const body = (
@@ -28,13 +29,14 @@ export default async function ProDashboardPage() {
   const { userId, account, locale, t } = await requirePro();
   const admin = proClient();
 
-  const [stats, { data: profile }] = await Promise.all([
+  const [stats, { data: profile }, fiscalProvided] = await Promise.all([
     fetchProDashboardStats(admin, account),
     admin
       .from("profiles")
       .select("stripe_account_id, stripe_payouts_ready")
       .eq("id", userId)
       .maybeSingle(),
+    hasFiscalIdentity(userId),
   ]);
 
   const payoutsReady = Boolean(profile?.stripe_payouts_ready);
@@ -70,6 +72,23 @@ export default async function ProDashboardPage() {
             className="mt-3 inline-block rounded-full bg-primary px-4 py-2 text-sm font-heading text-background"
           >
             {t(profile?.stripe_account_id ? "pro.connectFinishCta" : "pro.connectCta")}
+          </Link>
+        </div>
+      )}
+
+      {/* Second in line after connecting Stripe, and only once that's done -
+          two blockers at once reads as a wall. Missing tax details don't stop
+          them selling, they stop them being PAID, which is a thing you want to
+          learn well before the money is sitting there. */}
+      {payoutsReady && !fiscalProvided && (
+        <div className="rounded-2xl border border-primary/30 bg-primary/10 p-5">
+          <h2 className="font-heading text-sm text-foreground">{t("pro.taxNeededTitle")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("pro.taxNeededBody")}</p>
+          <Link
+            href="/pro/payouts"
+            className="mt-3 inline-block rounded-full bg-primary px-4 py-2 text-sm font-heading text-background"
+          >
+            {t("pro.taxNeededCta")}
           </Link>
         </div>
       )}

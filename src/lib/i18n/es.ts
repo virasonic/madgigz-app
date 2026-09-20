@@ -1034,6 +1034,16 @@ export const es: Messages = {
 
     paidOut: "Cobrado hasta ahora",
 
+    taxTitle: "Datos fiscales",
+
+    taxBlocking: "MadGigz no puede pagarte hasta tenerlos: estamos legalmente obligados a conservarlos y son la base de tu factura de comisi\u00f3n.",
+
+    taxNeededTitle: "A\u00f1ade tus datos fiscales",
+
+    taxNeededBody: "Estamos legalmente obligados a tenerlos antes de pagarte. Es un minuto.",
+
+    taxNeededCta: "A\u00f1adir datos fiscales",
+
     perShow: "Concierto a concierto",
 
     showDue: "listo",

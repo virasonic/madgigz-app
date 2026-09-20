@@ -1063,6 +1063,16 @@ export const en = {
 
     paidOut: "Paid out so far",
 
+    taxTitle: "Tax details",
+
+    taxBlocking: "MadGigz can't pay you until these are on file — we're legally required to hold them, and they're what your commission invoice is raised against.",
+
+    taxNeededTitle: "Add your tax details",
+
+    taxNeededBody: "We're legally required to hold them before paying you. It takes a minute.",
+
+    taxNeededCta: "Add tax details",
+
     perShow: "Show by show",
 
     showDue: "ready",

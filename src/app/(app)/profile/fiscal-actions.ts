@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isArtistRole } from "@/lib/roles";
+import { fetchProAccount } from "@/lib/pro";
 import { toFiscalIdentity, validateFiscalInput, type FiscalIdType } from "@/lib/fiscal";
 import {
   getFiscalIdentity,
@@ -12,22 +13,30 @@ import {
 } from "@/lib/fiscal-server";
 
 // Server Actions are public POST endpoints, so the caller is re-derived from the
-// session — never trusted from an argument. Only an approved artist (an
-// organiser who can receive payouts) has a fiscal identity to give.
-async function requireArtist() {
+// session — never trusted from an argument. Only an ORGANISER has a fiscal
+// identity to give: someone who can be paid, and whom MadGigz therefore has to
+// invoice and hold tax details for.
+//
+// Promoters and venues are organisers too (#88), and they hit the requirement
+// harder than artists do — /admin/payouts refuses to release without tax details
+// on file, so a promoter with no way to enter theirs could sell a show and then
+// not be payable. That was the gap: this gate used to be artist-only.
+async function requireOrganiser() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not signed in");
 
-  const { data: profile } = await createAdminClient()
-    .from("profiles")
-    .select("role, artist_status")
-    .eq("id", user.id)
-    .single();
+  const admin = createAdminClient();
+  const [{ data: profile }, pro] = await Promise.all([
+    admin.from("profiles").select("role, artist_status").eq("id", user.id).single(),
+    fetchProAccount(admin, user.id),
+  ]);
 
-  if (!profile || !isArtistRole(profile.role)) throw new Error("Not an artist");
+  if (!profile || (!isArtistRole(profile.role) && !pro?.active)) {
+    throw new Error("Not an organiser");
+  }
   return user;
 }
 
@@ -46,7 +55,7 @@ export async function saveMyFiscalIdentity(
 ): Promise<{ error: string | null }> {
   let user;
   try {
-    user = await requireArtist();
+    user = await requireOrganiser();
   } catch {
     return { error: "fiscal.errorNotArtist" };
   }
@@ -66,6 +75,7 @@ export async function saveMyFiscalIdentity(
   if (error) return { error: error === "missingMigration" ? "fiscal.errorMigration" : "fiscal.errorSave" };
 
   revalidatePath("/profile");
+  revalidatePath("/pro/payouts");
   return { error: null };
 }
 
@@ -74,7 +84,7 @@ export async function saveMyFiscalIdentity(
 export async function loadMyFiscalIdentity(): Promise<StoredFiscalIdentity | null> {
   let user;
   try {
-    user = await requireArtist();
+    user = await requireOrganiser();
   } catch {
     return null;
   }

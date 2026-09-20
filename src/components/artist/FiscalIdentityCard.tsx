@@ -11,11 +11,12 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
-// Fiscal-identity capture (#97). Sits beside PayoutCard in the Settings sheet:
-// the lawyer requires MadGigz to hold an organiser's tax info before payouts, and
-// it's what a monthly commission invoice is raised against. Collapsed to a
-// status row until the artist opens the form; values load lazily (they're
-// service-role-only, never shipped with the page).
+// Fiscal-identity capture (#97). Two homes, both about being payable: beside
+// PayoutCard in the artist's Settings sheet, and on the promoter/venue Payouts
+// tab (#88). The lawyer requires MadGigz to hold an organiser's tax info before
+// any payout, and it's what a monthly commission invoice is raised against.
+// Collapsed to a status row until they open the form; values load lazily (they
+// are service-role-only and never shipped with the page).
 export default function FiscalIdentityCard({ provided }: { provided: boolean }) {
   const { t } = useT();
   const [onFile, setOnFile] = useState(provided);

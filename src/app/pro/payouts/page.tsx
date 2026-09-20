@@ -7,6 +7,8 @@ import { fetchOrganiserSettlement, PAYOUT_HOLD_DAYS } from "@/lib/payouts";
 import { formatEuros } from "@/lib/pricing";
 import { dateLocale } from "@/lib/dates";
 import PayoutConnect from "./PayoutConnect";
+import FiscalIdentityCard from "@/components/artist/FiscalIdentityCard";
+import { hasFiscalIdentity } from "@/lib/fiscal-server";
 
 function euros(amount: number): string {
   return `€${amount.toFixed(2)}`;
@@ -40,9 +42,13 @@ export default async function ProPayoutsPage() {
 
   const accountId = (profile?.stripe_account_id as string | null) ?? null;
   const ready = Boolean(profile?.stripe_payouts_ready);
-  const [balance, settlement] = await Promise.all([
+  const [balance, settlement, fiscalProvided] = await Promise.all([
     ready ? fetchBalance(accountId) : Promise.resolve(null),
     fetchOrganiserSettlement(proClient(), userId, accountId),
+    // #97: the lawyer requires tax details on file before any payout, and
+    // /admin/payouts refuses to release without them. A promoter had no way to
+    // enter theirs at all, so they could sell a show and then not be payable.
+    hasFiscalIdentity(userId),
   ]);
 
   const showDate = (iso: string) =>
@@ -87,6 +93,21 @@ export default async function ProPayoutsPage() {
         <Suspense fallback={null}>
           <PayoutConnect connected={Boolean(accountId)} ready={ready} />
         </Suspense>
+      </div>
+
+      {/* Sits directly under the Stripe card because the two together are what
+          make an organiser payable - a connected account with no tax details on
+          file still cannot be released. Warned loudly rather than quietly
+          missing, since the consequence only shows up at the moment they expect
+          to be paid. */}
+      <div
+        className={`rounded-2xl p-5 ${
+          fiscalProvided ? "bg-surface" : "border border-primary/30 bg-primary/10"
+        }`}
+      >
+        <h2 className="mb-1 font-heading text-lg text-foreground">{t("pro.taxTitle")}</h2>
+        {!fiscalProvided && <p className="mb-3 text-sm text-muted">{t("pro.taxBlocking")}</p>}
+        <FiscalIdentityCard provided={fiscalProvided} />
       </div>
 
       {/* Vir, 20 Sept 2026: say plainly that the money comes AFTER the show, and
