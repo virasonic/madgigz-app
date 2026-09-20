@@ -182,7 +182,6 @@
       "finalSale": "Tickets are sold by the organiser and are final sale unless the show is cancelled — see the {terms}.",
       "testMode": "Preview mode — payments aren't live yet, so you won't be charged. To try checkout, use test card 4242 4242 4242 4242 with any future date and any CVC.",
       "lineup": "Lineup",
-      "presentedBy": "Presented by",
       "headliner": "Headliner",
       "venue": "Venue",
       "doors": "Doors",
@@ -223,6 +222,7 @@
       "claiming": "Claiming..."
     },
     "eventPage": {
+      "presentedBy": "Presented by",
       "homeAria": "MadGigz home",
       "shareBuy": "Buy tickets on MadGigz",
       "cancelledNotice": "This show has been cancelled. Any tickets bought through MadGigz have been refunded.",
@@ -1190,7 +1190,6 @@
       "finalSale": "Las entradas las vende el organizador y son venta final salvo cancelación — consulta los {terms}.",
       "testMode": "Modo de prueba — los pagos aún no están activos, así que no se te cobrará. Para probar el pago, usa la tarjeta de prueba 4242 4242 4242 4242 con cualquier fecha futura y cualquier CVC.",
       "lineup": "Cartel",
-      "presentedBy": "Presentado por",
       "headliner": "Cabeza de cartel",
       "venue": "Sala",
       "doors": "Apertura",
@@ -1231,6 +1230,7 @@
       "claiming": "Reclamando..."
     },
     "eventPage": {
+      "presentedBy": "Presentado por",
       "homeAria": "Inicio de MadGigz",
       "shareBuy": "Compra tu entrada en MadGigz",
       "cancelledNotice": "Este bolo se ha cancelado. Las entradas compradas por MadGigz han sido reembolsadas.",

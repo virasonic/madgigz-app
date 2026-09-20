@@ -246,9 +246,6 @@ export const en = {
     testMode:
       "Preview mode — payments aren't live yet, so you won't be charged. To try checkout, use test card 4242 4242 4242 4242 with any future date and any CVC.",
     lineup: "Lineup",
-    // The promoter or venue behind the show (#88) - how a fan finds them and
-    // follows them, which is what lets a promoter build a reputation.
-    presentedBy: "Presented by",
     headliner: "Headliner",
     venue: "Venue",
     doors: "Doors",
@@ -293,6 +290,12 @@ export const en = {
   },
 
   eventPage: {
+
+    // The promoter or venue behind the show (#88) - how a fan finds them and
+
+    // follows them, which is what lets a promoter build a reputation.
+
+    presentedBy: "Presented by",
     homeAria: "MadGigz home",
     shareBuy: "Buy tickets on MadGigz",
     cancelledNotice:
