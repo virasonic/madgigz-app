@@ -15,6 +15,7 @@ import ProfileClient from "./ProfileClient";
 import { isArtistRole } from "@/lib/roles";
 import { fetchUnreadCount } from "@/lib/notifications";
 import { hasFiscalIdentity } from "@/lib/fiscal-server";
+import { fetchProAccount } from "@/lib/pro";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -32,6 +33,7 @@ export default async function ProfilePage() {
     unreadCount,
     intro,
     fiscalProvided,
+    proAccount,
   ] = await Promise.all([
       // Fan-only, like the attended wall below: the saved grid is a fan surface,
       // and the count now reflects what the grid shows (upcoming saved), so a
@@ -52,6 +54,10 @@ export default async function ProfilePage() {
       isArtistRole(user.role) ? fetchArtistIntro(supabase, user.id) : Promise.resolve(null),
       // Fiscal details (#97) are an organiser concern; fans never see the card.
       isArtistRole(user.role) ? hasFiscalIdentity(user.id) : Promise.resolve(false),
+      // Promoters and venues (#88) reach their panel from here, the way an
+      // admin reaches theirs. Read with the caller's own client - addendum_051
+      // lets a pro user select their own row, and nobody else's.
+      fetchProAccount(supabase, user.id),
     ]);
 
   // An admin's own shows plus the MadGigz-organised gigs they run, merged and
@@ -83,6 +89,7 @@ export default async function ProfilePage() {
       unreadCount={unreadCount}
       initialIntro={intro}
       fiscalProvided={fiscalProvided}
+      proType={proAccount?.active ? proAccount.type : null}
     />
   );
 }

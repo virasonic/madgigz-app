@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import { fetchApprovedArtists, fetchGenres, fetchVenues } from "@/lib/supabase/queries";
-import NewEventForm from "./NewEventForm";
+import EventForm from "@/components/organiser/EventForm";
 
 // Shows MadGigz puts on the platform itself: a gig ticketed somewhere else that
 // deserves to be discoverable here, or a night MadGigz runs directly.
@@ -29,7 +29,7 @@ export default async function AdminNewEventPage() {
       </div>
 
       <div className="rounded-2xl bg-surface p-5">
-        <NewEventForm venues={venues} genres={genres} artists={artists} />
+        <EventForm venues={venues} genres={genres} artists={artists} />
       </div>
     </div>
   );

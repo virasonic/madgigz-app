@@ -97,6 +97,14 @@ export async function createCheckout(
   if (event.artistId && event.artistId === user.id) {
     return { error: "You can't buy a ticket to your own show" };
   }
+  // Same rule for the promoter or venue that booked it (#88): buying their own
+  // ticket would just be paying MadGigz a commission on their own money.
+  if (
+    (eventRow as { pro_account_id?: string | null }).pro_account_id &&
+    (eventRow as { pro_account_id?: string | null }).pro_account_id === user.id
+  ) {
+    return { error: "You can't buy a ticket to your own show" };
+  }
   const { data: taggedSelf } = await admin
     .from("event_artists")
     .select("event_id")
@@ -107,14 +115,21 @@ export async function createCheckout(
     return { error: "You're in this line-up, so you can't buy a ticket to this show" };
   }
 
-  // The artist must be able to receive money before we take any. Read through
-  // the admin client, not the buyer's: stripe_account_id is no longer granted
-  // to authenticated (addendum_018), and a fan's session having any route to
-  // another user's Stripe id was the wrong shape regardless.
-  const { data: artist } = await admin
+  // Who gets paid for this show. Promoters and venues are organisers too (#88),
+  // and when one of them booked the night the money is theirs, not the act's -
+  // they settle with the artists themselves. pro_account_id therefore outranks
+  // artist_id, and a show with neither is a MadGigz house show (below).
+  //
+  // Read through the admin client, not the buyer's: stripe_account_id is no
+  // longer granted to authenticated (addendum_018), and a fan's session having
+  // any route to another user's Stripe id was the wrong shape regardless.
+  const proAccountId = (eventRow as { pro_account_id?: string | null }).pro_account_id ?? null;
+  const payeeId = proAccountId ?? event.artistId;
+
+  const { data: payee } = await admin
     .from("profiles")
     .select("stripe_account_id, stripe_payouts_ready")
-    .eq("id", event.artistId ?? "")
+    .eq("id", payeeId ?? "")
     .maybeSingle();
 
   // Price tiers (#151): if the show has tiers, the fan must pick one, and its
@@ -214,9 +229,12 @@ export async function createCheckout(
   // from ourselves. Everything else about checkout is identical.
   const houseRun = Boolean((eventRow as { house_run?: boolean }).house_run);
 
-  if (!houseRun && (!artist?.stripe_payouts_ready || !artist.stripe_account_id)) {
+  if (!houseRun && (!payee?.stripe_payouts_ready || !payee.stripe_account_id)) {
     await release();
-    return { error: "This artist can't accept payments yet" };
+    // "organiser", not "artist": for a promoter's show the account that isn't
+    // ready is the promoter's, and telling a fan the artist can't be paid would
+    // be both wrong and unhelpful to whoever they complain to.
+    return { error: "This organiser can't accept payments yet" };
   }
 
   // Stripe collects the whole fee (commission + IVA) as one application fee;
@@ -273,7 +291,7 @@ export async function createCheckout(
           ? {}
           : {
               application_fee_amount: feeCents,
-              transfer_data: { destination: artist!.stripe_account_id },
+              transfer_data: { destination: payee!.stripe_account_id },
             }),
       },
       metadata: {
@@ -283,7 +301,7 @@ export async function createCheckout(
         discount_id: discount?.id ?? "",
         application_fee_cents: String(feeCents),
         application_fee_vat_cents: String(feeVatCents),
-        stripe_account_id: houseRun ? "" : artist!.stripe_account_id,
+        stripe_account_id: houseRun ? "" : payee!.stripe_account_id,
         tier_id: selectedTierId ?? "",
       },
     });

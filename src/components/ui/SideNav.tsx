@@ -31,12 +31,15 @@ export default function SideNav({
   userId,
   unreadCount = 0,
   isGuest = false,
+  isPro = false,
 }: {
   role: Role;
   artistStatus: ArtistStatus | null;
   userId: string;
   unreadCount?: number;
   isGuest?: boolean;
+  /** Active promoter/venue account (#88) - gets a rail row into /pro. */
+  isPro?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -95,6 +98,13 @@ export default function SideNav({
   // Label stays English on purpose — the admin panel is English-only by design.
   if (role === "admin") {
     items.push({ href: "/admin", label: "Admin panel", icon: ShieldIcon });
+  }
+
+  // Promoters and venues get the same shortcut into their own panel. Gated
+  // server-side by requirePro regardless, so this is convenience, not control.
+  // English on purpose, like the admin row - /pro is English-only by design.
+  if (isPro) {
+    items.push({ href: "/pro", label: "Pro panel", icon: ShieldIcon });
   }
 
   // Settings sits last, mirroring the profile gear. It opens the same ?settings=1

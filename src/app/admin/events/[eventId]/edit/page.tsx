@@ -9,7 +9,7 @@ import {
   fetchTaggedArtistIds,
   fetchVenues,
 } from "@/lib/supabase/queries";
-import NewEventForm from "../../new/NewEventForm";
+import EventForm from "@/components/organiser/EventForm";
 
 // Editing a MadGigz-created show. An artist's own show is deliberately not
 // editable here - it belongs to their Manage Show sheet, where the fee split
@@ -61,7 +61,7 @@ export default async function AdminEditEventPage({ params }: PageProps<"/admin/e
         </div>
       ) : (
         <div className="rounded-2xl bg-surface p-5">
-          <NewEventForm
+          <EventForm
             venues={venues}
             genres={genres}
             artists={artists}

@@ -7,10 +7,29 @@ import GenrePicker from "@/components/artist/GenrePicker";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
 import ExtraTagPicker from "@/components/artist/ExtraTagPicker";
 import DateInput from "@/components/ui/DateInput";
-import { createAdminEvent, updateAdminEvent } from "../event-actions";
+import { createAdminEvent, updateAdminEvent } from "@/app/admin/events/event-actions";
+import { createProEvent, updateProEvent } from "@/app/pro/events/event-actions";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
 import type { EventItem, Genre, PublicArtistProfile, Venue } from "@/lib/types";
+
+// Which panel is using the form. The fields are identical on purpose - a show
+// is a show - so this picks the write path and where to go afterwards, nothing
+// else. The two actions take the same payload type for exactly this reason.
+export type OrganiserMode = "admin" | "pro";
+
+const MODES = {
+  admin: {
+    create: createAdminEvent,
+    update: updateAdminEvent,
+    listPath: "/admin/events",
+  },
+  pro: {
+    create: createProEvent,
+    update: updateProEvent,
+    listPath: "/pro/events",
+  },
+} as const;
 
 const ACCENT_SWATCHES = [
   { name: "Orange", value: "#d76616" },
@@ -50,13 +69,15 @@ function blurOnWheel(e: React.WheelEvent<HTMLInputElement>) {
 const inputClass =
   "w-full rounded-xl bg-background px-4 py-2.5 text-sm text-foreground outline-none ring-1 ring-muted/20 focus:ring-primary";
 
-export default function NewEventForm({
+export default function EventForm({
   venues,
   genres,
   artists,
   existing,
   taggedArtistIds: initialTaggedIds = [],
   genreIds: initialGenreIds = [],
+  mode = "admin",
+  lockedVenue = null,
 }: {
   venues: Venue[];
   genres: Genre[];
@@ -67,6 +88,12 @@ export default function NewEventForm({
   existing?: EventItem;
   taggedArtistIds?: string[];
   genreIds?: string[];
+  mode?: OrganiserMode;
+  // A venue account books into its own room and nowhere else, so the picker is
+  // replaced by the room's name. The server re-derives it from the account
+  // regardless - this is the honest UI for a rule that already holds, not the
+  // rule itself.
+  lockedVenue?: { id: string; name: string } | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -75,8 +102,8 @@ export default function NewEventForm({
   const [title, setTitle] = useState(existing?.title ?? "");
   const [artistName, setArtistName] = useState(existing?.artist ?? "");
   const [venue, setVenue] = useState<VenueSelection>({
-    name: existing?.venue ?? "",
-    venueId: existing?.venueId ?? null,
+    name: lockedVenue?.name ?? existing?.venue ?? "",
+    venueId: lockedVenue?.id ?? existing?.venueId ?? null,
   });
   const [date, setDate] = useState(existing?.date ?? "");
   const [time, setTime] = useState(existing?.time?.slice(0, 5) ?? "21:00");
@@ -165,18 +192,19 @@ export default function NewEventForm({
         ticketingUrl,
       };
 
+      const { create, update, listPath } = MODES[mode];
       const result = existing
-        ? { ...(await updateAdminEvent(existing.id, payload)), id: existing.id }
-        : await createAdminEvent(payload);
+        ? { ...(await update(existing.id, payload)), id: existing.id }
+        : await create(payload);
 
       if (result.error && !result.id) {
         setError(result.error);
         return;
       }
       // A partial success (show created, tags failed) still navigates - the show
-      // exists, and stranding the admin on a form for a show that was already
-      // created is how duplicates get made.
-      router.push(result.error ? `/admin/events?warning=${encodeURIComponent(result.error)}` : "/admin/events");
+      // exists, and stranding the organiser on a form for a show that was
+      // already created is how duplicates get made.
+      router.push(result.error ? `${listPath}?warning=${encodeURIComponent(result.error)}` : listPath);
       router.refresh();
     });
   }
@@ -200,8 +228,12 @@ export default function NewEventForm({
         </Field>
       </div>
 
-      <Field label="Venue">
-        <VenuePicker value={venue} onChange={setVenue} venues={venues} compact />
+      <Field label="Venue" hint={lockedVenue ? "Your venue. Shows you book are always in your own room." : undefined}>
+        {lockedVenue ? (
+          <p className={`${inputClass} text-muted`}>{lockedVenue.name}</p>
+        ) : (
+          <VenuePicker value={venue} onChange={setVenue} venues={venues} compact />
+        )}
       </Field>
 
       <div className="grid gap-4 md:grid-cols-4">

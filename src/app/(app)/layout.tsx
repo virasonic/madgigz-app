@@ -10,6 +10,7 @@ import LegalUpdateNotice from "@/components/legal/LegalUpdateNotice";
 import { CURRENT_LEGAL_UPDATE, shouldSeeLegalUpdate } from "@/lib/legal-updates";
 import IntroReelNudge from "@/components/artist/IntroReelNudge";
 import { fetchArtistIntro } from "@/lib/supabase/queries";
+import { fetchProAccount } from "@/lib/pro";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -26,7 +27,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // below, which applies solely to a signed-in-but-unfinished account.
   const isGuest = !user;
 
-  const [profile, unreadCount] = user
+  // proAccount: one extra primary-key lookup for a signed-in user, so the rail
+  // can offer the pro panel (#88) the way it offers the admin one. Read with
+  // the caller's own client - addendum_051's policy lets a pro user see their
+  // own row and nobody else's - and it returns null (never throws) on a
+  // database where the addendum hasn't been run yet.
+  const [profile, unreadCount, proAccount] = user
     ? await Promise.all([
         supabase
           .from("profiles")
@@ -35,8 +41,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           .single()
           .then((r) => r.data),
         fetchUnreadCount(supabase, user.id),
+        fetchProAccount(supabase, user.id),
       ])
-    : [null, 0];
+    : [null, 0, null];
 
   // Whether this person is in the announcement's audience is decided here, on
   // the server, where the role already is - the client only decides whether
@@ -91,6 +98,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         userId={user?.id ?? ""}
         unreadCount={unreadCount}
         isGuest={isGuest}
+        isPro={Boolean(proAccount?.active)}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {impersonating && <ImpersonationBanner username={impersonating} />}

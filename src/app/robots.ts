@@ -26,6 +26,7 @@ export default function robots(): MetadataRoute.Robots {
           // Login-gated for now (the artist page redirects a guest to sign-in),
           // so it is nothing a crawler can read. Worth revisiting if artist
           // profiles ever open to guests - they would be good landing pages.
+          "/pro",
           "/profile",
           "/saved",
           "/signin",

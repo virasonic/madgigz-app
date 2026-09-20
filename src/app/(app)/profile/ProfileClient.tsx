@@ -29,6 +29,7 @@ import { LOCALES, LOCALE_LABELS } from "@/lib/i18n/config";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { dateLocale } from "@/lib/dates";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
+import type { ProAccountType } from "@/lib/pro";
 
 // Read once at module load (React purity), same pattern as the feed/tickets
 // "now" reads. Splits the artist's upcoming shows from past ones (#141).
@@ -137,6 +138,7 @@ function SettingsSheet({
   fiscalProvided,
   isArtist,
   isAdmin,
+  proType,
 }: {
   onClose: () => void;
   onSendFeedback: () => void;
@@ -147,6 +149,7 @@ function SettingsSheet({
   fiscalProvided: boolean;
   isArtist: boolean;
   isAdmin: boolean;
+  proType: ProAccountType | null;
 }) {
   const { t, locale, setLocale } = useT();
   const { handleProps, sheetStyle } = useDragToDismiss(onClose);
@@ -212,6 +215,20 @@ function SettingsSheet({
             >
               <span className="text-sm text-foreground">Admin panel</span>
               <span className="text-xs text-muted">Manage gigs, scan at the door</span>
+            </Link>
+          )}
+
+          {/* Same door for a promoter or venue (#88). English on purpose, like
+              the admin row: the pro panel is English-only by design. */}
+          {proType && (
+            <Link
+              href="/pro"
+              className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
+            >
+              <span className="text-sm text-foreground">Pro panel</span>
+              <span className="text-xs text-muted">
+                {proType === "venue" ? "Your venue's shows and sales" : "Your shows and sales"}
+              </span>
             </Link>
           )}
 
@@ -369,6 +386,8 @@ interface ProfileClientProps {
   initialIntro: ContentPost | null;
   /** Whether the organiser has fiscal details on file (#97). False for fans. */
   fiscalProvided: boolean;
+  /** Set for an active promoter/venue account (#88); null for everyone else. */
+  proType: ProAccountType | null;
 }
 
 export default function ProfileClient({
@@ -383,6 +402,7 @@ export default function ProfileClient({
   unreadCount,
   initialIntro,
   fiscalProvided,
+  proType,
 }: ProfileClientProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
@@ -890,6 +910,7 @@ export default function ProfileClient({
           fiscalProvided={fiscalProvided}
           isArtist={artistTools}
           isAdmin={user.role === "admin"}
+          proType={proType}
         />
       )}
       {feedbackOpen && <FeedbackDialog onClose={() => setFeedbackOpen(false)} />}
