@@ -9,6 +9,10 @@ import ExtraTagPicker from "@/components/artist/ExtraTagPicker";
 import DateInput from "@/components/ui/DateInput";
 import { createAdminEvent, updateAdminEvent } from "@/app/admin/events/event-actions";
 import { createProEvent, updateProEvent } from "@/app/pro/events/event-actions";
+import { setEventTiers } from "@/app/admin/events/tier-actions";
+import { setProEventTiers } from "@/app/pro/events/tier-actions";
+import { TierRowsFields } from "@/components/organiser/TierManager";
+import { tierRowsToInput, type TierRow } from "@/components/artist/TierRowsEditor";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
 import type { EventItem, Genre, PublicArtistProfile, Venue } from "@/lib/types";
@@ -22,11 +26,13 @@ const MODES = {
   admin: {
     create: createAdminEvent,
     update: updateAdminEvent,
+    setTiers: setEventTiers,
     listPath: "/admin/events",
   },
   pro: {
     create: createProEvent,
     update: updateProEvent,
+    setTiers: setProEventTiers,
     listPath: "/pro/events",
   },
 } as const;
@@ -142,6 +148,11 @@ export default function EventForm({
   const [ticketingUrl, setTicketingUrl] = useState(existing?.ticketing?.url ?? "");
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
+  // Ticket types, on the CREATE screen only (#151). Editing an existing show
+  // uses the standalone TierManager card instead, which saves on its own button
+  // - a tier refusal ("that one has already sold 12") shouldn't block an
+  // unrelated date change, and two tier editors on one page would be worse.
+  const [tierRows, setTierRows] = useState<TierRow[]>([]);
 
   function handlePoster(file: File | null) {
     setPosterFile(file);
@@ -192,7 +203,7 @@ export default function EventForm({
         ticketingUrl,
       };
 
-      const { create, update, listPath } = MODES[mode];
+      const { create, update, setTiers, listPath } = MODES[mode];
       const result = existing
         ? { ...(await update(existing.id, payload)), id: existing.id }
         : await create(payload);
@@ -201,10 +212,22 @@ export default function EventForm({
         setError(result.error);
         return;
       }
+
+      // Tiers are applied after the show exists, because they hang off its id.
+      // A tier failure here is reported as a warning rather than an error: the
+      // show was created, and sending the organiser back to a form that would
+      // create a second one is worse than a single-price show they can fix.
+      let tierWarning: string | null = null;
+      const tierInput = tierRowsToInput(tierRows);
+      if (!existing && result.id && tierInput.length > 0) {
+        const tierResult = await setTiers(result.id, tierInput);
+        if (tierResult.error) tierWarning = `ticket types weren't saved (${tierResult.error})`;
+      }
       // A partial success (show created, tags failed) still navigates - the show
       // exists, and stranding the organiser on a form for a show that was
       // already created is how duplicates get made.
-      router.push(result.error ? `${listPath}?warning=${encodeURIComponent(result.error)}` : listPath);
+      const warning = result.error ?? tierWarning;
+      router.push(warning ? `${listPath}?warning=${encodeURIComponent(warning)}` : listPath);
       router.refresh();
     });
   }
@@ -316,6 +339,18 @@ export default function EventForm({
           <input type="number" onWheel={blurOnWheel} min={1} className={inputClass} value={maxPerOrder} onChange={(e) => setMaxPerOrder(e.target.value)} />
         </Field>
       </div>
+
+      {/* Create only, and only when MadGigz is selling: an external-link show
+          has no ticket types of ours to price. On an existing show the
+          standalone TierManager card takes over. */}
+      {!existing && ticketing === "internal" && (
+        <Field
+          label="Ticket types (optional)"
+          hint="Leave empty for a single-price show. With types, the price above becomes the cheapest one and capacity is set from them."
+        >
+          <TierRowsFields rows={tierRows} onChange={setTierRows} />
+        </Field>
+      )}
 
       <Field label="Genres">
         <GenrePicker genres={genres} selectedIds={genreIds} onChange={setGenreIds} />

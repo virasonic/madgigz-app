@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { adminClient, fetchEventDetail, requireAdmin } from "@/lib/supabase/admin-queries";
 import { formatEuros } from "@/lib/pricing";
 import RefundButton from "../../billing/RefundButton";
-import TierManager, { type TierManagerTier } from "./TierManager";
+import TierManager, { type TierManagerTier } from "@/components/organiser/TierManager";
 
 function StatCard({
   label,

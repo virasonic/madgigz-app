@@ -10,6 +10,7 @@ import {
 } from "@/lib/supabase/queries";
 import { fetchProEventForEdit, proClient, requirePro } from "@/lib/supabase/pro-queries";
 import ShowVisibility from "./ShowVisibility";
+import TierManager, { type TierManagerTier } from "@/components/organiser/TierManager";
 
 export default async function ProEditEventPage({ params }: PageProps<"/pro/events/[eventId]">) {
   const { account } = await requirePro();
@@ -22,13 +23,32 @@ export default async function ProEditEventPage({ params }: PageProps<"/pro/event
   const event = await fetchProEventForEdit(admin, account, eventId);
   if (!event) notFound();
 
-  const [venues, genres, artists, genreIds, taggedArtistIds] = await Promise.all([
-    fetchVenues(admin),
-    fetchGenres(admin),
-    fetchApprovedArtists(admin),
-    fetchEventGenreIds(admin, eventId),
-    fetchTaggedArtistIds(admin, eventId),
-  ]);
+  const [venues, genres, artists, genreIds, taggedArtistIds, { data: tierRows }] =
+    await Promise.all([
+      fetchVenues(admin),
+      fetchGenres(admin),
+      fetchApprovedArtists(admin),
+      fetchEventGenreIds(admin, eventId),
+      fetchTaggedArtistIds(admin, eventId),
+      // Price tiers (#151). No rows - or no table, pre-addendum_039 - is an
+      // empty editor to start filling in, not an error.
+      admin
+        .from("event_tiers")
+        .select("id, name, price, capacity, max_per_order, available_until, sold")
+        .eq("event_id", eventId)
+        .order("sort_order", { ascending: true }),
+    ]);
+
+  const tiers: TierManagerTier[] = (tierRows ?? []).map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+    price: Number(r.price),
+    capacity: r.capacity as number,
+    maxPerOrder: (r.max_per_order as number | null) ?? 6,
+    availableUntil: (r.available_until as string | null) ?? null,
+    sold: r.sold as number,
+  }));
+  const isExternal = event.ticketing?.mode === "external";
 
   const lockedVenue =
     account.type === "venue" && account.venueId
@@ -69,6 +89,10 @@ export default async function ProEditEventPage({ params }: PageProps<"/pro/event
               lockedVenue={lockedVenue ? { id: lockedVenue.id, name: lockedVenue.name } : null}
             />
           </div>
+
+          {/* External-link shows sell somewhere else, so there are no ticket
+              types of ours to price. */}
+          {!isExternal && <TierManager mode="pro" eventId={event.id} initialTiers={tiers} />}
 
           {/* Cancelling refunds real money to real people, so it stays a
               MadGigz action rather than a button in a panel someone might press
