@@ -246,13 +246,116 @@ try {
     report("a pro cannot insert a show straight into the table", (data ?? []).length === 0, "an event was created");
   }
 
+  // ---- 5. The organiser toolset (addendum_052) ---------------------------
+  // Each of these is a policy that says "an ACTIVE pro account, on a show IT
+  // booked". Probed from both sides: the promoter's own show (must work) and
+  // somebody else's (must not).
+  console.log("\n5. Organiser tools on someone else's show");
+
+  const { data: otherEvent } = await admin
+    .from("events")
+    .insert({
+      artist_id: null,
+      pro_account_id: null,
+      title: "PROBE - not theirs",
+      artist_name: "Probe Act",
+      venue: "Probe Venue",
+      city: "Madrid",
+      event_date: "2027-01-03",
+      event_time: "21:00",
+      price: 10,
+      capacity: 50,
+      category: "Rock",
+      active: true,
+    })
+    .select("id")
+    .single();
+
+  {
+    const { data } = await P.from("content_posts").insert({
+      event_id: otherEvent.id,
+      artist_id: promoter.id,
+      artist_name: "PROBE - Promoter",
+      show_title: "PROBE - not theirs",
+      caption: "PROBE",
+      media_url: "https://example.invalid/probe.jpg",
+      media_type: "image",
+    }).select("id");
+    report("a pro cannot post on a show they didn't book", (data ?? []).length === 0, JSON.stringify(data));
+  }
+  {
+    await P.from("events").update({ active: false }).eq("id", otherEvent.id);
+    const { data } = await admin.from("events").select("active").eq("id", otherEvent.id).single();
+    report("a pro cannot hide a show they didn't book", data?.active === true, "it was hidden");
+  }
+  {
+    const { data } = await P.from("events").delete().eq("id", otherEvent.id).select("id");
+    report("a pro cannot delete a show they didn't book", (data ?? []).length === 0, "it was deleted");
+  }
+
+  console.log("\n6. Organiser tools on their own show");
+  {
+    const { data } = await P.from("events").update({ active: false }).eq("id", promoterEvent.id).select("id");
+    report("a pro CAN hide their own show", (data ?? []).length === 1, "the update matched nothing");
+    await admin.from("events").update({ active: true }).eq("id", promoterEvent.id);
+  }
+  {
+    const { data } = await P.from("content_posts").insert({
+      event_id: promoterEvent.id,
+      artist_id: promoter.id,
+      artist_name: "PROBE - Promoter",
+      show_title: "PROBE - promoter show",
+      caption: "PROBE",
+      media_url: "https://example.invalid/probe.jpg",
+      media_type: "image",
+    }).select("id");
+    report("a pro CAN post on their own show", (data ?? []).length === 1, "the insert was refused");
+  }
+  {
+    // A ticket on their own show: they must be able to read it to scan it.
+    const { data: ticket } = await admin
+      .from("tickets")
+      .insert({ user_id: attacker.id, event_id: promoterEvent.id, quantity: 1, price_paid: 15 })
+      .select("id")
+      .single();
+    {
+      const { data } = await P.from("tickets").select("id").eq("id", ticket.id);
+      report("a pro CAN read a ticket for their own show", (data ?? []).length === 1, "read nothing");
+    }
+    {
+      const { data } = await P.from("tickets")
+        .update({ checked_in_at: new Date().toISOString() })
+        .eq("id", ticket.id)
+        .select("id");
+      report("a pro CAN check in a ticket for their own show", (data ?? []).length === 1, "matched nothing");
+    }
+    // ...and a deactivated one must lose all of it at once, because every
+    // policy re-checks pa.active rather than trusting the session.
+    await admin.from("pro_accounts").update({ active: false }).eq("id", promoter.id);
+    {
+      const { data } = await P.from("tickets").select("id").eq("id", ticket.id);
+      report("a DEACTIVATED pro cannot read tickets any more", (data ?? []).length === 0, JSON.stringify(data));
+    }
+    {
+      await P.from("events").update({ active: false }).eq("id", promoterEvent.id);
+      const { data } = await admin.from("events").select("active").eq("id", promoterEvent.id).single();
+      report("a DEACTIVATED pro cannot hide their show", data?.active === true, "it was hidden");
+    }
+    await admin.from("pro_accounts").update({ active: true }).eq("id", promoter.id);
+    await admin.from("tickets").delete().eq("id", ticket.id);
+  }
+
   // ---- Teardown -----------------------------------------------------------
+  await admin.from("content_posts").delete().eq("artist_id", promoter.id);
+  await admin.from("events").delete().eq("id", otherEvent.id);
   await admin.from("events").delete().eq("id", promoterEvent.id);
 } catch (err) {
   console.error("\nprobe aborted:", err.message);
   fail += 1;
 } finally {
   if (seeded) {
+    // content_posts first: a post holds an FK to the event.
+    await admin.from("content_posts").delete().like("show_title", "PROBE - %");
     await admin.from("events").delete().like("title", "PROBE - %");
     await admin.from("pro_accounts").delete().like("display_name", "PROBE - %");
   }

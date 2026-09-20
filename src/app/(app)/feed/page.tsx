@@ -8,6 +8,7 @@ import {
   fetchIntroReels,
   fetchSavedEventIds,
   fetchShowsByArtist,
+  fetchShowsByProAccount,
 } from "@/lib/supabase/queries";
 import FeedClient from "./FeedClient";
 import { isArtistRole } from "@/lib/roles";
@@ -37,7 +38,14 @@ export default async function FeedPage() {
   const [events, posts, shows, savedIds, followedEventIds, intros] = await Promise.all([
     fetchEvents(supabase, { activeOnly: true, city: CURRENT_CITY }),
     fetchContentPosts(supabase),
-    user && isArtistRole(user.role) ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
+    // Which shows the "+" can post to. An artist's own, or - for a promoter or
+    // venue (#88) - the ones they booked. Never both: an account is one or the
+    // other, and the database (addendum_052) scopes the insert the same way.
+    user?.proType
+      ? fetchShowsByProAccount(supabase, user.id)
+      : user && isArtistRole(user.role)
+        ? fetchShowsByArtist(supabase, user.id)
+        : Promise.resolve([]),
     user ? fetchSavedEventIds(supabase, user.id) : Promise.resolve<string[]>([]),
     user ? fetchFollowedEventIds(supabase, user.id) : Promise.resolve(new Set<string>()),
     fetchIntroReels(supabase),

@@ -8,6 +8,7 @@ import {
   fetchPastSavedEvents,
   fetchSavedEvents,
   fetchShowsByArtist,
+  fetchShowsByProAccount,
   fetchTaggedShows,
   fetchTickets,
 } from "@/lib/supabase/queries";
@@ -28,6 +29,7 @@ export default async function ProfilePage() {
     ownShows,
     taggedShows,
     madgigzShows,
+    proShows,
     attendedEvents,
     pastSaved,
     unreadCount,
@@ -45,6 +47,10 @@ export default async function ProfilePage() {
       // Admins run MadGigz's own (ownerless) gigs, so those appear on the admin's
       // profile alongside any shows they personally own - manage/scan from here.
       user.role === "admin" ? fetchMadGigzShows(supabase) : Promise.resolve([]),
+      // Same idea for a promoter or venue (#88): the shows they booked belong on
+      // their profile, because that is where the scanner and the post button are
+      // on a phone.
+      user.proType ? fetchShowsByProAccount(supabase, user.id) : Promise.resolve([]),
       // The poster wall (#116) is a fan surface; artists/admins get their own tools
       // in place of the fan stats, so there's no need to run this for them.
       user.role === "fan" ? fetchAttendedEvents(supabase, user.id) : Promise.resolve([]),
@@ -60,9 +66,10 @@ export default async function ProfilePage() {
       fetchProAccount(supabase, user.id),
     ]);
 
-  // An admin's own shows plus the MadGigz-organised gigs they run, merged and
-  // date-sorted into one list (madgigzShows is empty for non-admins).
-  const shows = [...ownShows, ...madgigzShows].sort(
+  // An admin's own shows plus the MadGigz-organised gigs they run, plus a
+  // promoter's booked shows - merged and date-sorted into one list. All three
+  // lists are empty for anyone the relevant branch didn't apply to.
+  const shows = [...ownShows, ...madgigzShows, ...proShows].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 

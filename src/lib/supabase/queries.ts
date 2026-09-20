@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ARTIST_CAPABLE_ROLES } from "@/lib/roles";
+import { fetchProAccount } from "@/lib/pro";
 import type { TaggedArtist } from "@/lib/lineup-links";
 import {
   EMPTY_PREFERENCES,
@@ -38,16 +39,28 @@ export async function fetchCurrentUser(supabase: SupabaseClient): Promise<AppUse
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data } = await supabase
-    .from("profiles")
-    .select(
-      "id, username, role, follower_count, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, artist_status, evidence_submitted, stripe_account_connected, stripe_payouts_ready"
-    )
-    .eq("id", user.id)
-    .single();
+  // The pro lookup rides alongside rather than after: it's a primary-key read on
+  // a table addendum_051 lets you see exactly one row of (your own), and it
+  // returns null - never throws - on a database where the addendum hasn't run.
+  const [{ data }, pro] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "id, username, role, follower_count, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, artist_status, evidence_submitted, stripe_account_connected, stripe_payouts_ready"
+      )
+      .eq("id", user.id)
+      .single(),
+    fetchProAccount(supabase, user.id),
+  ]);
 
   if (!data) return null;
-  return mapProfile(data as ProfileRow, user.email ?? "");
+  // A deactivated pro account is not an organiser any more, so it's dropped
+  // here rather than checked at each of the half-dozen places that ask.
+  return mapProfile(
+    data as ProfileRow,
+    user.email ?? "",
+    pro?.active ? { type: pro.type, displayName: pro.displayName } : null
+  );
 }
 
 // The fan-facing "who am I buying from" page. Only returns approved artists -
@@ -688,6 +701,25 @@ export async function fetchShowsByArtist(
     .select("*, venues(address)")
     .eq("artist_id", artistId)
     .order("event_date");
+  return ((data as EventRow[]) ?? []).map(mapEvent);
+}
+
+// Shows a promoter or venue booked (#88), for their own profile - the mobile
+// home for managing and scanning them, exactly as fetchMadGigzShows is for an
+// admin. Reads through the caller's own client: events are world-readable, and
+// pro_account_id is a plain uuid column like artist_id.
+export async function fetchShowsByProAccount(
+  supabase: SupabaseClient,
+  proAccountId: string
+): Promise<EventItem[]> {
+  const { data, error } = await supabase
+    .from("events")
+    .select("*, venues(address)")
+    .eq("pro_account_id", proAccountId)
+    .order("event_date");
+  // Pre-addendum_051 the column isn't there; an empty list is the honest answer
+  // rather than a crashed profile page.
+  if (error) return [];
   return ((data as EventRow[]) ?? []).map(mapEvent);
 }
 

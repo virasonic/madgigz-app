@@ -8,7 +8,7 @@ import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { fetchCurrentUser } from "@/lib/supabase/queries";
 import { EventItem, EventRow, mapEvent, mapTicket, Ticket, TicketRow } from "@/lib/types";
-import { canActAsArtist } from "@/lib/roles";
+import { canActAsOrganiser } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
 type ScanResult =
@@ -36,9 +36,10 @@ export default function ScanTicketsPage() {
     fetchCurrentUser(supabase).then((user) => {
       // Artists scan their own gigs; admins also scan MadGigz-organised
       // (ownerless) gigs (#157), even if the admin account isn't an approved
-      // artist. The database still enforces which tickets each can actually read
-      // and check in (RLS) - this only widens who reaches the scanner.
-      if (!user || (!canActAsArtist(user) && user.role !== "admin")) {
+      // artist; promoters and venues scan the shows they booked (#88). The
+      // database still enforces which tickets each can actually read and check
+      // in (RLS) - this only widens who reaches the scanner.
+      if (!user || (!canActAsOrganiser(user) && user.role !== "admin")) {
         router.replace("/profile");
         return;
       }

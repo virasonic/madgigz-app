@@ -19,7 +19,7 @@ import { createClient } from "@/lib/supabase/client";
 import { clearOfflineTickets } from "@/lib/offline-tickets";
 import { clearNativeOfflineTickets } from "@/lib/offline-tickets-native";
 import { AppUser, ContentPost, EventItem } from "@/lib/types";
-import { isArtistRole } from "@/lib/roles";
+import { isArtistRole, organiserLabel } from "@/lib/roles";
 import DeleteAccountDialog from "@/components/account/DeleteAccountDialog";
 import FeedbackDialog from "@/components/account/FeedbackDialog";
 import { LegalLinksRow } from "@/components/legal/LegalNotice";
@@ -266,8 +266,11 @@ function SettingsSheet({
             ))}
 
           {/* Fans can opt into becoming an artist here; it drops them on the
-              same claim form and admin review a new artist goes through. */}
-          {!isArtist && <SwitchToArtistRow />}
+              same claim form and admin review a new artist goes through. Not
+              offered to a promoter or venue: they already have the organiser
+              tools, and the artist claim asks them to prove they are the act,
+              which they aren't. */}
+          {!isArtist && !proType && <SwitchToArtistRow />}
 
           {/* Below the real settings, above nothing - it is a thing you reach
               for when something has gone wrong, so it should be findable
@@ -452,10 +455,20 @@ export default function ProfileClient({
   }
 
   // Admins keep their own badge - they get the artist tools below, but
-  // labelling the account "Artist" would misreport what it actually is.
-  const roleLabel = user.role === "admin" ? "Admin" : user.role === "artist" ? "Artist" : "Fan";
+  // labelling the account "Artist" would misreport what it actually is. Same
+  // reasoning for a promoter or venue (#88): their login is a 'fan' row with a
+  // business attached, and "Fan" is simply the wrong word for it.
+  const roleLabel = organiserLabel(user);
+  // Deliberately two gates, not one. artistTools is "is the act" - the bio, the
+  // socials, the payout card, the fiscal details, the artist claim. A promoter
+  // is none of those things, so widening this one would offer them an artist
+  // payout flow that rejects them.
   const artistTools = isArtistRole(user.role);
-  const displayName = user.artistName ?? user.username;
+  const isPro = Boolean(user.proType);
+  // organiserTools is "runs shows" - the scanner, the show list, posting. That
+  // is the set promoters and venues share with artists.
+  const organiserTools = artistTools || isPro;
+  const displayName = (isPro ? user.proName : user.artistName) ?? user.username;
   const hasSocials = buildSocialLinks(user).length > 0;
   // Evidence is the one thing only the claim form can set, so it's the reliable
   // signal that the form was actually completed.
@@ -563,7 +576,7 @@ export default function ProfileClient({
         </div>
       )}
 
-      {user.role === "fan" ? (
+      {user.role === "fan" && !isPro ? (
         <>
           {/* The two stats double as a toggle (#180): tap Attended to see the
               memories wall (#116), tap Saved to see upcoming saved shows. The
@@ -664,7 +677,7 @@ export default function ProfileClient({
             </div>
           )}
         </>
-      ) : user.artistStatus !== "approved" ? (
+      ) : !isPro && user.artistStatus !== "approved" ? (
         <div className="mb-8 rounded-2xl bg-surface p-5 text-center">
           {user.artistStatus === "rejected" ? (
             <>
@@ -697,7 +710,7 @@ export default function ProfileClient({
           </Suspense>
 
           <div className="mb-6 flex gap-3">
-            <Link href="/profile/add-show" className="flex-1">
+            <Link href={isPro ? "/pro/events/new" : "/profile/add-show"} className="flex-1">
               <Button>{t("profile.addShow")}</Button>
             </Link>
             <Link href="/profile/scan" className="flex-1">
@@ -706,7 +719,11 @@ export default function ProfileClient({
           </div>
 
           {/* Intro reel (#143): a "this is me" clip the artist can set even with
-              no show to promote, so their profile is never empty. */}
+              no show to promote, so their profile is never empty. Artists only -
+              it is a performer's calling card, and the intro actions require an
+              approved artist anyway, so offering it to a promoter would be a
+              button that always fails. */}
+          {artistTools && (
           <div className="mb-6">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-heading text-sm uppercase tracking-wide text-muted">
@@ -747,6 +764,7 @@ export default function ProfileClient({
               </button>
             )}
           </div>
+          )}
 
           {/* Followers is back: #60 gave it something real to count. A zero
               here now means nobody has followed yet, which is true, rather

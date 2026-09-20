@@ -13,7 +13,7 @@ import { useGuestGate } from "@/components/auth/GuestGate";
 import { createClient } from "@/lib/supabase/client";
 import { fetchContentPosts, toggleSavedEvent } from "@/lib/supabase/queries";
 import { AppUser, ContentPost, EventItem } from "@/lib/types";
-import { canActAsArtist } from "@/lib/roles";
+import { canActAsOrganiser } from "@/lib/roles";
 import { getSeenAnnouncements, markAnnouncementSeen } from "@/lib/seen-announcements";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { FEED_TO_TOP_EVENT } from "@/lib/ui-events";
@@ -438,9 +438,10 @@ export default function FeedClient({
     router.refresh();
   }
 
-  // Only ever read inside the artist-only "post an update" flow, which a guest
-  // can't open (the "+" button is gated on canActAsArtist below).
-  const artistName = user ? user.artistName ?? user.username : "";
+  // Only ever read inside the organiser-only "post an update" flow, which a
+  // guest can't open (the "+" button is gated on canActAsOrganiser below). A
+  // promoter posts as their business, not under a personal handle.
+  const artistName = user ? user.proName ?? user.artistName ?? user.username : "";
 
   // Newest-first for the panel: a fresh announcement belongs at the TOP of the
   // catch-up list, not buried under the whole intro set (allPosts arrives
@@ -471,7 +472,7 @@ export default function FeedClient({
             <MegaphoneIcon />
           </button>
         )}
-        {user && canActAsArtist(user) && (
+        {user && canActAsOrganiser(user) && (
           <button
             type="button"
             onClick={() => setAddContentOpen(true)}
@@ -482,8 +483,8 @@ export default function FeedClient({
           </button>
         )}
         {/* #170: fans get a quick way into their discovery preferences from the
-            feed. Artists use this spot for the post "+", so fans only. */}
-        {user && !canActAsArtist(user) && (
+            feed. Organisers use this spot for the post "+", so fans only. */}
+        {user && !canActAsOrganiser(user) && (
           <Link
             href="/preferences"
             aria-label={t("preferences.title")}

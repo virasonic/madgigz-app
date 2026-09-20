@@ -1,3 +1,5 @@
+import type { ProAccountType } from "@/lib/pro";
+
 export type Role = "fan" | "artist" | "admin";
 export type ArtistStatus = "pending" | "approved" | "rejected";
 
@@ -221,6 +223,14 @@ export interface AppUser {
   // service-role-only (addendum_018) and the UI only ever needed the boolean.
   stripeAccountConnected: boolean;
   stripePayoutsReady: boolean;
+  /**
+   * Set for an active promoter/venue account (#88), null for everyone else.
+   * Promoters, venues and artists are all organisers, so this sits beside role
+   * rather than inside it - a pro is still an ordinary account in the app.
+   */
+  proType: ProAccountType | null;
+  /** The pro account's business name, for the profile header. */
+  proName: string | null;
 }
 
 // The subset of a profile that's safe and meaningful to show to someone
@@ -424,7 +434,14 @@ export interface ProfileRow {
   stripe_payouts_ready: boolean | null;
 }
 
-export function mapProfile(row: ProfileRow, email: string): AppUser {
+// `pro` comes from a second query (pro_accounts), not from the profiles row -
+// it's a different table with its own policy, so it's passed in rather than
+// guessed at from the role.
+export function mapProfile(
+  row: ProfileRow,
+  email: string,
+  pro?: { type: ProAccountType; displayName: string } | null
+): AppUser {
   return {
     id: row.id,
     email,
@@ -443,6 +460,8 @@ export function mapProfile(row: ProfileRow, email: string): AppUser {
     stripeAccountConnected: Boolean(row.stripe_account_connected),
     stripePayoutsReady: row.stripe_payouts_ready ?? false,
     youtube: row.youtube,
+    proType: pro?.type ?? null,
+    proName: pro?.displayName ?? null,
   };
 }
 
