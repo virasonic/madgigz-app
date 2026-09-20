@@ -20,6 +20,12 @@
 // again. Safe to re-run.
 //
 //   node scripts/probe-pro-accounts.mjs .env.staging
+//
+// Run against STAGING by default. It was run once against PROD deliberately
+// (20 Sept 2026, at Vir's request, 22/22 pass, residue checked clean afterwards)
+// because the policies gate who can reach an organiser's payouts and staging
+// only proves staging. Do that again only on purpose: it creates real auth users
+// on the live database for the length of the run.
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 
