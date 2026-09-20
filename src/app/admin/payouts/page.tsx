@@ -187,7 +187,9 @@ export default async function AdminPayoutsPage() {
                 <ReleaseButton
                   profileId={row.profileId}
                   artistName={row.name}
-                  availableCents={Math.min(row.settlement.releasableCents, row.availableCents)}
+                  releasableCents={row.settlement.releasableCents}
+                  availableCents={row.availableCents}
+                  heldCents={row.settlement.heldCents}
                 />
               </div>
 
@@ -199,10 +201,19 @@ export default async function AdminPayoutsPage() {
                       No show has taken place yet — nothing is due.
                     </p>
                   ) : row.overdueDays > 0 ? (
-                    <p className={row.availableCents > 0 ? "text-danger" : "text-foreground"}>
-                      Due since {row.dueDate}
-                      {row.overdueDays > 0 && ` (${row.overdueDays}d ago)`}
-                      {row.availableCents === 0 && " — no balance to release"}
+                    <p
+                      className={
+                        row.settlement.releasableCents > 0 ? "text-danger" : "text-foreground"
+                      }
+                    >
+                      Due since {row.dueDate} ({row.overdueDays}d ago)
+                      {/* "Pending" at Stripe is a settlement delay on the card
+                          payment, not a hold of ours - it clears on its own, so
+                          say that rather than leaving a due payout looking
+                          stuck. */}
+                      {row.settlement.releasableCents > 0 &&
+                        row.availableCents === 0 &&
+                        " — still clearing at Stripe, releasable in a few days"}
                     </p>
                   ) : (
                     <p className="text-foreground">Holds until {row.dueDate}</p>
