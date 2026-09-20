@@ -1,7 +1,7 @@
 // Fiscal-identity capture (#97). Pure types + validation so the rules are
 // testable and shared by the server action and the form. No DB, no Stripe.
 
-export type FiscalIdType = "nif" | "vat" | "other";
+export type FiscalIdType = "nif" | "dni" | "vat" | "other";
 
 export interface FiscalIdentity {
   legalName: string;
@@ -11,9 +11,17 @@ export interface FiscalIdentity {
   address: string;
 }
 
-export const FISCAL_ID_TYPES: FiscalIdType[] = ["nif", "vat", "other"];
+// Ordered by how a Spanish organiser thinks about themselves: a company gives a
+// NIF/CIF, an individual gives a DNI (or NIE, if they're a foreign resident).
+//
+// Strictly, a natural person's NIF *is* their DNI number plus its letter, so
+// these two overlap in law - but "NIF" reads as a business thing to someone who
+// has only ever been handed a DNI, and an organiser who can't find their own ID
+// in the list is an organiser who doesn't get paid. What the gestor and Odoo
+// need is the number; the label is there so the right person types it.
+export const FISCAL_ID_TYPES: FiscalIdType[] = ["nif", "dni", "vat", "other"];
 
-// A NIF/NIE/CIF, VAT number or passport number is only ever letters + digits (a
+// A NIF/DNI/NIE/CIF, VAT number or passport number is only ever letters + digits (a
 // VAT id may prefix a country code). Punctuation, spaces and lowercase are noise
 // on an invoice, so store a normalised form and compare against that.
 export function normalizeFiscalId(raw: string): string {

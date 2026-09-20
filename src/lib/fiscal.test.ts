@@ -42,6 +42,29 @@ describe("validateFiscalInput", () => {
       validateFiscalInput({ ...base, fiscalIdType: "vat", fiscalId: "ESB12345678" })
     ).toBeNull();
   });
+
+  // An individual organiser gives a DNI, which is 8 digits + a letter. Pinned
+  // because the length rule is a guess at plausibility, and a DNI sits close
+  // enough to the lower bound that a tightened rule could start rejecting real
+  // ones - and the failure mode is a promoter who cannot be paid.
+  it("accepts a Spanish DNI", () => {
+    expect(
+      validateFiscalInput({ ...base, fiscalIdType: "dni", fiscalId: "12345678Z" })
+    ).toBeNull();
+  });
+
+  it("accepts a NIE, which starts with a letter", () => {
+    expect(
+      validateFiscalInput({ ...base, fiscalIdType: "dni", fiscalId: "X1234567L" })
+    ).toBeNull();
+  });
+
+  // Typed the way it is printed on the card, with its dash.
+  it("accepts a DNI written with punctuation", () => {
+    expect(
+      validateFiscalInput({ ...base, fiscalIdType: "dni", fiscalId: "12345678-Z" })
+    ).toBeNull();
+  });
 });
 
 describe("toFiscalIdentity", () => {
