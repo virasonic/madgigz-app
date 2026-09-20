@@ -20,7 +20,7 @@ import { useLiveEventStats } from "@/lib/realtime";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 import { openExternal } from "@/lib/native";
 import { recordEventLinkClick } from "@/lib/track";
-import { fetchTaggedArtistProfiles } from "@/lib/supabase/queries";
+import { fetchPublicOrganiser, fetchTaggedArtistProfiles } from "@/lib/supabase/queries";
 import { buildLineupLinks, normName } from "@/lib/lineup-links";
 
 type Tab = "tickets" | "info";
@@ -91,17 +91,30 @@ export default function TicketModal({
   // Line-up act name -> profile id, so a printed act that's a tagged MadGigz
   // artist (or the owner) links to their profile. Fetched once per event.
   const [lineupLinks, setLineupLinks] = useState<Record<string, string>>({});
+  // The promoter or venue presenting the night (#88). They are not on the
+  // line-up - they didn't play - so without this credit a fan browsing in the
+  // app has no route to their profile at all, and the Follow button on it might
+  // as well not exist. The public /e/ page has the same credit; this is the
+  // surface fans are actually on.
+  const [organiser, setOrganiser] = useState<{ id: string; name: string } | null>(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const tagged = await fetchTaggedArtistProfiles(createClient(), event.id);
+      const supabase = createClient();
+      const [tagged, presenter] = await Promise.all([
+        fetchTaggedArtistProfiles(supabase, event.id),
+        fetchPublicOrganiser(supabase, event.proAccountId),
+      ]);
       if (cancelled) return;
       setLineupLinks(buildLineupLinks(tagged, { id: event.artistId, name: event.artist }));
+      // Returns null for a show with no pro owner, and for a pro account with
+      // no public page - so the credit renders only when it links somewhere.
+      setOrganiser(presenter ? { id: presenter.id, name: presenter.name } : null);
     })();
     return () => {
       cancelled = true;
     };
-  }, [event.id, event.artistId, event.artist]);
+  }, [event.id, event.artistId, event.artist, event.proAccountId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -551,6 +564,20 @@ export default function TicketModal({
                     })}
                   </ol>
                 </div>
+
+                {organiser && (
+                  <div>
+                    <h3 className="font-heading text-sm text-muted">
+                      {t("eventPage.presentedBy")}
+                    </h3>
+                    <Link
+                      href={`/profile/${organiser.id}`}
+                      className="mt-2 inline-block text-sm text-accent hover:underline"
+                    >
+                      {organiser.name}
+                    </Link>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4 border-t border-muted/15 pt-4 text-sm">
                   <div>
