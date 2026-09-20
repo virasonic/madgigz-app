@@ -106,7 +106,20 @@ string to **both**, read it via `useT()`'s `t("...")`, and interpolate with
 `en-GB`, prices EUR, in both locales by design.
 
 **The admin panel (`src/app/admin/**`) stays English** — do not wire it to the
-catalog.
+catalog. Its layout pins a `LocaleProvider locale="en"` so the components it
+borrows from the artist side (VenuePicker, LineupEditor, GenrePicker) render
+English there too, rather than an English chrome with Spanish placeholders in it.
+
+**The pro panel (`src/app/pro/**`) is the opposite: it IS translated.** Promoters
+and venues are third parties, not MadGigz's own back office, so the panel follows
+the language stored on their account (`pro_accounts.locale`, addendum_054) — not
+the locale cookie, because the invite email is written before they have one.
+Client components use `useT()` under the panel's own `LocaleProvider`; **server
+components must use `requirePro()`'s `t`, never `getServerT()`**, or a page's
+server half follows the browser while its client half follows the account and one
+screen ends up in two languages. Strings shared by both panels (`EventForm`,
+`TierManager`) live under `organiserForm` in the catalog and work in both because
+of the two providers.
 
 After changing any strings, regenerate the review artefacts so they don't drift:
 `node scripts/export-i18n-json.mjs` (then

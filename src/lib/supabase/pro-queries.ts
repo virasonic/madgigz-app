@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchProAccount, isProNotReady, ProAccount } from "@/lib/pro";
 import { EventRow, mapEvent } from "@/lib/types";
+import { getMessages, translate, type Locale } from "@/lib/i18n/config";
 
 /**
  * Verifies the current session belongs to an active pro account. Every /pro
@@ -13,7 +14,20 @@ import { EventRow, mapEvent } from "@/lib/types";
  * The lookup runs through the service-role client: the account row carries
  * `active`, and a deactivated pro must not be able to talk themselves back in.
  */
-export async function requirePro(): Promise<{ userId: string; account: ProAccount }> {
+export interface ProSession {
+  userId: string;
+  account: ProAccount;
+  locale: Locale;
+  /**
+   * Translator bound to the ACCOUNT's language, not the locale cookie. Server
+   * components under /pro must use this rather than getServerT(), or a page's
+   * server-rendered half would follow the browser while its client half follows
+   * the account - the two ending up in different languages on one screen.
+   */
+  t: (key: string, vars?: Record<string, string | number>) => string;
+}
+
+export async function requirePro(): Promise<ProSession> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -24,7 +38,13 @@ export async function requirePro(): Promise<{ userId: string; account: ProAccoun
   if (!account) throw new Error("Not authorized");
   if (!account.active) throw new Error("This pro account has been deactivated");
 
-  return { userId: user.id, account };
+  const messages = getMessages(account.locale);
+  return {
+    userId: user.id,
+    account,
+    locale: account.locale,
+    t: (key, vars) => translate(messages, key, vars),
+  };
 }
 
 export function proClient(): SupabaseClient {

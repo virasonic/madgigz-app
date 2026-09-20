@@ -13,7 +13,7 @@ import ShowVisibility from "./ShowVisibility";
 import TierManager, { type TierManagerTier } from "@/components/organiser/TierManager";
 
 export default async function ProEditEventPage({ params }: PageProps<"/pro/events/[eventId]">) {
-  const { account } = await requirePro();
+  const { account, t } = await requirePro();
   const { eventId } = await params;
   const admin = proClient();
 
@@ -59,19 +59,19 @@ export default async function ProEditEventPage({ params }: PageProps<"/pro/event
     <div className="flex flex-col gap-6">
       <div>
         <Link href="/pro/events" className="text-sm text-accent">
-          &larr; Events
+          &larr; {t("pro.navEvents")}
         </Link>
-        <h1 className="font-display mt-2 text-2xl text-foreground">Edit show</h1>
+        <h1 className="font-display mt-2 text-2xl text-foreground">{t("pro.editShow")}</h1>
         <p className="text-sm text-muted">
-          {event.title} · {event.sold} of {event.capacity} sold
+          {event.title} · {t("pro.soldOfCapacity", { sold: event.sold, capacity: event.capacity })}
         </p>
       </div>
 
       {event.cancelled ? (
         <div className="rounded-2xl bg-surface p-5">
-          <p className="font-heading text-sm text-foreground">This show is cancelled</p>
+          <p className="font-heading text-sm text-foreground">{t("pro.showCancelledTitle")}</p>
           <p className="mt-1 text-sm text-muted">
-            Everyone has been refunded and the record stays as it was, so it can&apos;t be edited.
+            {t("pro.showCancelledBody")}
           </p>
         </div>
       ) : (
@@ -98,8 +98,7 @@ export default async function ProEditEventPage({ params }: PageProps<"/pro/event
               MadGigz action rather than a button in a panel someone might press
               to mean "hide it". */}
           <p className="text-sm text-muted">
-            Need to cancel the show and refund everyone? Email MadGigz and we&apos;ll do it — it
-            can&apos;t be undone, so it isn&apos;t a button here.
+            {t("pro.cancelHint")}
           </p>
         </>
       )}

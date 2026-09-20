@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { fetchProEvents, proClient, requirePro } from "@/lib/supabase/pro-queries";
+import { dateLocale } from "@/lib/dates";
+import type { Locale } from "@/lib/i18n/config";
 
 function euros(amount: number): string {
   return `€${amount.toFixed(2)}`;
 }
 
-function dateLabel(date: string): string {
-  return new Date(`${date}T12:00:00`).toLocaleDateString("en-GB", {
+function dateLabel(date: string, locale: Locale): string {
+  return new Date(`${date}T12:00:00`).toLocaleDateString(dateLocale(locale), {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -26,7 +28,7 @@ function StatusPill({ label, tone }: { label: string; tone: "live" | "muted" | "
 }
 
 export default async function ProEventsPage({ searchParams }: PageProps<"/pro/events">) {
-  const { account } = await requirePro();
+  const { account, locale, t } = await requirePro();
   const events = await fetchProEvents(proClient(), account);
 
   // A partial success on the form (show saved, genres or tags failed) redirects
@@ -39,26 +41,26 @@ export default async function ProEventsPage({ searchParams }: PageProps<"/pro/ev
   const past = events.filter((e) => e.date < today);
 
   const sections = [
-    { title: "Upcoming", rows: upcoming },
-    { title: "Past", rows: past },
+    { title: t("pro.upcoming"), rows: upcoming },
+    { title: t("pro.past"), rows: past },
   ].filter((s) => s.rows.length > 0);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl text-foreground">Events</h1>
+          <h1 className="font-display text-2xl text-foreground">{t("pro.navEvents")}</h1>
           <p className="text-sm text-muted">
             {account.type === "venue"
-              ? "Every show in your room. Takings are shown on the ones you booked."
-              : "The shows you're promoting."}
+              ? t("pro.eventsSubtitleVenue")
+              : t("pro.eventsSubtitlePromoter")}
           </p>
         </div>
         <Link
           href="/pro/events/new"
           className="shrink-0 rounded-full bg-primary px-5 py-2.5 font-heading text-sm text-foreground"
         >
-          New show
+          {t("pro.newShow")}
         </Link>
       </div>
 
@@ -68,15 +70,15 @@ export default async function ProEventsPage({ searchParams }: PageProps<"/pro/ev
 
       {events.length === 0 ? (
         <div className="rounded-2xl bg-surface p-8 text-center">
-          <p className="font-heading text-foreground">No shows yet</p>
+          <p className="font-heading text-foreground">{t("pro.noShowsTitle")}</p>
           <p className="mt-1 text-sm text-muted">
-            Add your first show and it appears in the MadGigz app straight away.
+            {t("pro.noShowsBody")}
           </p>
           <Link
             href="/pro/events/new"
             className="mt-4 inline-block rounded-full bg-primary px-5 py-2.5 font-heading text-sm text-foreground"
           >
-            New show
+            {t("pro.newShow")}
           </Link>
         </div>
       ) : (
@@ -87,12 +89,12 @@ export default async function ProEventsPage({ searchParams }: PageProps<"/pro/ev
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-muted/15 text-muted">
-                    <th className="pb-2 font-heading">Show</th>
-                    <th className="pb-2 font-heading">Date</th>
-                    <th className="pb-2 font-heading">Venue</th>
-                    <th className="pb-2 text-right font-heading">Sold</th>
-                    <th className="pb-2 text-right font-heading">Takings</th>
-                    <th className="pb-2 text-right font-heading">Status</th>
+                    <th className="pb-2 font-heading">{t("pro.colShow")}</th>
+                    <th className="pb-2 font-heading">{t("pro.colDate")}</th>
+                    <th className="pb-2 font-heading">{t("pro.colVenue")}</th>
+                    <th className="pb-2 text-right font-heading">{t("pro.colSold")}</th>
+                    <th className="pb-2 text-right font-heading">{t("pro.colTakings")}</th>
+                    <th className="pb-2 text-right font-heading">{t("pro.colStatus")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -109,7 +111,7 @@ export default async function ProEventsPage({ searchParams }: PageProps<"/pro/ev
                         <span className="block text-xs text-muted">{event.artist}</span>
                       </td>
                       <td className="py-3 pr-3 text-muted">
-                        {dateLabel(event.date)}
+                        {dateLabel(event.date, locale)}
                         <span className="block text-xs">{event.time?.slice(0, 5)}</span>
                       </td>
                       <td className="py-3 pr-3 text-muted">{event.venue}</td>
@@ -122,7 +124,7 @@ export default async function ProEventsPage({ searchParams }: PageProps<"/pro/ev
                           as "this show sold nothing". */}
                       <td className="py-3 pr-3 text-right tabular-nums text-foreground">
                         {event.revenue === null ? (
-                          <span className="text-muted" title="Booked by someone else">
+                          <span className="text-muted" title={t("pro.bookedBySomeoneElse")}>
                             —
                           </span>
                         ) : (
@@ -131,15 +133,15 @@ export default async function ProEventsPage({ searchParams }: PageProps<"/pro/ev
                       </td>
                       <td className="py-3 text-right">
                         {event.cancelled ? (
-                          <StatusPill label="Cancelled" tone="danger" />
+                          <StatusPill label={t("pro.statusCancelled")} tone="danger" />
                         ) : !event.active ? (
-                          <StatusPill label="Hidden" tone="muted" />
+                          <StatusPill label={t("pro.statusHidden")} tone="muted" />
                         ) : !event.owned ? (
-                          <StatusPill label="Hosted" tone="muted" />
+                          <StatusPill label={t("pro.statusHosted")} tone="muted" />
                         ) : event.external ? (
-                          <StatusPill label="External" tone="muted" />
+                          <StatusPill label={t("pro.statusExternal")} tone="muted" />
                         ) : (
-                          <StatusPill label="On sale" tone="live" />
+                          <StatusPill label={t("pro.statusOnSale")} tone="live" />
                         )}
                       </td>
                     </tr>

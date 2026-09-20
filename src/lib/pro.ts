@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
 
 export type ProAccountType = "promoter" | "venue";
 
@@ -10,6 +11,12 @@ export interface ProAccount {
   /** Venue accounts only: the room they manage. Always null for a promoter. */
   venueId: string | null;
   active: boolean;
+  /**
+   * The language the panel and MadGigz's emails to them use (#88). A property
+   * of the account, not of the browser: the invite email is written before this
+   * person has a cookie, and the panel should open right on a new machine.
+   */
+  locale: Locale;
 }
 
 export interface ProAccountRow {
@@ -18,6 +25,8 @@ export interface ProAccountRow {
   display_name: string;
   venue_id: string | null;
   active: boolean;
+  /** Absent pre-addendum_054. */
+  locale?: string | null;
 }
 
 export function mapProAccount(row: ProAccountRow): ProAccount {
@@ -27,6 +36,9 @@ export function mapProAccount(row: ProAccountRow): ProAccount {
     displayName: row.display_name,
     venueId: row.venue_id,
     active: row.active,
+    // Falls back to the app default rather than guessing from a browser we
+    // cannot see from here.
+    locale: isLocale(row.locale ?? undefined) ? (row.locale as Locale) : DEFAULT_LOCALE,
   };
 }
 
@@ -68,19 +80,29 @@ export async function fetchProAccount(
 
   const { data, error } = await client
     .from("pro_accounts")
-    .select("id, type, display_name, venue_id, active")
+    .select("id, type, display_name, venue_id, active, locale")
     .eq("id", profileId)
     .maybeSingle();
 
   if (error) {
-    if (isProNotReady(error)) return null;
-    console.error("fetchProAccount failed:", error);
-    return null;
+    // `locale` arrives in addendum_054, one migration after the table itself.
+    // Asking for a column that isn't there yet fails the WHOLE select, so a
+    // straight "not ready -> null" here would take the panel down on a database
+    // that has 051 but not 054. Retry without it instead; mapProAccount already
+    // defaults a missing locale.
+    const { data: withoutLocale, error: retryError } = await client
+      .from("pro_accounts")
+      .select("id, type, display_name, venue_id, active")
+      .eq("id", profileId)
+      .maybeSingle();
+
+    if (retryError) {
+      if (isProNotReady(retryError)) return null;
+      console.error("fetchProAccount failed:", retryError);
+      return null;
+    }
+    return withoutLocale ? mapProAccount(withoutLocale as ProAccountRow) : null;
   }
 
   return data ? mapProAccount(data as ProAccountRow) : null;
-}
-
-export function proTypeLabel(type: ProAccountType): string {
-  return type === "venue" ? "Venue" : "Promoter";
 }

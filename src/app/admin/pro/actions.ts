@@ -5,6 +5,7 @@ import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import { logDecision } from "@/lib/decision-ledger";
 import { sendProInviteEmail } from "@/lib/email";
 import { isProNotReady, type ProAccountType } from "@/lib/pro";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
 
 export interface CreateProAccountInput {
   /** The business name: "Sala El Sol", "Noches Raras Bookings". */
@@ -13,6 +14,13 @@ export interface CreateProAccountInput {
   type: ProAccountType;
   /** Required for a venue account, ignored for a promoter. */
   venueId: string | null;
+  /**
+   * The language their panel opens in and their invite email is written in
+   * (#88). Chosen here because the email goes out before this person has a
+   * browser we've ever seen, so there is no cookie to read it from. They can
+   * change it themselves in the panel afterwards.
+   */
+  locale: Locale;
 }
 
 export interface CreateProAccountResult {
@@ -103,6 +111,7 @@ export async function createProAccount(
   if (input.type === "venue" && !input.venueId) {
     return { error: "Pick the venue this account manages" };
   }
+  const locale: Locale = isLocale(input.locale) ? input.locale : DEFAULT_LOCALE;
 
   const username = await freeUsername(admin, displayName, email);
 
@@ -157,6 +166,7 @@ export async function createProAccount(
       type: input.type,
       display_name: displayName,
       venue_id: input.type === "venue" ? input.venueId : null,
+      locale,
       active: true,
       created_by: currentAdmin.id,
     },
@@ -165,11 +175,29 @@ export async function createProAccount(
 
   if (insertError) {
     if (isProNotReady(insertError)) {
-      console.error("pro_accounts missing - run addendum_051:", insertError);
-      return { error: "The database is missing addendum_051 - run it, then try again" };
+      // Either the table (051) or the locale column (054) is missing. Retry
+      // without the locale so a half-migrated database can still make accounts
+      // rather than refusing outright - they just default to Spanish until 054
+      // lands.
+      const { error: retryError } = await admin.from("pro_accounts").upsert(
+        {
+          id: userId,
+          type: input.type,
+          display_name: displayName,
+          venue_id: input.type === "venue" ? input.venueId : null,
+          active: true,
+          created_by: currentAdmin.id,
+        },
+        { onConflict: "id" }
+      );
+      if (retryError) {
+        console.error("pro_accounts missing - run addendum_051:", retryError);
+        return { error: "The database is missing addendum_051 - run it, then try again" };
+      }
+    } else {
+      console.error("createProAccount upsert failed:", insertError);
+      return { error: "The login was made but the pro account wasn't. Check the logs." };
     }
-    console.error("createProAccount upsert failed:", insertError);
-    return { error: "The login was made but the pro account wasn't. Check the logs." };
   }
 
   const { sent } = await sendProInviteEmail({
@@ -178,13 +206,14 @@ export async function createProAccount(
     type: input.type,
     setPasswordUrl,
     existingAccount,
+    locale,
   });
 
   await logDecision(admin, currentAdmin.id, {
     action: "pro_account_created",
     subjectType: "pro_account",
     subjectId: userId,
-    metadata: { type: input.type, displayName, existingAccount, emailSent: sent },
+    metadata: { type: input.type, displayName, locale, existingAccount, emailSent: sent },
   });
 
   revalidatePath("/admin/pro");

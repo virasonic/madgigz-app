@@ -11,14 +11,16 @@ import {
 } from "@/components/artist/TierRowsEditor";
 import type { OrganiserMode } from "@/components/organiser/EventForm";
 import { breakdownFor, formatEuros, parseEuros, toCents } from "@/lib/pricing";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
-// Price-tier editing for the two back-office panels (#151). English, like the
-// rest of /admin and /pro - the row markup here is deliberately NOT the artist's
-// TierRowsEditor, which runs through the i18n catalog and would render Spanish
-// inside an English-only panel. The *conversion* helpers are shared with it
-// though (emptyTierRow / tierRowsToInput / tierToRow), because turning form
-// strings into a TierInput is the error-prone part and having two versions of it
-// is how a price ends up off by a decimal comma on one surface only.
+// Price-tier editing for the two back-office panels (#151). Translated through
+// the catalog like the rest of them: /pro follows the organiser's language and
+// /admin pins its LocaleProvider to English, so one component serves both.
+// Still a separate component from the artist's TierRowsEditor, which is laid out
+// for a phone and shows a different fee line - but the *conversion* helpers are
+// shared (emptyTierRow / tierRowsToInput / tierToRow), because turning form
+// strings into a TierInput is the error-prone part and two copies of it is how a
+// price ends up off by a decimal comma on one surface only.
 
 export interface TierManagerTier {
   id: string;
@@ -58,6 +60,8 @@ export function TierRowsFields({
    */
   showNet?: boolean;
 }) {
+  const { t } = useT();
+
   function update(i: number, patch: Partial<TierRow>) {
     onChange(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   }
@@ -70,27 +74,27 @@ export function TierRowsFields({
             <input
               value={r.name}
               onChange={(e) => update(i, { name: e.target.value })}
-              placeholder="Name (e.g. General, VIP)"
+              placeholder={t("organiserForm.tierNamePlaceholder")}
               className={`min-w-[8rem] flex-1 ${fieldClass}`}
             />
             <input
               value={r.price}
               onChange={(e) => update(i, { price: e.target.value })}
-              placeholder="Price €"
+              placeholder={t("organiserForm.tierPricePlaceholder")}
               inputMode="decimal"
               className={`w-24 ${fieldClass}`}
             />
             <input
               value={r.capacity}
               onChange={(e) => update(i, { capacity: e.target.value })}
-              placeholder="Available"
+              placeholder={t("organiserForm.tierAvailablePlaceholder")}
               inputMode="numeric"
               className={`w-24 ${fieldClass}`}
             />
             <input
               value={r.maxPerOrder}
               onChange={(e) => update(i, { maxPerOrder: e.target.value })}
-              placeholder="Max/order"
+              placeholder={t("organiserForm.tierMaxPlaceholder")}
               inputMode="numeric"
               className={`w-24 ${fieldClass}`}
             />
@@ -101,28 +105,37 @@ export function TierRowsFields({
             const bd = breakdownFor(toCents(priceNum));
             return (
               <p className="mt-2 text-xs text-muted">
-                Fan pays {formatEuros(bd.fanPaysCents)} · fee {formatEuros(bd.feeCents)} ·{" "}
-                <span className="text-foreground">you keep {formatEuros(bd.artistReceivesCents)}</span>
+                {t("organiserForm.tierBreakdown", {
+                  fan: formatEuros(bd.fanPaysCents),
+                  fee: formatEuros(bd.feeCents),
+                })}{" "}
+                <span className="text-foreground">
+                  {t("organiserForm.youKeep", { net: formatEuros(bd.artistReceivesCents) })}
+                </span>
               </p>
             );
           })()}
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <label className="text-xs text-muted">On sale until (optional)</label>
+            <label className="text-xs text-muted">{t("organiserForm.tierOnSaleUntil")}</label>
             <input
               type="datetime-local"
               value={r.availableUntil}
               onChange={(e) => update(i, { availableUntil: e.target.value })}
               className={fieldClass}
             />
-            {r.id && <span className="text-xs text-muted">Sold: {r.sold}</span>}
+            {r.id && (
+              <span className="text-xs text-muted">
+                {t("organiserForm.tierSold", { count: r.sold })}
+              </span>
+            )}
             <button
               type="button"
               onClick={() => onChange(rows.filter((_, idx) => idx !== i))}
               className="ml-auto text-xs text-danger disabled:opacity-40"
               disabled={r.sold > 0}
-              title={r.sold > 0 ? "Can't remove a tier that has sold tickets" : undefined}
+              title={r.sold > 0 ? t("organiserForm.tierRemoveBlocked") : undefined}
             >
-              Remove
+              {t("organiserForm.tierRemove")}
             </button>
           </div>
         </div>
@@ -133,7 +146,7 @@ export function TierRowsFields({
         onClick={() => onChange([...rows, emptyTierRow()])}
         className="self-start rounded-full border border-muted/30 px-4 py-2 text-sm text-foreground"
       >
-        + Add tier
+        {t("organiserForm.tierAdd")}
       </button>
     </div>
   );
@@ -154,6 +167,7 @@ export default function TierManager({
   initialTiers: TierManagerTier[];
   mode?: OrganiserMode;
 }) {
+  const { t } = useT();
   const [rows, setRows] = useState<TierRow[]>(initialTiers.map(tierToRow));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -179,14 +193,15 @@ export default function TierManager({
   return (
     <div className="rounded-2xl bg-surface p-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-lg text-foreground">Price tiers</h2>
+        <h2 className="font-display text-lg text-foreground">{t("organiserForm.tiersTitle")}</h2>
         <span className="text-xs text-muted">
-          {rows.length === 0 ? "Single price" : `${rows.length} tiers`}
+          {rows.length === 0
+            ? t("organiserForm.tiersSinglePrice")
+            : t("organiserForm.tiersCount", { count: rows.length })}
         </span>
       </div>
       <p className="mt-1 text-xs text-muted">
-        Leave empty for a single-price show. With tiers, the event capacity and the &ldquo;from&rdquo;
-        price are set from the tiers below.
+        {t("organiserForm.tiersHint")}
       </p>
 
       <div className="mt-4">
@@ -200,9 +215,9 @@ export default function TierManager({
           disabled={saving}
           className="rounded-full bg-primary px-5 py-2 text-sm font-heading text-foreground disabled:opacity-50"
         >
-          {saving ? "Saving…" : "Save tiers"}
+          {saving ? t("common.saving") : t("organiserForm.tierSave")}
         </button>
-        {saved && <span className="text-xs text-accent">Saved</span>}
+        {saved && <span className="text-xs text-accent">{t("organiserForm.tierSaved")}</span>}
       </div>
       {error && <p className="mt-2 text-sm text-danger">{error}</p>}
     </div>

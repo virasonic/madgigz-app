@@ -7,6 +7,7 @@ import {
   refreshProPayoutStatus,
   startProPayoutOnboarding,
 } from "./payout-actions";
+import { useT } from "@/lib/i18n/LocaleProvider";
 
 export default function PayoutConnect({
   connected,
@@ -15,6 +16,7 @@ export default function PayoutConnect({
   connected: boolean;
   ready: boolean;
 }) {
+  const { t } = useT();
   const router = useRouter();
   const params = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -46,7 +48,7 @@ export default function PayoutConnect({
         window.location.href = url;
         return;
       }
-      setError(connectError ?? "Couldn't open Stripe. Please try again.");
+      setError(connectError ?? t("pro.stripeOpenError"));
     });
   }
 
@@ -58,7 +60,7 @@ export default function PayoutConnect({
         window.open(url, "_blank", "noopener,noreferrer");
         return;
       }
-      setError(dashError ?? "Couldn't open your Stripe dashboard.");
+      setError(dashError ?? t("pro.stripeDashboardError"));
     });
   }
 
@@ -83,7 +85,9 @@ export default function PayoutConnect({
             disabled={isPending}
             className="rounded-full bg-primary px-5 py-2.5 font-heading text-sm text-foreground disabled:opacity-60"
           >
-            {isPending ? "Opening Stripe..." : connected ? "Finish setting up payouts" : "Set up payouts"}
+            {isPending
+              ? t("pro.openingStripe")
+              : t(connected ? "pro.connectFinishCta" : "pro.connectCta")}
           </button>
         )}
 
@@ -94,7 +98,7 @@ export default function PayoutConnect({
             disabled={isPending}
             className="rounded-full bg-surface px-5 py-2.5 font-heading text-sm text-foreground ring-1 ring-muted/30 disabled:opacity-60"
           >
-            Open Stripe dashboard
+            {t("pro.openStripe")}
           </button>
         )}
 
@@ -105,7 +109,7 @@ export default function PayoutConnect({
             disabled={isPending}
             className="rounded-full px-5 py-2.5 font-heading text-sm text-muted hover:text-foreground disabled:opacity-60"
           >
-            Check again
+            {t("pro.checkAgain")}
           </button>
         )}
       </div>

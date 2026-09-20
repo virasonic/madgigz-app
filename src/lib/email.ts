@@ -193,48 +193,82 @@ export async function sendProInviteEmail(input: {
   setPasswordUrl: string;
   /** They already had a MadGigz account; this adds the panel to it. */
   existingAccount: boolean;
+  /**
+   * The language their account was created in (#88). Not read from a cookie,
+   * because this email is written before they have ever opened MadGigz — it is
+   * the first thing they see, so it has to be in their language from the start.
+   */
+  locale: "en" | "es";
 }): Promise<{ sent: boolean }> {
   if (!resend) return { sent: false };
 
-  const role = input.type === "venue" ? "venue" : "promoter";
-  const opening = input.existingAccount
-    ? `Your MadGigz account now has a ${role} panel attached to it.`
-    : `We've set up a MadGigz ${role} account for ${input.displayName}.`;
-  const action = input.existingAccount
-    ? "Use the link below if you need to set a new password; otherwise just sign in as usual."
-    : "Set your password with the link below, then sign in.";
+  const es = input.locale === "es";
+  const role = es
+    ? input.type === "venue"
+      ? "sala"
+      : "promotor"
+    : input.type === "venue"
+      ? "venue"
+      : "promoter";
+
+  const copy = es
+    ? {
+        subject: input.existingAccount
+          ? "Tu cuenta de MadGigz ahora es una cuenta pro"
+          : `Tu cuenta de ${role} en MadGigz está lista`,
+        heading: "Te damos la bienvenida a MadGigz Pro",
+        opening: input.existingAccount
+          ? `Tu cuenta de MadGigz ya tiene un panel de ${role}.`
+          : `Hemos creado una cuenta de ${role} en MadGigz para ${input.displayName}.`,
+        action: input.existingAccount
+          ? "Usa el enlace de abajo si necesitas una contraseña nueva; si no, entra como siempre."
+          : "Crea tu contraseña con el enlace de abajo y entra.",
+        cta: input.existingAccount ? "Crear una contraseña nueva" : "Crear mi contraseña",
+        body: "Desde el panel puedes publicar tus conciertos, vender entradas y seguir las ventas. El dinero de las entradas entra en tu propia cuenta de Stripe — te pediremos conectarla la primera vez que entres.",
+        footer:
+          "El enlace funciona una sola vez y caduca. Si ya se ha usado, pulsa «He olvidado mi contraseña» en la pantalla de inicio de sesión.",
+      }
+    : {
+        subject: input.existingAccount
+          ? "Your MadGigz account is now a pro account"
+          : `Your MadGigz ${role} account is ready`,
+        heading: "Welcome to MadGigz Pro",
+        opening: input.existingAccount
+          ? `Your MadGigz account now has a ${role} panel attached to it.`
+          : `We've set up a MadGigz ${role} account for ${input.displayName}.`,
+        action: input.existingAccount
+          ? "Use the link below if you need to set a new password; otherwise just sign in as usual."
+          : "Set your password with the link below, then sign in.",
+        cta: input.existingAccount ? "Set a new password" : "Set your password",
+        body: "From the panel you can list your shows, sell tickets and watch the sales come in. Ticket money goes into your own Stripe account — you'll be asked to connect it the first time you sign in.",
+        footer:
+          "The link works once and expires. If it's spent, use 'Forgot password' on the sign-in screen.",
+      };
 
   const lines = [
-    opening,
+    copy.opening,
     "",
-    action,
+    copy.action,
     "",
     input.setPasswordUrl,
     "",
-    "From the panel you can list your shows, sell tickets and watch the sales come in. Ticket money goes into your own Stripe account — you'll be asked to connect it the first time you sign in.",
+    copy.body,
     "",
-    "The link works once and expires. If it's spent, use 'Forgot password' on the sign-in screen.",
+    copy.footer,
   ];
 
   const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#12100f;color:#f5efe6;padding:32px;border-radius:16px;max-width:520px;margin:0 auto">
-      <h1 style="font-size:20px;margin:0 0 16px">Welcome to MadGigz Pro</h1>
-      <p style="margin:0 0 12px;line-height:1.55">${opening}</p>
-      <p style="margin:0 0 20px;line-height:1.55">${action}</p>
+      <h1 style="font-size:20px;margin:0 0 16px">${copy.heading}</h1>
+      <p style="margin:0 0 12px;line-height:1.55">${copy.opening}</p>
+      <p style="margin:0 0 20px;line-height:1.55">${copy.action}</p>
       <p style="margin:0 0 24px">
         <a href="${input.setPasswordUrl}" style="display:inline-block;background:#d76616;color:#12100f;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">
-          ${input.existingAccount ? "Set a new password" : "Set your password"}
+          ${copy.cta}
         </a>
       </p>
-      <p style="margin:0 0 12px;line-height:1.55;color:#a8a099">
-        From the panel you can list your shows, sell tickets and watch the sales come in. Ticket
-        money goes into your own Stripe account — you'll be asked to connect it the first time you
-        sign in.
-      </p>
-      <p style="margin:0;line-height:1.55;color:#a8a099;font-size:13px">
-        The link works once and expires. If it's spent, use &ldquo;Forgot password&rdquo; on the
-        sign-in screen.
-      </p>
+      <p style="margin:0 0 12px;line-height:1.55;color:#a8a099">${copy.body}</p>
+      <p style="margin:0;line-height:1.55;color:#a8a099;font-size:13px">${copy.footer}</p>
     </div>
   `;
 
@@ -242,9 +276,7 @@ export async function sendProInviteEmail(input: {
     await resend.emails.send({
       from: FROM_ADDRESS,
       to: input.to,
-      subject: input.existingAccount
-        ? "Your MadGigz account is now a pro account"
-        : `Your MadGigz ${role} account is ready`,
+      subject: copy.subject,
       text: lines.join("\n"),
       html,
     });

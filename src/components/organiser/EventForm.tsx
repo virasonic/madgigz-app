@@ -16,6 +16,7 @@ import { tierRowsToInput, type TierRow } from "@/components/artist/TierRowsEdito
 import { breakdownFor, FEE_PERCENT, formatEuros, MIN_FEE_CENTS, toCents, VAT_PERCENT } from "@/lib/pricing";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
+import { useT } from "@/lib/i18n/LocaleProvider";
 import type { EventItem, Genre, PublicArtistProfile, Venue } from "@/lib/types";
 
 // Which panel is using the form. The fields are identical on purpose - a show
@@ -39,10 +40,10 @@ const MODES = {
 } as const;
 
 const ACCENT_SWATCHES = [
-  { name: "Orange", value: "#d76616" },
-  { name: "Maroon", value: "#73241d" },
-  { name: "Teal", value: "#54c3bd" },
-  { name: "Dark teal", value: "#0d5c6d" },
+  { nameKey: "organiserForm.swatchOrange", value: "#d76616" },
+  { nameKey: "organiserForm.swatchMaroon", value: "#73241d" },
+  { nameKey: "organiserForm.swatchTeal", value: "#54c3bd" },
+  { nameKey: "organiserForm.swatchDarkTeal", value: "#0d5c6d" },
 ];
 
 const AGE_OPTIONS = ["All ages", "16+", "18+", "21+"];
@@ -102,6 +103,7 @@ export default function EventForm({
   // rule itself.
   lockedVenue?: { id: string; name: string } | null;
 }) {
+  const { t } = useT();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +182,7 @@ export default function EventForm({
           imageUrl = await uploadEventMedia(createClient(), posterFile, "posters");
         } catch (uploadError) {
           console.error("Poster upload failed:", uploadError);
-          setError("Couldn't upload the poster - try a smaller file, or leave it blank.");
+          setError(t("organiserForm.posterUploadError"));
           return;
         }
       }
@@ -231,7 +233,8 @@ export default function EventForm({
       const tierInput = tierRowsToInput(tierRows);
       if (!existing && result.id && tierInput.length > 0) {
         const tierResult = await setTiers(result.id, tierInput);
-        if (tierResult.error) tierWarning = `ticket types weren't saved (${tierResult.error})`;
+        if (tierResult.error)
+          tierWarning = t("organiserForm.tierWarning", { reason: tierResult.error });
       }
       // A partial success (show created, tags failed) still navigates - the show
       // exists, and stranding the organiser on a form for a show that was
@@ -249,10 +252,10 @@ export default function EventForm({
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Show title">
+        <Field label={t("organiserForm.showTitle")}>
           <input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} />
         </Field>
-        <Field label="Billed as" hint="What fans see on the card. Any name, on the platform or not.">
+        <Field label={t("organiserForm.billedAs")} hint={t("organiserForm.billedAsHint")}>
           <input
             className={inputClass}
             value={artistName}
@@ -261,7 +264,10 @@ export default function EventForm({
         </Field>
       </div>
 
-      <Field label="Venue" hint={lockedVenue ? "Your venue. Shows you book are always in your own room." : undefined}>
+      <Field
+        label={t("organiserForm.venue")}
+        hint={lockedVenue ? t("organiserForm.lockedVenueHint") : undefined}
+      >
         {lockedVenue ? (
           <p className={`${inputClass} text-muted`}>{lockedVenue.name}</p>
         ) : (
@@ -270,16 +276,16 @@ export default function EventForm({
       </Field>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Field label="Date">
+        <Field label={t("organiserForm.date")}>
           <DateInput className={inputClass} value={date} onChange={setDate} />
         </Field>
-        <Field label="Time">
+        <Field label={t("organiserForm.time")}>
           <input type="time" className={inputClass} value={time} onChange={(e) => setTime(e.target.value)} />
         </Field>
-        <Field label="Capacity">
+        <Field label={t("organiserForm.capacity")}>
           <input type="number" onWheel={blurOnWheel} min={1} className={inputClass} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
         </Field>
-        <Field label="Age">
+        <Field label={t("organiserForm.age")}>
           <select className={inputClass} value={ageRestriction} onChange={(e) => setAgeRestriction(e.target.value)}>
             {AGE_OPTIONS.map((a) => (
               <option key={a} value={a}>{a}</option>
@@ -289,7 +295,7 @@ export default function EventForm({
       </div>
 
       <div className="rounded-2xl bg-background p-4">
-        <p className="font-heading text-xs uppercase tracking-wide text-muted">Ticketing</p>
+        <p className="font-heading text-xs uppercase tracking-wide text-muted">{t("organiserForm.ticketing")}</p>
 
         {/* The two panels mean genuinely different things by "we sell it". An
             admin creating a show here is MadGigz running its own night: the
@@ -307,9 +313,9 @@ export default function EventForm({
               onChange={() => setTicketing("external")}
             />
             <span>
-              Sold elsewhere
+              {t("organiserForm.soldElsewhere")}
               <span className="block text-xs text-muted">
-                MadGigz lists it and links out. No money passes through us.
+                {t("organiserForm.soldElsewhereHint")}
               </span>
             </span>
           </label>
@@ -321,22 +327,15 @@ export default function EventForm({
               onChange={() => setTicketing("internal")}
             />
             <span>
-              {organiserSells ? "Sell through MadGigz" : "MadGigz house show"}
+              {t(organiserSells ? "organiserForm.sellThrough" : "organiserForm.houseShow")}
               <span className="block text-xs text-muted">
-                {organiserSells ? (
-                  <>
-                    Fans buy in the app and get a scannable ticket. The money goes
-                    straight to your Stripe account, minus MadGigz&apos;s{" "}
-                    {FEE_PERCENT}% (minimum {formatEuros(MIN_FEE_CENTS)}) plus{" "}
-                    {VAT_PERCENT}% IVA.
-                  </>
-                ) : (
-                  <>
-                    Fans buy in the app and get a scannable ticket. The money lands in
-                    the MadGigz account — no payout to an artist, and no commission,
-                    because we don&apos;t charge ourselves.
-                  </>
-                )}
+                {organiserSells
+                  ? t("organiserForm.sellThroughHint", {
+                      pct: FEE_PERCENT,
+                      min: formatEuros(MIN_FEE_CENTS),
+                      vat: VAT_PERCENT,
+                    })
+                  : t("organiserForm.houseShowHint")}
               </span>
             </span>
           </label>
@@ -344,7 +343,7 @@ export default function EventForm({
 
         {ticketing === "external" ? (
           <div className="mt-4">
-            <Field label="Ticket link">
+            <Field label={t("organiserForm.ticketLink")}>
               <input
                 className={inputClass}
                 placeholder="https://www.entradium.com/..."
@@ -358,8 +357,8 @@ export default function EventForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field
-          label="Price (EUR)"
-          hint={ticketing === "external" ? "Shown to fans before they're sent to the other site." : undefined}
+          label={t("organiserForm.price")}
+          hint={ticketing === "external" ? t("organiserForm.priceExternalHint") : undefined}
         >
           <input type="number" onWheel={blurOnWheel} min={0} step="0.01" className={inputClass} value={price} onChange={(e) => setPrice(e.target.value)} />
           {/* What you actually keep. The organiser absorbs the fee - the price
@@ -368,15 +367,19 @@ export default function EventForm({
               house show, where there is no fee to show. */}
           {breakdown && (
             <span className="mt-1 block text-xs text-muted">
-              Fan pays {formatEuros(breakdown.fanPaysCents)} · MadGigz fee{" "}
-              {formatEuros(breakdown.feeCents)} ·{" "}
+              {t("organiserForm.breakdown", {
+                fan: formatEuros(breakdown.fanPaysCents),
+                fee: formatEuros(breakdown.feeCents),
+              })}{" "}
               <span className="text-foreground">
-                you keep {formatEuros(breakdown.artistReceivesCents)}
+                {t("organiserForm.youKeep", {
+                  net: formatEuros(breakdown.artistReceivesCents),
+                })}
               </span>
             </span>
           )}
         </Field>
-        <Field label="Max tickets per order">
+        <Field label={t("organiserForm.maxPerOrder")}>
           <input type="number" onWheel={blurOnWheel} min={1} className={inputClass} value={maxPerOrder} onChange={(e) => setMaxPerOrder(e.target.value)} />
         </Field>
       </div>
@@ -386,27 +389,27 @@ export default function EventForm({
           standalone TierManager card takes over. */}
       {!existing && ticketing === "internal" && (
         <Field
-          label="Ticket types (optional)"
-          hint="Leave empty for a single-price show. With types, the price above becomes the cheapest one and capacity is set from them."
+          label={t("organiserForm.ticketTypes")}
+          hint={t("organiserForm.ticketTypesHint")}
         >
           <TierRowsFields rows={tierRows} onChange={setTierRows} showNet={organiserSells} />
         </Field>
       )}
 
-      <Field label="Genres">
+      <Field label={t("organiserForm.genres")}>
         <GenrePicker genres={genres} selectedIds={genreIds} onChange={setGenreIds} />
       </Field>
 
       <Field
-        label="Line-up"
-        hint="Type any name. Pick a MadGigz artist to tag them — the show then shows on their profile and they can post about it."
+        label={t("organiserForm.lineup")}
+        hint={t("organiserForm.lineupHint")}
       >
         <LineupEditor entries={entries} onChange={setEntries} artists={artists} compact />
       </Field>
 
       <Field
-        label="Also tag band members / collaborators"
-        hint="Tag approved MadGigz artists who should be able to post to this show without appearing on the ticket line-up (e.g. band members)."
+        label={t("organiserForm.extraTags")}
+        hint={t("organiserForm.extraTagsHint")}
       >
         <ExtraTagPicker
           artists={artists}
@@ -418,7 +421,7 @@ export default function EventForm({
         />
       </Field>
 
-      <Field label="Description">
+      <Field label={t("organiserForm.description")}>
         <textarea
           rows={4}
           className={inputClass}
@@ -428,7 +431,7 @@ export default function EventForm({
       </Field>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label={existing ? "Replace poster (optional)" : "Poster"}>
+        <Field label={t(existing ? "organiserForm.replacePoster" : "organiserForm.poster")}>
           <input
             type="file"
             accept="image/*"
@@ -436,13 +439,13 @@ export default function EventForm({
             onChange={(e) => handlePoster(e.target.files?.[0] ?? null)}
           />
         </Field>
-        <Field label="Accent colour">
+        <Field label={t("organiserForm.accentColour")}>
           <div className="flex gap-3">
             {ACCENT_SWATCHES.map((swatch) => (
               <button
                 key={swatch.value}
                 type="button"
-                aria-label={swatch.name}
+                aria-label={t(swatch.nameKey)}
                 onClick={() => setAccentColor(swatch.value)}
                 style={{ backgroundColor: swatch.value }}
                 className={`h-9 w-9 rounded-full ${
@@ -460,7 +463,7 @@ export default function EventForm({
         // A blob: URL for a file that hasn't been uploaded yet - next/image
         // can't optimise something with no remote source.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={posterPreview} alt="Poster preview" className="max-h-64 w-fit rounded-xl" />
+        <img src={posterPreview} alt={t("organiserForm.posterPreview")} className="max-h-64 w-fit rounded-xl" />
       )}
 
       <div className="flex gap-3">
@@ -469,7 +472,9 @@ export default function EventForm({
           disabled={isPending}
           className="rounded-full bg-primary px-6 py-3 font-heading text-sm text-foreground disabled:opacity-50"
         >
-          {isPending ? "Saving..." : existing ? "Save changes" : "Create show"}
+          {isPending
+            ? t("common.saving")
+            : t(existing ? "organiserForm.saveChanges" : "organiserForm.createShow")}
         </button>
         <button
           type="button"

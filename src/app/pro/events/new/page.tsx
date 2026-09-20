@@ -4,7 +4,7 @@ import { fetchApprovedArtists, fetchGenres, fetchVenues } from "@/lib/supabase/q
 import { proClient, requirePro } from "@/lib/supabase/pro-queries";
 
 export default async function ProNewEventPage() {
-  const { account } = await requirePro();
+  const { account, t } = await requirePro();
   const admin = proClient();
 
   const [venues, genres, artists] = await Promise.all([
@@ -22,13 +22,11 @@ export default async function ProNewEventPage() {
     <div className="flex flex-col gap-6">
       <div>
         <Link href="/pro/events" className="text-sm text-accent">
-          &larr; Events
+          &larr; {t("pro.navEvents")}
         </Link>
-        <h1 className="font-display mt-2 text-2xl text-foreground">New show</h1>
+        <h1 className="font-display mt-2 text-2xl text-foreground">{t("pro.newShow")}</h1>
         <p className="text-sm text-muted">
-          It goes live in the MadGigz app as soon as you save. Acts already on MadGigz can be
-          tagged in the line-up — the show then appears on their profile and they can post about
-          it, while you stay the only one who manages it.
+          {t("pro.newShowBlurb")}
         </p>
       </div>
 

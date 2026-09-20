@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { proClient, fetchProDashboardStats, requirePro } from "@/lib/supabase/pro-queries";
+import { dateLocale } from "@/lib/dates";
 
 function StatCard({ label, value, hint, href }: { label: string; value: string; hint?: string; href?: string }) {
   const body = (
@@ -24,7 +25,7 @@ function euros(amount: number): string {
 }
 
 export default async function ProDashboardPage() {
-  const { userId, account } = await requirePro();
+  const { userId, account, locale, t } = await requirePro();
   const admin = proClient();
 
   const [stats, { data: profile }] = await Promise.all([
@@ -48,8 +49,8 @@ export default async function ProDashboardPage() {
         <h1 className="font-display text-2xl text-foreground">{account.displayName}</h1>
         <p className="text-sm text-muted">
           {account.type === "venue"
-            ? "Sales and shows for your venue."
-            : "Sales and shows you're promoting."}
+            ? t("pro.dashSubtitleVenue")
+            : t("pro.dashSubtitlePromoter")}
         </p>
       </div>
 
@@ -60,32 +61,35 @@ export default async function ProDashboardPage() {
           is the worst time to learn it. */}
       {!payoutsReady && (
         <div className="rounded-2xl border border-primary/30 bg-primary/10 p-5">
-          <h2 className="font-heading text-sm text-foreground">Connect payouts to start selling</h2>
+          <h2 className="font-heading text-sm text-foreground">{t("pro.connectTitle")}</h2>
           <p className="mt-1 text-sm text-muted">
-            MadGigz can&apos;t take money for your shows until your Stripe account is set up and
-            verified. It takes a few minutes.
+            {t("pro.connectBody")}
           </p>
           <Link
             href="/pro/payouts"
             className="mt-3 inline-block rounded-full bg-primary px-4 py-2 text-sm font-heading text-background"
           >
-            {profile?.stripe_account_id ? "Finish setting up payouts" : "Set up payouts"}
+            {t(profile?.stripe_account_id ? "pro.connectFinishCta" : "pro.connectCta")}
           </Link>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard
-          label="Sales today"
+          label={t("pro.salesToday")}
           value={euros(stats.revenueToday)}
-          hint={`${stats.ticketsToday} ${stats.ticketsToday === 1 ? "ticket" : "tickets"}`}
+          hint={
+            stats.ticketsToday === 1
+              ? t("pro.ticketCountOne")
+              : t("pro.ticketCount", { count: stats.ticketsToday })
+          }
         />
-        <StatCard label="Sales total" value={euros(stats.revenue)} hint="Net of refunds" />
-        <StatCard label="Tickets sold" value={String(stats.ticketsSold)} />
+        <StatCard label={t("pro.salesTotal")} value={euros(stats.revenue)} hint={t("pro.netOfRefunds")} />
+        <StatCard label={t("pro.ticketsSold")} value={String(stats.ticketsSold)} />
         <StatCard
-          label="Shows"
+          label={t("pro.shows")}
           value={String(stats.eventCount)}
-          hint={`${stats.upcomingCount} upcoming`}
+          hint={t("pro.upcomingCount", { count: stats.upcomingCount })}
           href="/pro/events"
         />
         {/* A venue's headline number is its diary, not its takings - most of
@@ -93,32 +97,31 @@ export default async function ProDashboardPage() {
             no such shows, so they get their upcoming count instead. */}
         {account.type === "venue" ? (
           <StatCard
-            label="Hosted"
+            label={t("pro.hosted")}
             value={String(stats.hostedCount)}
-            hint="Booked by others"
+            hint={t("pro.bookedByOthers")}
             href="/pro/events"
           />
         ) : (
-          <StatCard label="Upcoming" value={String(stats.upcomingCount)} href="/pro/events" />
+          <StatCard label={t("pro.upcoming")} value={String(stats.upcomingCount)} href="/pro/events" />
         )}
       </div>
 
       <div className="rounded-2xl bg-surface p-5">
-        <h2 className="mb-4 font-heading text-lg text-foreground">Sales by day</h2>
+        <h2 className="mb-4 font-heading text-lg text-foreground">{t("pro.salesByDay")}</h2>
         {stats.salesByDay.length === 0 ? (
           <p className="text-sm text-muted">
-            No tickets sold yet.{" "}
+            {t("pro.noSalesYet")}{" "}
             <Link href="/pro/events/new" className="text-accent">
-              Add your first show
+              {t("pro.addFirstShow")}
             </Link>
-            .
           </p>
         ) : (
           <div className="flex flex-col gap-2">
             {stats.salesByDay.map(([day, tickets, amount]) => (
               <div key={day} className="flex items-center gap-3 text-sm">
                 <span className="w-28 shrink-0 text-muted">
-                  {new Date(`${day}T12:00:00`).toLocaleDateString("en-GB", {
+                  {new Date(`${day}T12:00:00`).toLocaleDateString(dateLocale(locale), {
                     day: "numeric",
                     month: "short",
                   })}
@@ -130,7 +133,7 @@ export default async function ProDashboardPage() {
                   />
                 </div>
                 <span className="w-16 shrink-0 text-right tabular-nums text-muted">
-                  {tickets} {tickets === 1 ? "tkt" : "tkts"}
+                  {tickets} {t(tickets === 1 ? "pro.tktShortOne" : "pro.tktShort")}
                 </span>
                 <span className="w-20 shrink-0 text-right tabular-nums text-foreground">
                   {euros(amount)}

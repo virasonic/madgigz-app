@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { ProAccountType } from "@/lib/pro";
+import { DEFAULT_LOCALE, LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import type { Venue } from "@/lib/types";
 import { createProAccount } from "./actions";
 
@@ -26,6 +27,7 @@ export default function NewProUserForm({ venues }: { venues: Venue[] }) {
   const [email, setEmail] = useState("");
   const [type, setType] = useState<ProAccountType>("promoter");
   const [venueId, setVenueId] = useState("");
+  const [locale, setLocale] = useState<Locale>(DEFAULT_LOCALE);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [manualLink, setManualLink] = useState<string | null>(null);
@@ -42,6 +44,7 @@ export default function NewProUserForm({ venues }: { venues: Venue[] }) {
         email,
         type,
         venueId: type === "venue" ? venueId || null : null,
+        locale,
       });
 
       if (result.error) {
@@ -64,6 +67,7 @@ export default function NewProUserForm({ venues }: { venues: Venue[] }) {
       setDisplayName("");
       setEmail("");
       setVenueId("");
+      setLocale(DEFAULT_LOCALE);
       router.refresh();
     });
   }
@@ -99,6 +103,23 @@ export default function NewProUserForm({ venues }: { venues: Venue[] }) {
           />
         </Field>
       </div>
+
+      <Field
+        label="Language"
+        hint="Their panel opens in this, and the invite email is written in it. They can change it themselves later."
+      >
+        <select
+          className={inputClass}
+          value={locale}
+          onChange={(e) => setLocale(e.target.value as Locale)}
+        >
+          {LOCALES.map((option) => (
+            <option key={option} value={option}>
+              {LOCALE_LABELS[option]}
+            </option>
+          ))}
+        </select>
+      </Field>
 
       <Field label="Account type">
         <div className="flex gap-2 rounded-full bg-background p-1">
