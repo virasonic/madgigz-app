@@ -149,11 +149,14 @@ list only when "correct" is non-obvious and the blast radius is real — don't
 chase whole-repo coverage.
 
 If a change is observable in the browser, run the dev server and check it before
-declaring it done — don't ask the user to verify what you can. Three adversarial
+declaring it done — don't ask the user to verify what you can. Four adversarial
 probes in `scripts/` (`security-probe.mjs`, `probe-artist-side.mjs`,
-`probe-feedback.mjs`) are worth re-running after any migration touching policies
-or grants; each reads the stored value back, because an UPDATE matching zero rows
-returns no error and "did it error?" reports a locked door as a hole.
+`probe-feedback.mjs`, `probe-pro-accounts.mjs`) are worth re-running after any
+migration touching policies or grants; each reads the stored value back, because
+an UPDATE matching zero rows returns no error and "did it error?" reports a
+locked door as a hole. They take an env file (`node scripts/<probe>.mjs
+.env.staging`) and refuse to report a clean sheet on a database where the table
+isn't there yet.
 
 `npm run knip` catches dead code before it accumulates — unused files, exports,
 and dependencies. `knip.json` already excuses the intentional false positives
