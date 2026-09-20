@@ -51,6 +51,11 @@ export interface Genre {
 export interface EventItem {
   id: string;
   artistId: string | null;
+  /**
+   * The promoter/venue that booked this show (#88), if any. Independent of
+   * artistId: it says who runs and is paid for the night, not who performs.
+   */
+  proAccountId: string | null;
   venueId: string | null;
   title: string;
   artist: string;
@@ -248,6 +253,12 @@ export interface PublicArtistProfile {
   twitter: string | null;
   spotify: string | null;
   youtube: string | null;
+  /**
+   * Set when this public page belongs to a promoter or venue (#88) rather than
+   * an act. Drives the label and which shows the page lists - a promoter's are
+   * the ones they booked, not ones they performed at.
+   */
+  proType: ProAccountType | null;
 }
 
 export interface Discount {
@@ -267,6 +278,8 @@ export interface Discount {
 export interface EventRow {
   id: string;
   artist_id: string | null;
+  /** Absent on a database where addendum_051 hasn't run. */
+  pro_account_id?: string | null;
   venue_id: string | null;
   title: string;
   artist_name: string;
@@ -300,6 +313,7 @@ export function mapEvent(row: EventRow): EventItem {
   return {
     id: row.id,
     artistId: row.artist_id,
+    proAccountId: row.pro_account_id ?? null,
     venueId: row.venue_id ?? null,
     title: row.title,
     artist: row.artist_name,
@@ -470,6 +484,8 @@ export function mapProfile(
 export interface PublicArtistProfileRow {
   id: string;
   username: string;
+  /** Absent pre-addendum_053, hence optional rather than nullable-only. */
+  pro_type?: ProAccountType | null;
   follower_count: number | null;
   artist_name: string | null;
   artist_bio: string | null;
@@ -496,6 +512,9 @@ export function mapPublicArtistProfile(row: PublicArtistProfileRow): PublicArtis
     twitter: row.twitter,
     spotify: row.spotify,
     youtube: row.youtube,
+    // Null on a database where addendum_053 hasn't run, which reads as "an
+    // ordinary artist page" - the safe direction.
+    proType: row.pro_type ?? null,
   };
 }
 

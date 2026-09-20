@@ -13,6 +13,7 @@ import { setEventTiers } from "@/app/admin/events/tier-actions";
 import { setProEventTiers } from "@/app/pro/events/tier-actions";
 import { TierRowsFields } from "@/components/organiser/TierManager";
 import { tierRowsToInput, type TierRow } from "@/components/artist/TierRowsEditor";
+import { breakdownFor, FEE_PERCENT, formatEuros, MIN_FEE_CENTS, toCents, VAT_PERCENT } from "@/lib/pricing";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
 import type { EventItem, Genre, PublicArtistProfile, Venue } from "@/lib/types";
@@ -154,6 +155,15 @@ export default function EventForm({
   // unrelated date change, and two tier editors on one page would be worse.
   const [tierRows, setTierRows] = useState<TierRow[]>([]);
 
+  // A promoter or venue sells on their own account and pays the commission; an
+  // admin's internal show is a MadGigz house show, which pays none.
+  const organiserSells = mode === "pro";
+  const priceCents = toCents(Number(price));
+  const breakdown =
+    organiserSells && ticketing === "internal" && Number.isFinite(priceCents) && priceCents > 0
+      ? breakdownFor(priceCents)
+      : null;
+
   function handlePoster(file: File | null) {
     setPosterFile(file);
     setPosterPreview(file ? URL.createObjectURL(file) : null);
@@ -281,6 +291,13 @@ export default function EventForm({
       <div className="rounded-2xl bg-background p-4">
         <p className="font-heading text-xs uppercase tracking-wide text-muted">Ticketing</p>
 
+        {/* The two panels mean genuinely different things by "we sell it". An
+            admin creating a show here is MadGigz running its own night: the
+            money is ours and there is no commission, because we don't charge
+            ourselves. A promoter is a THIRD PARTY - the money is theirs, into
+            their own Stripe, and the commission very much applies. Telling a
+            promoter otherwise (which this form did) is not a wording slip; it
+            misstates who holds their takings. */}
         <div className="mt-3 flex flex-col gap-2">
           <label className="flex items-start gap-3 text-sm text-foreground">
             <input
@@ -292,7 +309,7 @@ export default function EventForm({
             <span>
               Sold elsewhere
               <span className="block text-xs text-muted">
-                MadGigz advertises it and links out. No money passes through us.
+                MadGigz lists it and links out. No money passes through us.
               </span>
             </span>
           </label>
@@ -304,11 +321,22 @@ export default function EventForm({
               onChange={() => setTicketing("internal")}
             />
             <span>
-              MadGigz house show
+              {organiserSells ? "Sell through MadGigz" : "MadGigz house show"}
               <span className="block text-xs text-muted">
-                Fans buy in the app and get a scannable ticket. The money lands in
-                the MadGigz account — no payout to an artist, and no commission,
-                because we don&apos;t charge ourselves.
+                {organiserSells ? (
+                  <>
+                    Fans buy in the app and get a scannable ticket. The money goes
+                    straight to your Stripe account, minus MadGigz&apos;s{" "}
+                    {FEE_PERCENT}% (minimum {formatEuros(MIN_FEE_CENTS)}) plus{" "}
+                    {VAT_PERCENT}% IVA.
+                  </>
+                ) : (
+                  <>
+                    Fans buy in the app and get a scannable ticket. The money lands in
+                    the MadGigz account — no payout to an artist, and no commission,
+                    because we don&apos;t charge ourselves.
+                  </>
+                )}
               </span>
             </span>
           </label>
@@ -334,6 +362,19 @@ export default function EventForm({
           hint={ticketing === "external" ? "Shown to fans before they're sent to the other site." : undefined}
         >
           <input type="number" onWheel={blurOnWheel} min={0} step="0.01" className={inputClass} value={price} onChange={(e) => setPrice(e.target.value)} />
+          {/* What you actually keep. The organiser absorbs the fee - the price
+              set here is exactly what the fan pays - so without this the number
+              typed above quietly isn't the number received. Omitted for an admin
+              house show, where there is no fee to show. */}
+          {breakdown && (
+            <span className="mt-1 block text-xs text-muted">
+              Fan pays {formatEuros(breakdown.fanPaysCents)} · MadGigz fee{" "}
+              {formatEuros(breakdown.feeCents)} ·{" "}
+              <span className="text-foreground">
+                you keep {formatEuros(breakdown.artistReceivesCents)}
+              </span>
+            </span>
+          )}
         </Field>
         <Field label="Max tickets per order">
           <input type="number" onWheel={blurOnWheel} min={1} className={inputClass} value={maxPerOrder} onChange={(e) => setMaxPerOrder(e.target.value)} />
@@ -348,7 +389,7 @@ export default function EventForm({
           label="Ticket types (optional)"
           hint="Leave empty for a single-price show. With types, the price above becomes the cheapest one and capacity is set from them."
         >
-          <TierRowsFields rows={tierRows} onChange={setTierRows} />
+          <TierRowsFields rows={tierRows} onChange={setTierRows} showNet={organiserSells} />
         </Field>
       )}
 

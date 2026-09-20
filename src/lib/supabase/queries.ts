@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ARTIST_CAPABLE_ROLES } from "@/lib/roles";
-import { fetchProAccount } from "@/lib/pro";
+import { fetchProAccount, type ProAccountType } from "@/lib/pro";
 import type { TaggedArtist } from "@/lib/lineup-links";
 import {
   EMPTY_PREFERENCES,
@@ -31,6 +31,7 @@ import {
   mapVenue,
   Ticket,
   TicketRow,
+  Role,
 } from "@/lib/types";
 
 export async function fetchCurrentUser(supabase: SupabaseClient): Promise<AppUser | null> {
@@ -70,18 +71,73 @@ export async function fetchArtistProfile(
   supabase: SupabaseClient,
   artistId: string
 ): Promise<PublicArtistProfile | null> {
-  const { data } = await supabase
+  // Read the row first, then decide whether it is publicly visible - the two
+  // kinds of public page have different tests and PostgREST can't express the
+  // OR of them cleanly. Nothing sensitive is in this select, so the extra row
+  // that comes back for a plain fan is discarded a line later.
+  const { data, error } = await supabase
     .from("profiles")
     .select(
-      "id, username, follower_count, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, role, artist_status"
+      "id, username, follower_count, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, role, artist_status, pro_type"
     )
     .eq("id", artistId)
-    .in("role", ARTIST_CAPABLE_ROLES)
-    .eq("artist_status", "approved")
     .maybeSingle();
 
+  // 42703 = pro_type missing (addendum_053 not run). Fall back to the artist-
+  // only query rather than losing every public page at once.
+  if (error?.code === "42703" || error?.code === "PGRST204") {
+    const { data: legacy } = await supabase
+      .from("profiles")
+      .select(
+        "id, username, follower_count, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, role, artist_status"
+      )
+      .eq("id", artistId)
+      .in("role", ARTIST_CAPABLE_ROLES)
+      .eq("artist_status", "approved")
+      .maybeSingle();
+    return legacy ? mapPublicArtistProfile(legacy as PublicArtistProfileRow) : null;
+  }
+
   if (!data) return null;
-  return mapPublicArtistProfile(data as PublicArtistProfileRow);
+  const row = data as PublicArtistProfileRow & { role: Role; artist_status: string | null };
+  if (!isPubliclyVisible(row)) return null;
+  return mapPublicArtistProfile(row);
+}
+
+/**
+ * The public identity behind a profile id, for a "presented by" credit on a
+ * show (#88). Deliberately tiny and tolerant: it returns null rather than
+ * throwing on a database without addendum_053, and null for an account with no
+ * public page, so a caller can render the credit only when there's somewhere
+ * for it to link.
+ */
+export async function fetchPublicOrganiser(
+  supabase: SupabaseClient,
+  profileId: string | null
+): Promise<{ id: string; name: string; proType: ProAccountType | null } | null> {
+  if (!profileId) return null;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username, artist_name, pro_type")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (error || !data) return null;
+  const row = data as { id: string; username: string; artist_name: string | null; pro_type?: ProAccountType | null };
+  if (!row.pro_type) return null;
+  return { id: row.id, name: row.artist_name ?? row.username, proType: row.pro_type };
+}
+
+// Who gets a public profile page. An approved act, or an active promoter/venue
+// (#88) - promoters build a reputation too, so they need a page to build it on.
+// A pending or rejected artist gets neither, exactly as before: a search hit
+// that 404s on tap is worse than no hit.
+function isPubliclyVisible(row: {
+  role: Role;
+  artist_status: string | null;
+  pro_type?: ProAccountType | null;
+}): boolean {
+  if (row.pro_type) return true;
+  return ARTIST_CAPABLE_ROLES.includes(row.role) && row.artist_status === "approved";
 }
 
 // Madrid-only for now. The city column exists so opening a second city later

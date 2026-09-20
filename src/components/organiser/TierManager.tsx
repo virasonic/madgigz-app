@@ -10,6 +10,7 @@ import {
   type TierRow,
 } from "@/components/artist/TierRowsEditor";
 import type { OrganiserMode } from "@/components/organiser/EventForm";
+import { breakdownFor, formatEuros, parseEuros, toCents } from "@/lib/pricing";
 
 // Price-tier editing for the two back-office panels (#151). English, like the
 // rest of /admin and /pro - the row markup here is deliberately NOT the artist's
@@ -46,9 +47,16 @@ const fieldClass =
 export function TierRowsFields({
   rows,
   onChange,
+  showNet = false,
 }: {
   rows: TierRow[];
   onChange: (rows: TierRow[]) => void;
+  /**
+   * Show what the organiser keeps per type, after commission. On for a promoter
+   * or venue, who absorbs the fee; off for an admin house show, which pays
+   * none - a "you keep" line there would be inventing a deduction.
+   */
+  showNet?: boolean;
 }) {
   function update(i: number, patch: Partial<TierRow>) {
     onChange(rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -87,6 +95,17 @@ export function TierRowsFields({
               className={`w-24 ${fieldClass}`}
             />
           </div>
+          {showNet && (() => {
+            const priceNum = parseEuros(r.price);
+            if (!Number.isFinite(priceNum) || priceNum <= 0) return null;
+            const bd = breakdownFor(toCents(priceNum));
+            return (
+              <p className="mt-2 text-xs text-muted">
+                Fan pays {formatEuros(bd.fanPaysCents)} · fee {formatEuros(bd.feeCents)} ·{" "}
+                <span className="text-foreground">you keep {formatEuros(bd.artistReceivesCents)}</span>
+              </p>
+            );
+          })()}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <label className="text-xs text-muted">On sale until (optional)</label>
             <input
@@ -171,7 +190,7 @@ export default function TierManager({
       </p>
 
       <div className="mt-4">
-        <TierRowsFields rows={rows} onChange={change} />
+        <TierRowsFields rows={rows} onChange={change} showNet={mode === "pro"} />
       </div>
 
       <div className="mt-4 flex items-center gap-3">

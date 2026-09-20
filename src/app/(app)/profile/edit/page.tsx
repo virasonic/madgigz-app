@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchCurrentUser } from "@/lib/supabase/queries";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { AppUser } from "@/lib/types";
-import { canActAsArtist, isArtistRole } from "@/lib/roles";
+import { canActAsArtist, canActAsOrganiser, isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
 // Same set the signup claim collects, so an artist can correct a typo or add
@@ -196,7 +196,9 @@ export default function EditProfilePage() {
 
   if (!user) return null;
 
-  const isArtist = isArtistRole(user.role);
+  // Bio, photo and socials are one public identity whoever owns it, so a
+  // promoter with a public page (#88) edits the same fields an act does.
+  const isArtist = canActAsOrganiser(user) || isArtistRole(user.role);
 
   const trimmedUsername = username.trim();
   const usernameChanged = trimmedUsername.toLowerCase() !== user.username.toLowerCase();

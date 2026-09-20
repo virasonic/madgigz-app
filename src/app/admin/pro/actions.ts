@@ -145,6 +145,12 @@ export async function createProAccount(
   // Upsert, so re-running this for an address that already has a pro account
   // fixes a typo'd name or the wrong type instead of erroring on the primary
   // key. Re-sending the invite is often exactly why an admin is back here.
+  // profiles.artist_name is really "public display name" - it is what the public
+  // profile page and the "presented by" credit render. Setting it here is what
+  // gives a promoter a page with their business on it rather than a slug, and it
+  // means every existing public-profile query works for them unchanged.
+  await admin.from("profiles").update({ artist_name: displayName }).eq("id", userId);
+
   const { error: insertError } = await admin.from("pro_accounts").upsert(
     {
       id: userId,

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isArtistRole } from "@/lib/roles";
+import { fetchProAccount } from "@/lib/pro";
 import { ContentPost, ContentPostRow, mapContentPost } from "@/lib/types";
 
 // Set / replace / remove an artist's pinned introduction reel (#143). The media
@@ -29,12 +30,18 @@ export async function saveIntroReel(input: SaveIntroInput): Promise<SaveIntroRes
   if (!user) return { error: "Not signed in" };
 
   const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("role, artist_name, username")
-    .eq("id", user.id)
-    .single();
-  if (!profile || !isArtistRole(profile.role)) return { error: "Only artists can add an intro reel" };
+  const [{ data: profile }, pro] = await Promise.all([
+    admin.from("profiles").select("role, artist_name, username").eq("id", user.id).single(),
+    // Promoters and venues get an intro reel too (Vir, 20 Sept 2026): a
+    // promoter builds a reputation, and a page with a face and a sound on it is
+    // how that starts. Read through the service-role client, like the profile
+    // above - the caller is authorised here, not by RLS.
+    fetchProAccount(admin, user.id),
+  ]);
+  const isActivePro = Boolean(pro?.active);
+  if (!profile || (!isArtistRole(profile.role) && !isActivePro)) {
+    return { error: "Only organisers can add an intro reel" };
+  }
 
   if (!input.mediaUrl && !input.streamUid) return { error: "Add a photo or video" };
 
@@ -55,7 +62,7 @@ export async function saveIntroReel(input: SaveIntroInput): Promise<SaveIntroRes
     .insert({
       event_id: null,
       artist_id: user.id,
-      artist_name: profile.artist_name ?? profile.username,
+      artist_name: pro?.displayName ?? profile.artist_name ?? profile.username,
       show_title: "",
       caption: input.caption.trim(),
       media_url: input.mediaUrl,

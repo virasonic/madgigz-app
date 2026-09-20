@@ -7,6 +7,7 @@ import {
   fetchEventById,
   fetchEventGenreNames,
   fetchIsManuallyAttended,
+  fetchPublicOrganiser,
   fetchTaggedArtistProfiles,
 } from "@/lib/supabase/queries";
 import { buildLineupLinks, normName } from "@/lib/lineup-links";
@@ -107,6 +108,11 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
   // Line-up act name -> profile id, for the ones that are tagged MadGigz artists
   // (or the owner). Non-matching acts stay plain text.
   const lineupLinks = buildLineupLinks(tagged, { id: event.artistId, name: event.artist });
+
+  // The promoter or venue presenting this night. They are not on the line-up -
+  // they didn't play - so they need their own credit, and it is the only route
+  // a fan has to their profile and the follow button on it.
+  const organiser = await fetchPublicOrganiser(supabase, event.proAccountId);
 
   const soldOut = event.capacity - event.sold <= 0;
 
@@ -231,6 +237,17 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
                 );
               })}
             </ol>
+          </>
+        )}
+
+        {organiser && (
+          <>
+            <h2 className="mb-2 mt-8 font-heading text-sm uppercase tracking-wide text-muted">
+              {t("eventPage.presentedBy")}
+            </h2>
+            <Link href={`/profile/${organiser.id}`} className="text-sm text-accent hover:underline">
+              {organiser.name}
+            </Link>
           </>
         )}
 

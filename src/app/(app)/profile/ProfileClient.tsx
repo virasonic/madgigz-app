@@ -567,7 +567,7 @@ export default function ProfileClient({
           away from. */}
       {/* One wrapper so bio-only, links-only, and both all get the same spacing
           against the header above and whatever follows. */}
-      {artistTools && (user.artistBio || hasSocials) && (
+      {organiserTools && (user.artistBio || hasSocials) && (
         <div className="-mt-2 mb-6 flex flex-col gap-3">
           {user.artistBio && (
             <p className="text-sm leading-relaxed text-foreground/90">{user.artistBio}</p>
@@ -718,12 +718,12 @@ export default function ProfileClient({
             </Link>
           </div>
 
-          {/* Intro reel (#143): a "this is me" clip the artist can set even with
-              no show to promote, so their profile is never empty. Artists only -
-              it is a performer's calling card, and the intro actions require an
-              approved artist anyway, so offering it to a promoter would be a
-              button that always fails. */}
-          {artistTools && (
+          {/* Intro reel (#143): a "this is me" clip the organiser can set even
+              with no show to promote, so their profile is never empty. Open to
+              promoters and venues too (Vir, 20 Sept 2026) - a promoter builds a
+              reputation, and a page with a face and a sound on it is where that
+              starts. */}
+          {organiserTools && (
           <div className="mb-6">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-heading text-sm uppercase tracking-wide text-muted">

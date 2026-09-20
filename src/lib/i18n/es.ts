@@ -223,6 +223,9 @@ export const es: Messages = {
     testMode:
       "Modo de prueba — los pagos aún no están activos, así que no se te cobrará. Para probar el pago, usa la tarjeta de prueba 4242 4242 4242 4242 con cualquier fecha futura y cualquier CVC.",
     lineup: "Cartel",
+    // The promoter or venue behind the show (#88) - how a fan finds them and
+    // follows them, which is what lets a promoter build a reputation.
+    presentedBy: "Presentado por",
     headliner: "Cabeza de cartel",
     venue: "Sala",
     doors: "Apertura",
@@ -445,6 +448,11 @@ export const es: Messages = {
     allHidden: "Todos tus bolos están ocultos ahora mismo.",
     hiddenShows: "Bolos ocultos",
     taggedIn: "Etiquetado en",
+    // The badge on a PUBLIC profile page. Promoters and venues get a page too
+    // (#88), so the label has to say which kind of organiser this is.
+    publicRoleArtist: "Artista",
+    publicRolePromoter: "Promotor",
+    publicRoleVenue: "Sala",
     byArtist: "por {artist}",
     notificationsAria: "Notificaciones",
     settingsAria: "Ajustes",

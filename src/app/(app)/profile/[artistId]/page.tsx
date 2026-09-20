@@ -7,6 +7,7 @@ import {
   fetchFollowedArtistIds,
   fetchSavedEventIds,
   fetchShowsByArtist,
+  fetchShowsByProAccount,
   fetchTaggedShows,
 } from "@/lib/supabase/queries";
 import FollowButton from "@/components/artist/FollowButton";
@@ -15,6 +16,7 @@ import Avatar from "@/components/ui/Avatar";
 import SocialLinks from "@/components/ui/SocialLinks";
 import ArtistShowsGrid from "./ArtistShowsGrid";
 import BackButton from "@/components/ui/BackButton";
+import { getServerT } from "@/lib/i18n/server";
 
 export default async function PublicArtistProfilePage({
   params,
@@ -34,16 +36,33 @@ export default async function PublicArtistProfilePage({
   // (Add Show, Settings, hidden shows) instead of the stripped-down public one.
   if (artistId === currentUser.id) redirect("/profile");
 
-  const [artist, shows, taggedShows, savedIds, followedIds, intro] = await Promise.all([
+  const [artist, savedIds, followedIds, intro, { t }] = await Promise.all([
     fetchArtistProfile(supabase, artistId),
-    fetchShowsByArtist(supabase, artistId),
-    fetchTaggedShows(supabase, artistId),
     fetchSavedEventIds(supabase, currentUser.id),
     fetchFollowedArtistIds(supabase, currentUser.id),
     fetchArtistIntro(supabase, artistId),
+    getServerT(),
   ]);
 
   if (!artist) notFound();
+
+  // Which shows this page is about depends on what kind of organiser it is. An
+  // act's page bills what they played; a promoter's bills what they booked, and
+  // has no "tagged in" - being tagged means being on the line-up, which a
+  // promoter never is. Fetched after the profile because the answer decides the
+  // query.
+  const [shows, taggedShows] = artist.proType
+    ? [await fetchShowsByProAccount(supabase, artistId), []]
+    : await Promise.all([
+        fetchShowsByArtist(supabase, artistId),
+        fetchTaggedShows(supabase, artistId),
+      ]);
+
+  const roleLabel = artist.proType
+    ? artist.proType === "venue"
+      ? t("profile.publicRoleVenue")
+      : t("profile.publicRolePromoter")
+    : t("profile.publicRoleArtist");
 
   // Cancelled or hidden shows aren't this artist's to show off to a browsing
   // fan - fetchShowsByArtist returns everything because the artist's own
@@ -76,7 +95,7 @@ export default async function PublicArtistProfilePage({
             {artist.artistName}
           </h1>
           <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-heading uppercase tracking-wide text-muted">
-            Artist
+            {roleLabel}
           </span>
         </div>
         <div className="shrink-0">
