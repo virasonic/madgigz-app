@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchContentPosts, toggleSavedEvent } from "@/lib/supabase/queries";
 import { AppUser, ContentPost, EventItem } from "@/lib/types";
 import { canActAsOrganiser } from "@/lib/roles";
+import { audienceAllows } from "@/lib/announcement-audience";
 import { getSeenAnnouncements, markAnnouncementSeen } from "@/lib/seen-announcements";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { FEED_TO_TOP_EVENT } from "@/lib/ui-events";
@@ -170,6 +171,15 @@ export default function FeedClient({
   // once For You carries enough to be the landing pane again.
   const [pane, setPane] = useState<Pane>("thisWeek");
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
+  // Announcements (posts with no event) can be aimed at fans or at organisers
+  // (addendum_055); hide the ones not meant for this viewer. Reel posts (with an
+  // event) always pass through — the audience filter is announcement-only. A
+  // guest is treated as a fan. NOT a security control, just noise removal.
+  const isOrganiserViewer = user ? canActAsOrganiser(user) : false;
+  const visiblePosts = useMemo(
+    () => allPosts.filter((post) => post.eventId || audienceAllows(post.audience, isOrganiserViewer)),
+    [allPosts, isOrganiserViewer]
+  );
   // #102: the open ticket and the announcements sheet live in the URL now, so
   // the back button closes them, they survive a refresh, and a ticket link is
   // shareable. activeEvent is resolved from the ?ticket=<id> param below.
@@ -352,8 +362,8 @@ export default function FeedClient({
     [initialIntros, user?.id]
   );
   const forYouFeed = useMemo(
-    () => buildForYouFeed(initialEvents, allPosts, followed, seenAnnouncements, discoveryIntros),
-    [initialEvents, allPosts, followed, seenAnnouncements, discoveryIntros]
+    () => buildForYouFeed(initialEvents, visiblePosts, followed, seenAnnouncements, discoveryIntros),
+    [initialEvents, visiblePosts, followed, seenAnnouncements, discoveryIntros]
   );
 
   // Mirror the built feed into a ref after each commit (never during render) so
@@ -450,8 +460,8 @@ export default function FeedClient({
   // sequence when scrolled - only this list flips. Empty means the button hides
   // rather than opening to nothing.
   const announcements = useMemo(
-    () => allPosts.filter((post) => !post.eventId),
-    [allPosts]
+    () => visiblePosts.filter((post) => !post.eventId),
+    [visiblePosts]
   );
 
   return (

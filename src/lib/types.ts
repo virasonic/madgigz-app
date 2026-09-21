@@ -184,6 +184,12 @@ export interface ContentPost {
    * window (the column may not exist yet).
    */
   isIntro?: boolean;
+  /**
+   * Who a MadGigz announcement is for (addendum_055): null = everyone, 'fans' =
+   * hidden from organisers, 'organisers' = hidden from fans. The feed filters on
+   * it by viewer role; null on artist posts and pre-migration.
+   */
+  audience?: string | null;
 }
 
 export interface Ticket {
@@ -365,6 +371,9 @@ export interface ContentPostRow {
   caption_es?: string | null;
   // Undefined until addendum_038 runs; mapContentPost reads it as false.
   is_intro?: boolean | null;
+  // Undefined until addendum_055 runs (select("*")); mapContentPost reads it as
+  // null → everyone. Who a MadGigz announcement is for; null on artist posts.
+  audience?: string | null;
   /**
    * Embedded from the artist_id -> profiles FK (#123). Present only when the
    * query asks for it (fetchContentPosts/fetchShowContent do; the admin
@@ -392,6 +401,7 @@ export function mapContentPost(row: ContentPostRow): ContentPost {
     headlineEs: row.headline_es ?? null,
     captionEs: row.caption_es ?? null,
     isIntro: row.is_intro ?? false,
+    audience: row.audience ?? null,
   };
 }
 

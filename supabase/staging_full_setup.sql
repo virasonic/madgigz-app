@@ -3640,3 +3640,13 @@ create policy "Pro users can set their own panel language" on public.pro_account
 -- grant list from addendum_051 — column grants are not extended to columns added
 -- later, which is the rule CLAUDE.md shouts about.
 grant select (locale) on public.pro_accounts to authenticated;
+
+-- ############# addendum_055_announcement_audience.sql #############
+
+-- Who a MadGigz announcement is for (addendum_055). NULL (the default and every
+-- existing row) = everyone; the feed filters 'fans'/'organisers' in code by the
+-- viewer's role. PUBLIC column — content_posts is world-readable via a blanket
+-- table grant, not the profiles column-grant regime, so no grant is needed here.
+-- Additive and safe to run on a live DB.
+alter table public.content_posts
+  add column if not exists audience text;  -- null = everyone; 'fans'; 'organisers'

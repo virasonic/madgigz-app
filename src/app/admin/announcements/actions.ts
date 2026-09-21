@@ -14,6 +14,9 @@ export async function createTextAnnouncement(input: {
   // every reader sees the base headline/body.
   headlineEs?: string;
   bodyEs?: string;
+  // Who it's for (addendum_055): "fans", "organisers", or anything else / absent
+  // = everyone. Stored as null for "everyone" so the default carries no value.
+  audience?: string;
 }): Promise<{ error: string | null }> {
   const admin = await requireAdmin();
 
@@ -41,6 +44,7 @@ export async function createTextAnnouncement(input: {
     media_type: "text",
     headline_es: headlineEs || null,
     caption_es: bodyEs || null,
+    audience: normaliseAudience(input.audience),
   });
 
   if (error) {
@@ -53,22 +57,42 @@ export async function createTextAnnouncement(input: {
   return { error: null };
 }
 
-// Inserts an announcement row, degrading gracefully in the window before
-// addendum_043 has been run: if the Spanish columns don't exist yet the insert
-// fails with 42703 (undefined column), so we drop them and retry with the base
-// fields. Once the migration is in, the first attempt succeeds. Same
-// ship-code-before-SQL pattern the rest of the app uses.
+// The audience is stored as null for "everyone" (addendum_055) so the default
+// carries no value to keep in step. Only the two targeting values are kept.
+function normaliseAudience(audience: string | undefined): string | null {
+  return audience === "fans" || audience === "organisers" ? audience : null;
+}
+
+// Inserts an announcement row, degrading gracefully in the window before a
+// newer column's addendum has been run: if a column doesn't exist yet the insert
+// fails with 42703 (undefined column), so we strip the newest optional columns
+// and retry. Newest first: audience (055), then the Spanish pair (043). Once the
+// migrations are in, the first attempt succeeds. Same ship-code-before-SQL
+// pattern the rest of the app uses.
 async function insertAnnouncement(
-  row: Record<string, unknown> & { headline_es: string | null; caption_es: string | null }
+  row: Record<string, unknown> & {
+    headline_es: string | null;
+    caption_es: string | null;
+    audience: string | null;
+  }
 ): Promise<{ error: { code?: string } | null }> {
   const db = adminClient();
-  const { error } = await db.from("content_posts").insert(row);
+  let { error } = await db.from("content_posts").insert(row);
+
   if (error?.code === "42703") {
-    const base: Record<string, unknown> = { ...row };
-    delete base.headline_es;
-    delete base.caption_es;
-    return db.from("content_posts").insert(base);
+    // audience (addendum_055) missing — retry without it.
+    const noAudience: Record<string, unknown> = { ...row };
+    delete noAudience.audience;
+    ({ error } = await db.from("content_posts").insert(noAudience));
+
+    if (error?.code === "42703") {
+      // Spanish columns (addendum_043) also missing — retry without those too.
+      delete noAudience.headline_es;
+      delete noAudience.caption_es;
+      ({ error } = await db.from("content_posts").insert(noAudience));
+    }
   }
+
   return { error };
 }
 
@@ -79,6 +103,7 @@ export async function createAnnouncement(form: FormData): Promise<{ error: strin
 
   const caption = String(form.get("caption") ?? "").trim();
   const captionEs = String(form.get("caption_es") ?? "").trim();
+  const audience = String(form.get("audience") ?? "");
   const file = form.get("media");
 
   if (!(file instanceof File) || file.size === 0) return { error: "Choose an image or video" };
@@ -120,6 +145,7 @@ export async function createAnnouncement(form: FormData): Promise<{ error: strin
     media_type: isVideo ? "video" : "image",
     headline_es: null,
     caption_es: captionEs || null,
+    audience: normaliseAudience(audience),
   });
 
   if (error) {

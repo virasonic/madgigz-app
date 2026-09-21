@@ -7,6 +7,11 @@ import {
   deleteAnnouncement,
   updateAnnouncementLocale,
 } from "./actions";
+import {
+  AUDIENCE_OPTIONS,
+  AnnouncementAudience,
+  audienceLabel,
+} from "@/lib/announcement-audience";
 
 export interface AdminAnnouncement {
   id: string;
@@ -16,8 +21,9 @@ export interface AdminAnnouncement {
   captionEs: string | null;
   mediaUrl: string | null;
   mediaType: string;
-  accentColor: string | null;
+  audience: string | null;
   createdAt: string;
+  accentColor: string | null;
 }
 
 // The two brand accents the template offers. Orange is MadGigz's own voice,
@@ -26,6 +32,39 @@ const ACCENTS = [
   { label: "Orange", value: "#d76616" },
   { label: "Teal", value: "#54c3bd" },
 ];
+
+// Who the announcement shows to in the feed (addendum_055). The feed is browsed
+// by fans and by organisers alike, so an announcement can be aimed at one side
+// and hidden from the other. "Everyone" is the default.
+function AudienceSelect({
+  value,
+  onChange,
+}: {
+  value: AnnouncementAudience;
+  onChange: (value: AnnouncementAudience) => void;
+}) {
+  const hint = AUDIENCE_OPTIONS.find((o) => o.value === value)?.hint;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs text-muted">Show to</span>
+      <div className="flex flex-wrap gap-2">
+        {AUDIENCE_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            className={`rounded-full px-3 py-1.5 text-xs font-heading ${
+              value === option.value ? "bg-primary text-foreground" : "bg-background text-muted"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {hint && <span className="text-[11px] text-muted/70">{hint}</span>}
+    </div>
+  );
+}
 
 export default function AnnouncementsClient({ items }: { items: AdminAnnouncement[] }) {
   const [mode, setMode] = useState<"template" | "upload">("template");
@@ -75,6 +114,7 @@ function TemplateComposer() {
   const [headlineEs, setHeadlineEs] = useState("");
   const [bodyEs, setBodyEs] = useState("");
   const [accent, setAccent] = useState(ACCENTS[0].value);
+  const [audience, setAudience] = useState<AnnouncementAudience>("all");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -82,7 +122,14 @@ function TemplateComposer() {
     event.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await createTextAnnouncement({ headline, body, accent, headlineEs, bodyEs });
+      const result = await createTextAnnouncement({
+        headline,
+        body,
+        accent,
+        headlineEs,
+        bodyEs,
+        audience,
+      });
       if (result.error) {
         setError(result.error);
         return;
@@ -91,6 +138,7 @@ function TemplateComposer() {
       setBody("");
       setHeadlineEs("");
       setBodyEs("");
+      setAudience("all");
     });
   }
 
@@ -154,6 +202,8 @@ function TemplateComposer() {
           ))}
         </div>
 
+        <AudienceSelect value={audience} onChange={setAudience} />
+
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <button
@@ -195,6 +245,7 @@ function UploadComposer() {
   const formRef = useRef<HTMLFormElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isVideo, setIsVideo] = useState(false);
+  const [audience, setAudience] = useState<AnnouncementAudience>("all");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -210,6 +261,7 @@ function UploadComposer() {
       }
       formRef.current?.reset();
       setPreview(null);
+      setAudience("all");
     });
   }
 
@@ -256,6 +308,9 @@ function UploadComposer() {
           placeholder="Texto en español (opcional)"
           className="w-full rounded-xl border border-dashed border-muted/20 bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary"
         />
+        <AudienceSelect value={audience} onChange={setAudience} />
+        {/* Uncontrolled form → carry the audience in a hidden field. */}
+        <input type="hidden" name="audience" value={audience} />
         <p className="text-xs text-muted">
           For a designed graphic or a video. For plain text on the brand card, use “Write a card”.
         </p>
@@ -340,6 +395,14 @@ function Row({ item }: { item: AdminAnnouncement }) {
       <div className="min-w-0 flex-1">
         {item.headline && <p className="text-sm font-heading text-foreground">{item.headline}</p>}
         <p className="text-sm text-muted">{item.caption}</p>
+
+        {/* Only surfaced when it's actually targeted — an untargeted "Everyone"
+            announcement needs no badge. */}
+        {(item.audience === "fans" || item.audience === "organisers") && (
+          <span className="mt-1 inline-block rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-heading text-primary">
+            {audienceLabel(item.audience)}
+          </span>
+        )}
 
         {!editing && hasEs && (
           <p className="mt-1 text-xs text-accent">

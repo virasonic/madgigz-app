@@ -27,6 +27,7 @@ export default async function AdminAnnouncementsPage() {
     mediaUrl: (row.media_url as string | null) ?? null,
     mediaType: row.media_type as string,
     accentColor: (row.accent_color as string | null) ?? null,
+    audience: (row.audience as string | null) ?? null,
     createdAt: row.created_at as string,
   }));
 
