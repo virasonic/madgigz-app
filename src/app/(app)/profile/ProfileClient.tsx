@@ -15,6 +15,7 @@ import IntroReel from "@/components/artist/IntroReel";
 import IntroReelModal from "@/components/artist/IntroReelModal";
 import { removeIntroReel } from "./intro-actions";
 import { markAttended } from "./attendance-actions";
+import { clearSwitchOnSignOut } from "../account/actions";
 import { createClient } from "@/lib/supabase/client";
 import { clearOfflineTickets } from "@/lib/offline-tickets";
 import { clearNativeOfflineTickets } from "@/lib/offline-tickets-native";
@@ -138,6 +139,7 @@ function SettingsSheet({
   fiscalProvided,
   isArtist,
   isAdmin,
+  canSwitchAccounts,
   proType,
 }: {
   onClose: () => void;
@@ -149,6 +151,7 @@ function SettingsSheet({
   fiscalProvided: boolean;
   isArtist: boolean;
   isAdmin: boolean;
+  canSwitchAccounts: boolean;
   proType: ProAccountType | null;
 }) {
   const { t, locale, setLocale } = useT();
@@ -215,6 +218,20 @@ function SettingsSheet({
             >
               <span className="text-sm text-foreground">Admin panel</span>
               <span className="text-xs text-muted">Manage gigs, scan at the door</span>
+            </Link>
+          )}
+
+          {/* Multi-account switcher (#192), admin-only. Shows for an admin, and
+              stays visible while "acting as" another account (canSwitchAccounts)
+              so there's always a way back. English on purpose, like the rows
+              above — back-office tooling, not a fan screen. */}
+          {canSwitchAccounts && (
+            <Link
+              href="/account"
+              className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
+            >
+              <span className="text-sm text-foreground">Switch account</span>
+              <span className="text-xs text-muted">Jump between your accounts</span>
             </Link>
           )}
 
@@ -391,6 +408,13 @@ interface ProfileClientProps {
   fiscalProvided: boolean;
   /** Set for an active promoter/venue account (#88); null for everyone else. */
   proType: ProAccountType | null;
+  /**
+   * Whether to show the admin-only account switcher (#192): the current user is
+   * an admin, or an admin set the switcher up on this device and is "acting as"
+   * this account (so there's always a way back). Computed server-side because it
+   * reads an httpOnly cookie.
+   */
+  canSwitchAccounts: boolean;
 }
 
 export default function ProfileClient({
@@ -406,6 +430,7 @@ export default function ProfileClient({
   initialIntro,
   fiscalProvided,
   proType,
+  canSwitchAccounts,
 }: ProfileClientProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
@@ -500,6 +525,9 @@ export default function ProfileClient({
     // person to sign in (#129) — both the web cache and the native mirror.
     clearOfflineTickets();
     void clearNativeOfflineTickets();
+    // Wipe any remembered account-switcher sessions (#192) so one person's saved
+    // logins never carry over to the next on a shared device.
+    await clearSwitchOnSignOut();
     router.replace("/");
     router.refresh();
   }
@@ -928,6 +956,7 @@ export default function ProfileClient({
           fiscalProvided={fiscalProvided}
           isArtist={artistTools}
           isAdmin={user.role === "admin"}
+          canSwitchAccounts={canSwitchAccounts}
           proType={proType}
         />
       )}

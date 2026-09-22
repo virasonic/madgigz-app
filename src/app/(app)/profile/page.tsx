@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { getOwner } from "@/lib/account-switch";
 import {
   fetchArtistIntro,
   fetchAttendedEvents,
@@ -22,6 +24,11 @@ export default async function ProfilePage() {
   const supabase = await createClient();
   const user = await fetchCurrentUser(supabase);
   if (!user) redirect("/");
+
+  // The admin-only account switcher (#192) shows for an admin, and stays visible
+  // while an admin is "acting as" another account (the owner cookie is set) so
+  // there's always a way back. Reads an httpOnly cookie, hence server-side here.
+  const canSwitchAccounts = user.role === "admin" || getOwner(await cookies()) !== null;
 
   const [
     savedEvents,
@@ -97,6 +104,7 @@ export default async function ProfilePage() {
       initialIntro={intro}
       fiscalProvided={fiscalProvided}
       proType={proAccount?.active ? proAccount.type : null}
+      canSwitchAccounts={canSwitchAccounts}
     />
   );
 }
