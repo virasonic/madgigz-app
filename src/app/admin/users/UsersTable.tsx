@@ -21,7 +21,9 @@ const NOW = Date.now();
 const USER_COLUMNS: Record<string, SortAccessor<AdminUserRow>> = {
   username: (u) => u.username,
   email: (u) => u.email,
-  role: (u) => u.role,
+  // A promoter/venue login is a role='fan' row (#88); sort and label by the pro
+  // type when there is one so organisers group under their real role.
+  role: (u) => u.proType ?? u.role,
   tickets: (u) => u.ticketCount,
   joined: (u) => new Date(u.createdAt).getTime(),
   lastSignIn: (u) => (u.lastSignInAt ? new Date(u.lastSignInAt).getTime() : null),
@@ -125,7 +127,7 @@ export default function UsersTable({ users }: { users: AdminUserRow[] }) {
                   </Link>
                 </td>
                 <td className="py-2 text-muted">{u.email}</td>
-                <td className="py-2 text-muted capitalize">{u.role}</td>
+                <td className="py-2 text-muted capitalize">{u.proType ?? u.role}</td>
                 <td className="py-2 text-muted">{u.ticketCount}</td>
                 <td className="py-2 text-muted">
                   {new Date(u.createdAt).toLocaleDateString("en-GB")}

@@ -79,7 +79,9 @@ export default async function AdminUserDetailPage({
               <h1 className="font-display text-2xl text-foreground">
                 {user.artistName ?? user.username}
               </h1>
-              <Pill tone="flat">{user.role}</Pill>
+              {/* A promoter/venue login is a role='fan' row (#88); show the pro
+                  type when there is one rather than the bare "fan". */}
+              <Pill tone="flat">{user.proType ?? user.role}</Pill>
               {user.deletedAt && <Pill tone="flat">Deleted</Pill>}
               {!user.deletedAt && user.deletionRequestedAt && (
                 <Pill tone="warn">Deletion requested</Pill>

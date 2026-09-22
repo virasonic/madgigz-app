@@ -37,6 +37,8 @@ export interface AdminUserRow {
   email: string;
   username: string;
   role: string;
+  /** "promoter" | "venue" for an active pro account, else null (#88). */
+  proType: string | null;
   createdAt: string;
   lastSignInAt: string | null;
   ticketCount: number;
@@ -69,7 +71,7 @@ export async function fetchAllUsers(admin: SupabaseClient): Promise<AdminUserRow
   const { data: profileRows } = await admin
     .from("profiles")
     .select(
-      "id, username, role, created_at, deletion_requested_at, deleted_at, artist_photo_url"
+      "id, username, role, pro_type, created_at, deletion_requested_at, deleted_at, artist_photo_url"
     );
   const { data: ticketRows } = await admin.from("tickets").select("user_id");
 
@@ -87,6 +89,10 @@ export async function fetchAllUsers(admin: SupabaseClient): Promise<AdminUserRow
       email: u.email ?? "",
       username: profile?.username ?? "-",
       role: profile?.role ?? "fan",
+      // Public mirror of an ACTIVE pro account (addendum_053): null for a plain
+      // fan or a deactivated pro. A promoter/venue login is deliberately a
+      // role='fan' row, so the table labels by this, not by role (#88).
+      proType: (profile?.pro_type as string | null) ?? null,
       createdAt: u.created_at,
       lastSignInAt: u.last_sign_in_at ?? null,
       ticketCount: ticketCounts.get(u.id) ?? 0,
@@ -741,6 +747,8 @@ export interface AdminUserDetail {
   email: string;
   username: string;
   role: string;
+  /** "promoter" | "venue" for an active pro account, else null (#88). */
+  proType: string | null;
   createdAt: string;
   lastSignInAt: string | null;
   emailConfirmedAt: string | null;
@@ -850,6 +858,7 @@ export async function fetchUserDetail(
     email: authUser?.user?.email ?? "",
     username: profile.username,
     role: profile.role,
+    proType: (profile.pro_type as string | null) ?? null,
     createdAt: profile.created_at,
     lastSignInAt: authUser?.user?.last_sign_in_at ?? null,
     emailConfirmedAt: authUser?.user?.email_confirmed_at ?? null,
