@@ -255,6 +255,28 @@ export async function fetchApprovedArtists(
   return ((data as PublicArtistProfileRow[]) ?? []).map(mapPublicArtistProfile);
 }
 
+// Promoters and venues, for Explore search (#88 / addendum_053). They aren't in
+// fetchApprovedArtists - a pro is a role='fan' row - so search couldn't find
+// them. pro_type is the granted public mirror of an ACTIVE pro account (null for
+// a deactivated one, which correctly drops out here), and a pro's public display
+// name is written to profiles.artist_name by admin/pro/actions. Returns [] on a
+// database without addendum_053 (the .not filter 42703s) so search still works
+// in the deploy→migration gap. Same PublicArtistProfile shape as artists, with
+// proType set, so the search results reuse the artist card.
+export async function fetchPublicProAccounts(
+  supabase: SupabaseClient
+): Promise<PublicArtistProfile[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(
+      "id, username, follower_count, artist_name, artist_bio, artist_photo_url, instagram, tiktok, twitter, spotify, youtube, pro_type"
+    )
+    .not("pro_type", "is", null)
+    .order("artist_name");
+  if (error) return [];
+  return ((data as PublicArtistProfileRow[]) ?? []).map(mapPublicArtistProfile);
+}
+
 // Which of these artists the current user follows. One query for the whole
 // list rather than one per card - Explore renders every approved artist.
 export async function fetchFollowedArtistIds(

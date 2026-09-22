@@ -8,6 +8,7 @@ import {
   fetchFollowedEventIds,
   fetchGenreIdsByEvent,
   fetchGenresByEvent,
+  fetchPublicProAccounts,
   fetchSavedEventIds,
 } from "@/lib/supabase/queries";
 import { EMPTY_PREFERENCES } from "@/lib/fan-preferences";
@@ -33,18 +34,29 @@ export default async function ExplorePage() {
   // and the per-user saved/followed sets come back empty without a session.
   const user = await fetchCurrentUser(supabase);
 
-  const [events, savedIds, artists, genresByEvent, genreIdsByEvent, followedEventIds, preferences] =
-    await Promise.all([
-      fetchEvents(supabase, { activeOnly: true, city: CURRENT_CITY, upcomingOnly: true }),
-      user ? fetchSavedEventIds(supabase, user.id) : Promise.resolve<string[]>([]),
-      fetchApprovedArtists(supabase),
-      fetchGenresByEvent(supabase),
-      fetchGenreIdsByEvent(supabase),
-      user ? fetchFollowedEventIds(supabase, user.id) : Promise.resolve(new Set<string>()),
-      // #170: the fan's saved discovery preferences boost matching shows. Guests
-      // (and pre-migration) get empty preferences, so ordering is unchanged.
-      user ? fetchFanPreferences(supabase, user.id) : Promise.resolve(EMPTY_PREFERENCES),
-    ]);
+  const [
+    events,
+    savedIds,
+    artists,
+    proAccounts,
+    genresByEvent,
+    genreIdsByEvent,
+    followedEventIds,
+    preferences,
+  ] = await Promise.all([
+    fetchEvents(supabase, { activeOnly: true, city: CURRENT_CITY, upcomingOnly: true }),
+    user ? fetchSavedEventIds(supabase, user.id) : Promise.resolve<string[]>([]),
+    fetchApprovedArtists(supabase),
+    // #88: promoters and venues are searchable too — a role='fan' pro row that
+    // fetchApprovedArtists never returns.
+    fetchPublicProAccounts(supabase),
+    fetchGenresByEvent(supabase),
+    fetchGenreIdsByEvent(supabase),
+    user ? fetchFollowedEventIds(supabase, user.id) : Promise.resolve(new Set<string>()),
+    // #170: the fan's saved discovery preferences boost matching shows. Guests
+    // (and pre-migration) get empty preferences, so ordering is unchanged.
+    user ? fetchFanPreferences(supabase, user.id) : Promise.resolve(EMPTY_PREFERENCES),
+  ]);
 
   return (
     <ExploreClient
@@ -52,6 +64,7 @@ export default async function ExplorePage() {
       initialEvents={events}
       initialSavedIds={savedIds}
       artists={artists}
+      proAccounts={proAccounts}
       genresByEvent={genresByEvent}
       genreIdsByEvent={genreIdsByEvent}
       followedEventIds={[...followedEventIds]}

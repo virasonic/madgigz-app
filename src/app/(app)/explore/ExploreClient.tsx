@@ -21,6 +21,8 @@ interface ExploreClientProps {
   initialEvents: EventItem[];
   initialSavedIds: string[];
   artists: PublicArtistProfile[];
+  /** Promoters and venues (#88) - searchable alongside artists. */
+  proAccounts: PublicArtistProfile[];
   genresByEvent: Record<string, string[]>;
   genreIdsByEvent: Record<string, string[]>;
   followedEventIds: string[];
@@ -32,6 +34,7 @@ export default function ExploreClient({
   initialEvents,
   initialSavedIds,
   artists,
+  proAccounts,
   genresByEvent,
   genreIdsByEvent,
   followedEventIds,
@@ -120,6 +123,15 @@ export default function ExploreClient({
     );
   }, [artists, trimmedQuery]);
 
+  // Promoters and venues (#88), same match rule as artists. Shown in their own
+  // section so a venue isn't filed under "Artists".
+  const filteredPros = useMemo(() => {
+    if (!trimmedQuery) return [];
+    return proAccounts.filter((pro) =>
+      [pro.artistName, pro.username].join(" ").toLowerCase().includes(trimmedQuery)
+    );
+  }, [proAccounts, trimmedQuery]);
+
   async function handleToggleSave(eventId: string) {
     // Guests can browse but not save - the tap becomes the sign-up prompt.
     if (!userId) {
@@ -205,9 +217,41 @@ export default function ExploreClient({
         </div>
       )}
 
+      {filteredPros.length > 0 && (
+        <div className="mb-6">
+          <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">
+            {t("explore.organisersHeading")}
+          </h2>
+          <div className="flex flex-col gap-2">
+            {filteredPros.map((pro) => (
+              <Link
+                key={pro.id}
+                href={`/profile/${pro.id}`}
+                className="flex items-center gap-3 rounded-2xl bg-surface p-3"
+              >
+                <Avatar photoUrl={pro.artistPhotoUrl} name={pro.artistName} size={44} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-heading text-sm text-foreground">{pro.artistName}</p>
+                  {pro.artistName !== pro.username && (
+                    <p className="truncate text-xs text-muted">@{pro.username}</p>
+                  )}
+                </div>
+                {/* Which kind of organiser, so a venue reads as a venue and not
+                    an act. proType is always set on a pro row. */}
+                <span className="shrink-0 rounded-full bg-background px-2.5 py-1 text-[11px] font-heading text-muted">
+                  {pro.proType === "venue"
+                    ? t("profile.publicRoleVenue")
+                    : t("profile.publicRolePromoter")}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {filteredEvents.length > 0 && (
         <>
-          {filteredArtists.length > 0 && (
+          {(filteredArtists.length > 0 || filteredPros.length > 0) && (
             <h2 className="mb-3 font-heading text-sm uppercase tracking-wide text-muted">{t("explore.eventsHeading")}</h2>
           )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -222,7 +266,7 @@ export default function ExploreClient({
         </>
       )}
 
-      {filteredEvents.length === 0 && filteredArtists.length === 0 && (
+      {filteredEvents.length === 0 && filteredArtists.length === 0 && filteredPros.length === 0 && (
         <p className="text-sm text-muted">
           {trimmedQuery ? t("explore.noResults") : t("explore.noEvents")}
         </p>

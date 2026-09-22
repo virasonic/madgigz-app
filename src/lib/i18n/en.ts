@@ -176,6 +176,7 @@ export const en = {
     title: "Explore",
     searchPlaceholder: "Search events, artists, venues...",
     artistsHeading: "Artists",
+    organisersHeading: "Venues & promoters",
     eventsHeading: "Events",
     noResults: "No events or artists found.",
     noEvents: "No events found.",

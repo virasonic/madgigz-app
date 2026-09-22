@@ -155,6 +155,7 @@ export const es: Messages = {
     title: "Explorar",
     searchPlaceholder: "Busca eventos, artistas, salas...",
     artistsHeading: "Artistas",
+    organisersHeading: "Locales y promotores",
     eventsHeading: "Eventos",
     noResults: "No se encontraron eventos ni artistas.",
     noEvents: "No se encontraron eventos.",
