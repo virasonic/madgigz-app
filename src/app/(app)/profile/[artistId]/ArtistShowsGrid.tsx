@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem } from "@/lib/types";
 import { useUrlModal } from "@/lib/useUrlModal";
+import { useGuestGate } from "@/components/auth/GuestGate";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
 export default function ArtistShowsGrid({
@@ -16,13 +17,14 @@ export default function ArtistShowsGrid({
   past,
   initialSavedIds,
 }: {
-  userId: string;
+  userId: string | null;
   upcoming: EventItem[];
   past: EventItem[];
   initialSavedIds: string[];
 }) {
   const { t } = useT();
   const router = useRouter();
+  const { promptSignup, sheet } = useGuestGate();
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   // #102: open ticket sheet is ?ticket=<id>, resolved from this artist's shows.
   const ticketModal = useUrlModal("ticket");
@@ -33,6 +35,12 @@ export default function ArtistShowsGrid({
   );
 
   async function handleToggleSave(eventId: string) {
+    // Guests can browse the shows but not save - the tap becomes the sign-up
+    // prompt (same as Explore/Feed).
+    if (!userId) {
+      promptSignup();
+      return;
+    }
     const wasSaved = savedIds.includes(eventId);
     setSavedIds((ids) => (wasSaved ? ids.filter((id) => id !== eventId) : [...ids, eventId]));
     const supabase = createClient();
@@ -81,11 +89,13 @@ export default function ArtistShowsGrid({
         <TicketModal
           key={activeEvent.id}
           event={activeEvent}
+          isGuest={!userId}
           liked={savedIds.includes(activeEvent.id)}
           onToggleLike={() => handleToggleSave(activeEvent.id)}
           onClose={ticketModal.close}
         />
       )}
+      {sheet}
     </>
   );
 }

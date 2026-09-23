@@ -27,11 +27,10 @@ export default async function PublicArtistProfilePage({
   const { artistId: handle } = await params;
   const supabase = await createClient();
   const currentUser = await fetchCurrentUser(supabase);
-  // Reachable mid-browse (an artist link on a reel or in Explore), so a guest
-  // who taps it lands on sign-in with a way back here - not the bare landing.
-  // Viewing an artist's page is still account-gated for now; only Feed and
-  // Explore are open to guests.
-  if (!currentUser) redirect(`/signin?next=${encodeURIComponent(`/profile/${handle}`)}`);
+  // Guest-open, like a shared gig link (/e/[id]): a logged-out visitor can view
+  // the profile and browse the shows. The actions that write something for them
+  // - Follow, saving a show, buying a ticket - are what prompt sign-up, handled
+  // in the button/modal, not by gating the whole page.
 
   // The URL segment is either a username (the pretty /profile/weyvir form) or a
   // raw id (older shared links, and internal links that only hold the id).
@@ -42,7 +41,7 @@ export default async function PublicArtistProfilePage({
 
   // An artist viewing their own page gets sent to the richer private view
   // (Add Show, Settings, hidden shows) instead of the stripped-down public one.
-  if (artistId === currentUser.id) redirect("/profile");
+  if (currentUser && artistId === currentUser.id) redirect("/profile");
 
   // Canonicalise on the username, so a shared id link (or a wrong-case handle)
   // cleans up in the address bar to /profile/<username>.
@@ -50,8 +49,8 @@ export default async function PublicArtistProfilePage({
 
   const [artist, savedIds, followedIds, intro, { t }] = await Promise.all([
     fetchArtistProfile(supabase, artistId),
-    fetchSavedEventIds(supabase, currentUser.id),
-    fetchFollowedArtistIds(supabase, currentUser.id),
+    currentUser ? fetchSavedEventIds(supabase, currentUser.id) : Promise.resolve([] as string[]),
+    currentUser ? fetchFollowedArtistIds(supabase, currentUser.id) : Promise.resolve([] as string[]),
     fetchArtistIntro(supabase, artistId),
     getServerT(),
   ]);
@@ -111,7 +110,11 @@ export default async function PublicArtistProfilePage({
           </span>
         </div>
         <div className="shrink-0">
-          <FollowButton artistId={artist.id} initialFollowing={followedIds.includes(artist.id)} />
+          <FollowButton
+            artistId={artist.id}
+            initialFollowing={followedIds.includes(artist.id)}
+            isGuest={!currentUser}
+          />
         </div>
       </div>
 
@@ -136,7 +139,7 @@ export default async function PublicArtistProfilePage({
       <SocialLinks source={artist} className="mt-4" />
 
       <ArtistShowsGrid
-        userId={currentUser.id}
+        userId={currentUser?.id ?? null}
         upcoming={upcomingShows}
         past={pastShows}
         initialSavedIds={savedIds}

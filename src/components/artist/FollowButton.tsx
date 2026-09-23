@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toggleFollow } from "@/app/(app)/profile/follow-actions";
+import { useGuestGate } from "@/components/auth/GuestGate";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
 // No follower count here on purpose. It's an artist insight - shown to them on
@@ -11,16 +12,25 @@ import { useT } from "@/lib/i18n/LocaleProvider";
 export default function FollowButton({
   artistId,
   initialFollowing,
+  isGuest = false,
 }: {
   artistId: string;
   initialFollowing: boolean;
+  isGuest?: boolean;
 }) {
   const { t } = useT();
+  const { promptSignup, sheet } = useGuestGate();
   const [following, setFollowing] = useState(initialFollowing);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleClick() {
+    // Guests can view the profile but not follow - the tap becomes the sign-up
+    // prompt (same as saving a show or buying a ticket).
+    if (isGuest) {
+      promptSignup();
+      return;
+    }
     // Optimistic: following should feel instant.
     const wasFollowing = following;
     setFollowing(!wasFollowing);
@@ -48,6 +58,7 @@ export default function FollowButton({
         {following ? t("follow.following") : t("follow.follow")}
       </button>
       {error && <span className="text-xs text-primary">{error}</span>}
+      {sheet}
     </div>
   );
 }
