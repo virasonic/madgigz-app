@@ -47,7 +47,9 @@ export async function toggleFollow(
     }
   }
 
-  revalidatePath(`/profile/${artistId}`);
+  // The public page is keyed by username now, not the id, so invalidate the
+  // whole dynamic route rather than one id path.
+  revalidatePath("/profile/[artistId]", "page");
   revalidatePath("/explore");
   return { following: !currentlyFollowing };
 }

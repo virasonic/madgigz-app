@@ -9,6 +9,7 @@ import {
   fetchShowsByArtist,
   fetchShowsByProAccount,
   fetchTaggedShows,
+  resolveProfileHandle,
 } from "@/lib/supabase/queries";
 import FollowButton from "@/components/artist/FollowButton";
 import IntroReel from "@/components/artist/IntroReel";
@@ -23,18 +24,29 @@ export default async function PublicArtistProfilePage({
 }: {
   params: Promise<{ artistId: string }>;
 }) {
-  const { artistId } = await params;
+  const { artistId: handle } = await params;
   const supabase = await createClient();
   const currentUser = await fetchCurrentUser(supabase);
   // Reachable mid-browse (an artist link on a reel or in Explore), so a guest
   // who taps it lands on sign-in with a way back here - not the bare landing.
   // Viewing an artist's page is still account-gated for now; only Feed and
   // Explore are open to guests.
-  if (!currentUser) redirect(`/signin?next=${encodeURIComponent(`/profile/${artistId}`)}`);
+  if (!currentUser) redirect(`/signin?next=${encodeURIComponent(`/profile/${handle}`)}`);
+
+  // The URL segment is either a username (the pretty /profile/weyvir form) or a
+  // raw id (older shared links, and internal links that only hold the id).
+  // Resolve to the real profile either way.
+  const resolved = await resolveProfileHandle(supabase, handle);
+  if (!resolved) notFound();
+  const artistId = resolved.id;
 
   // An artist viewing their own page gets sent to the richer private view
   // (Add Show, Settings, hidden shows) instead of the stripped-down public one.
   if (artistId === currentUser.id) redirect("/profile");
+
+  // Canonicalise on the username, so a shared id link (or a wrong-case handle)
+  // cleans up in the address bar to /profile/<username>.
+  if (handle !== resolved.username) redirect(`/profile/${resolved.username}`);
 
   const [artist, savedIds, followedIds, intro, { t }] = await Promise.all([
     fetchArtistProfile(supabase, artistId),

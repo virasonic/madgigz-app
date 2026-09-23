@@ -213,6 +213,8 @@ export async function removeSelfFromShow(eventId: string): Promise<{ error: stri
   if ((data?.length ?? 0) === 0) return { error: "You're not tagged on that show" };
 
   revalidatePath("/profile");
-  revalidatePath(`/profile/${user.id}`);
+  // The public page is keyed by username now, not the id, so invalidate the
+  // whole dynamic route rather than one id path.
+  revalidatePath("/profile/[artistId]", "page");
   return { error: null };
 }

@@ -82,7 +82,9 @@ export async function saveIntroReel(input: SaveIntroInput): Promise<SaveIntroRes
   }
 
   revalidatePath("/profile");
-  revalidatePath(`/profile/${user.id}`);
+  // The public page is keyed by username now, not the id, so invalidate the
+  // whole dynamic route rather than one id path.
+  revalidatePath("/profile/[artistId]", "page");
   return { post: mapContentPost(inserted as ContentPostRow) };
 }
 
@@ -105,6 +107,8 @@ export async function removeIntroReel(): Promise<{ error: string | null }> {
   }
 
   revalidatePath("/profile");
-  revalidatePath(`/profile/${user.id}`);
+  // The public page is keyed by username now, not the id, so invalidate the
+  // whole dynamic route rather than one id path.
+  revalidatePath("/profile/[artistId]", "page");
   return { error: null };
 }

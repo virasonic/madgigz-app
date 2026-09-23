@@ -197,7 +197,7 @@ export default function ExploreClient({
             {filteredArtists.map((artist) => (
               <Link
                 key={artist.id}
-                href={`/profile/${artist.id}`}
+                href={`/profile/${artist.username}`}
                 className="flex items-center gap-3 rounded-2xl bg-surface p-3"
               >
                 <Avatar photoUrl={artist.artistPhotoUrl} name={artist.artistName} size={44} />
@@ -226,7 +226,7 @@ export default function ExploreClient({
             {filteredPros.map((pro) => (
               <Link
                 key={pro.id}
-                href={`/profile/${pro.id}`}
+                href={`/profile/${pro.username}`}
                 className="flex items-center gap-3 rounded-2xl bg-surface p-3"
               >
                 <Avatar photoUrl={pro.artistPhotoUrl} name={pro.artistName} size={44} />

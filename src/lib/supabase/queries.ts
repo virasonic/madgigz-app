@@ -104,6 +104,43 @@ export async function fetchArtistProfile(
   return mapPublicArtistProfile(row);
 }
 
+// A profile is reachable in the URL by either its username (the pretty,
+// shareable /profile/weyvir form) or its raw id (the permanent form a username
+// change can never break, and what most in-app links still hold). Usernames are
+// [A-Za-z0-9._-]{3,30}, so they can never look like a full 36-char UUID — the
+// two shapes never collide — and the case-insensitive unique index
+// (addendum_011) guarantees at most one match.
+const PROFILE_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function resolveProfileHandle(
+  supabase: SupabaseClient,
+  handle: string
+): Promise<{ id: string; username: string } | null> {
+  if (PROFILE_ID_RE.test(handle)) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .eq("id", handle)
+      .maybeSingle();
+    return data ? { id: data.id as string, username: data.username as string } : null;
+  }
+
+  // ilike is case-insensitive but treats _ and % as wildcards, and a username
+  // can contain _, so escape those (and \ defensively) then verify the match
+  // exactly — "we_vir" must never resolve to "weyvir".
+  const escaped = handle.replace(/[\\%_]/g, (c) => `\\${c}`);
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, username")
+    .ilike("username", escaped)
+    .maybeSingle();
+  if (!data) return null;
+  const username = data.username as string;
+  if (username.toLowerCase() !== handle.toLowerCase()) return null;
+  return { id: data.id as string, username };
+}
+
 /**
  * The public identity behind a profile id, for a "presented by" credit on a
  * show (#88). Deliberately tiny and tolerant: it returns null rather than
