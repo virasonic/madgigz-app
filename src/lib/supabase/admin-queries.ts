@@ -976,6 +976,10 @@ export async function fetchTagSuggestions(admin: SupabaseClient): Promise<TagSug
 export interface AttributionFunnelRow {
   campaign: string;
   source: string;
+  /** How it was placed, from utm_medium — bio, story, qr, dm, paid_social. For
+   *  organic links this is the dimension that actually matters: "Instagram" is
+   *  not an answer, "Instagram bio vs Instagram story" is. */
+  medium: string;
   /** The audience, from utm_term = Meta's {{adset.name}}. Kept as its own
    *  dimension because "which audience worked" is the question a campaign with
    *  more than one ad set is actually asking. */
@@ -1008,7 +1012,7 @@ export async function fetchSignupAttribution(admin: SupabaseClient): Promise<Att
   const [{ data: attribution }, { data: eventArtists }, { count: totalUsers }] = await Promise.all([
     admin
       .from("signup_attribution")
-      .select("user_id, source, campaign, content, term, created_at, profiles!inner(role, artist_status)")
+      .select("user_id, source, medium, campaign, content, term, created_at, profiles!inner(role, artist_status)")
       .order("created_at", { ascending: false }),
     // Who has ever listed a show. Tickets sold would be the better outcome, but
     // listing is the thing the artist ads actually ask for.
@@ -1036,6 +1040,7 @@ export async function fetchSignupAttribution(admin: SupabaseClient): Promise<Att
   type Joined = {
     user_id: string;
     source: string | null;
+    medium: string | null;
     campaign: string | null;
     content: string | null;
     term: string | null;
@@ -1052,15 +1057,17 @@ export async function fetchSignupAttribution(admin: SupabaseClient): Promise<Att
 
     const campaign = decodeTag(raw.campaign) ?? "(no campaign)";
     const source = decodeTag(raw.source) ?? "(unknown)";
+    const medium = decodeTag(raw.medium) ?? "(no medium)";
     const adSet = decodeTag(raw.term) ?? "(no ad set tag)";
     const ad = decodeTag(raw.content) ?? "(no ad tag)";
     // JSON rather than a delimiter: these names come from Meta and may contain
     // anything a person typed into Ads Manager.
-    const key = JSON.stringify([campaign, source, adSet, ad]);
+    const key = JSON.stringify([campaign, source, medium, adSet, ad]);
 
     const row = byAd.get(key) ?? {
       campaign,
       source,
+      medium,
       adSet,
       ad,
       signups: 0,
