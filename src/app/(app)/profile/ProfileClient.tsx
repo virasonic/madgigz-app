@@ -454,10 +454,12 @@ export default function ProfileClient({
   // the artist's own show is managed, a show they are only tagged on is not.
   const [activeTaggedShow, setActiveTaggedShow] = useState<EventItem | null>(null);
   // #180: the two fan stats (Attended / Saved) act as a toggle - tapping one
-  // shows that poster grid and hides the other. Default to whichever has
-  // content, preferring the attended "memories" wall that shipped first (#116).
+  // shows that poster grid and hides the other. Default to upcoming saved shows
+  // (#199) - a fan opening their profile cares more about what's coming than the
+  // back catalogue - and fall back to the attended "memories" wall (#116) only
+  // when there's nothing upcoming.
   const [gridView, setGridView] = useState<"attended" | "saved">(
-    attendedEvents.length > 0 ? "attended" : "saved"
+    savedEvents.length > 0 ? "saved" : "attended"
   );
   // #102: the settings sheet lives in ?settings=1 so the back button closes it
   // instead of leaving the profile. The Stripe payout round-trip (below) and the
