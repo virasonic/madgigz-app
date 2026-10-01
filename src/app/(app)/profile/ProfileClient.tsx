@@ -44,99 +44,136 @@ function formatDate(iso: string, dl: string) {
   });
 }
 
-// #201: a dynamic poster-wall collage for the attended/saved walls. Tiles are
-// packed into rows whose column spans sum to 6 (the grid width), each row given
-// one height - so the wall is ALWAYS gap-free at any count, while the mix of
-// widths (2/3/4/6) and per-row heights gives a real big/small collage like the
-// vintage-poster mural Vir referenced. Fewer gigs -> the first rows are large
-// and the wall still looks full; as gigs accumulate it fills into a denser
-// mosaic. Newest gig leads the big top row. Returns [colSpan, rowSpan] per tile.
-function packMosaic(n: number): [number, number][] {
-  const cycle: [number[], number][] = [
-    [[4, 2], 4],
-    [[2, 2, 2], 3],
-    [[3, 3], 4],
-    [[2, 2, 2], 3],
-    [[2, 4], 4],
-    [[2, 2, 2], 3],
-  ];
-  const spans: [number, number][] = [];
-  let i = 0;
-  let c = 0;
-  while (i < n) {
-    const rem = n - i;
-    let tpl: [number[], number];
-    if (rem === 1) tpl = [[6], 5];
-    else if (rem === 2) tpl = c % 2 ? [[3, 3], 4] : [[4, 2], 4];
-    else if (rem === 3) tpl = [[2, 2, 2], 3];
-    else tpl = cycle[c % cycle.length];
-    const [widths, h] = tpl;
-    for (const w of widths) {
-      spans.push([w, h]);
-      i++;
-    }
-    c++;
-  }
-  return spans;
-}
-
-// A poster grid of the fan's shows - the attended "memories" wall (#116) and the
-// upcoming-saved grid (#180) are the same thing with different data, toggled by
-// the two stat tiles, so they share one renderer.
+// A poster "collage" of the fan's shows - the attended memories wall (#116) and
+// the upcoming-saved grid (#180) share this renderer. Masonry columns keep each
+// poster at its OWN aspect ratio (no cropping - a tall poster stays tall, a wide
+// one stays wide) and never leave vertical gaps, so the wall always looks full.
+// Dynamic by count: few gigs -> fewer, bigger columns; more gigs -> a denser
+// collage. Newest first. No captions - just the posters (#201, Vir 1 Oct).
 function FanPosterGrid({
   title,
   subtitle,
   events,
-  dl,
 }: {
   title: string;
   subtitle: string;
   events: EventItem[];
-  dl: string;
 }) {
-  // Most recent gig first (newest leads the big top row), then packed into the
-  // gap-free mosaic above.
   const ordered = [...events].sort((a, b) => b.date.localeCompare(a.date));
-  const spans = packMosaic(ordered.length);
+  const n = ordered.length;
+  const cols = n <= 1 ? "columns-1" : n <= 4 ? "columns-2" : "columns-3";
   return (
     <div className="mb-8">
       <h2 className="font-heading text-sm uppercase tracking-wide text-muted">{title}</h2>
       <p className="mt-1 text-xs text-muted">{subtitle}</p>
-      <div className="mt-3 grid grid-cols-6 gap-1 [grid-auto-rows:3rem]">
-        {ordered.map((event, i) => {
-          const [c, r] = spans[i];
-          return (
-            <Link
-              key={event.id}
-              href={`/e/${event.id}`}
-              style={{ gridColumn: `span ${c}`, gridRow: `span ${r}` }}
-              className="group relative block overflow-hidden rounded-sm bg-surface transition-transform duration-150 hover:z-10 hover:scale-[1.03]"
-            >
-              {event.image ? (
-                <Image
-                  src={event.image}
-                  alt={event.title}
-                  fill
-                  sizes="(min-width: 480px) 220px, 50vw"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center p-2 text-center">
-                  <span className="line-clamp-3 font-heading text-xs text-muted">{event.title}</span>
-                </div>
-              )}
-              {/* A quiet gradient so the title stays legible on any poster. */}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 pt-6">
-                <p className="truncate font-heading text-[11px] leading-tight text-white">
-                  {event.title}
-                </p>
-                <p className="truncate text-[10px] text-white/70">{formatDate(event.date, dl)}</p>
+      <div className={`mt-3 gap-1 [column-fill:balance] ${cols}`}>
+        {ordered.map((event) => (
+          <Link
+            key={event.id}
+            href={`/e/${event.id}`}
+            className="group mb-1 block break-inside-avoid overflow-hidden rounded-sm bg-surface transition-transform duration-150 hover:scale-[1.03]"
+          >
+            {event.image ? (
+              // A plain img, not next/image: these posters are arbitrary Storage
+              // URLs shown at their natural aspect ratio (no crop), which the
+              // fixed-size / fill model of next/image doesn't fit - the same
+              // choice the other poster-image tiles in this app make.
+              // eslint-disable-next-line @next/next/no-img-element -- natural-aspect poster, see note
+              <img src={event.image} alt={event.title} loading="lazy" className="block h-auto w-full" />
+            ) : (
+              <div className="flex aspect-[3/4] w-full items-center justify-center p-2 text-center">
+                <span className="line-clamp-3 font-heading text-xs text-muted">{event.title}</span>
               </div>
-            </Link>
-          );
-        })}
+            )}
+          </Link>
+        ))}
       </div>
     </div>
+  );
+}
+
+// The Attended / Saved walls and the two stat tiles that toggle between them.
+// Isolated so it can drive the active wall from the URL (?wall=attended|saved)
+// via useSearchParams - which needs a Suspense boundary. Keeping the wall in the
+// URL means the browser back button returns to the SAME wall after a poster's
+// event page is visited (#201, Vir 1 Oct); without it, coming back reset to the
+// default wall.
+function AttendedSavedWalls({
+  attendedCount,
+  savedCount,
+  attendedEvents,
+  savedEvents,
+}: {
+  attendedCount: number;
+  savedCount: number;
+  attendedEvents: EventItem[];
+  savedEvents: EventItem[];
+}) {
+  const { t } = useT();
+  const searchParams = useSearchParams();
+  const param = searchParams.get("wall");
+  // Default to the upcoming "Saved" wall (#199), falling back to Attended when
+  // there's nothing upcoming. A ?wall pointing at an empty wall falls back too.
+  let wall: "attended" | "saved" =
+    param === "attended" || param === "saved" ? param : savedEvents.length > 0 ? "saved" : "attended";
+  if (wall === "saved" && savedEvents.length === 0 && attendedEvents.length > 0) wall = "attended";
+  if (wall === "attended" && attendedEvents.length === 0 && savedEvents.length > 0) wall = "saved";
+
+  function show(next: "attended" | "saved") {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("wall", next);
+    // replaceState (not push) so toggling doesn't stack history; Next patches it
+    // back into useSearchParams so the switch is shallow (no server re-run, no
+    // scroll jump), yet the URL still carries the wall for the back button.
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  }
+
+  return (
+    <>
+      {/* The two stats double as a toggle (#180): tap Attended to see the
+          memories wall (#116), tap Saved to see upcoming saved shows. The
+          active one is ringed; a stat with nothing behind it isn't tappable
+          (no empty shelf). */}
+      <div className="mb-8 grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          disabled={attendedEvents.length === 0}
+          onClick={() => show("attended")}
+          className={`rounded-2xl bg-surface p-4 text-center transition enabled:hover:bg-surface/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+            wall === "attended" && attendedEvents.length > 0 ? "ring-2 ring-primary" : ""
+          }`}
+        >
+          <p className="font-display text-3xl text-foreground">{attendedCount}</p>
+          <p className="text-sm text-muted">{t("profile.attended")}</p>
+        </button>
+        <button
+          type="button"
+          disabled={savedEvents.length === 0}
+          onClick={() => show("saved")}
+          className={`rounded-2xl bg-surface p-4 text-center transition enabled:hover:bg-surface/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+            wall === "saved" && savedEvents.length > 0 ? "ring-2 ring-primary" : ""
+          }`}
+        >
+          <p className="font-display text-3xl text-foreground">{savedCount}</p>
+          <p className="text-sm text-muted">{t("profile.saved")}</p>
+        </button>
+      </div>
+
+      {wall === "saved" && savedEvents.length > 0 && (
+        <FanPosterGrid
+          title={t("profile.savedShowsTitle")}
+          subtitle={t("profile.savedShowsSubtitle")}
+          events={savedEvents}
+        />
+      )}
+      {wall === "attended" && attendedEvents.length > 0 && (
+        <FanPosterGrid
+          title={t("profile.pastShowsTitle")}
+          subtitle={t("profile.pastShowsSubtitle")}
+          events={attendedEvents}
+        />
+      )}
+    </>
   );
 }
 
@@ -497,14 +534,9 @@ export default function ProfileClient({
   // Kept separate from activeShow so the modal knows which one it is looking at:
   // the artist's own show is managed, a show they are only tagged on is not.
   const [activeTaggedShow, setActiveTaggedShow] = useState<EventItem | null>(null);
-  // #180: the two fan stats (Attended / Saved) act as a toggle - tapping one
-  // shows that poster grid and hides the other. Default to upcoming saved shows
-  // (#199) - a fan opening their profile cares more about what's coming than the
-  // back catalogue - and fall back to the attended "memories" wall (#116) only
-  // when there's nothing upcoming.
-  const [gridView, setGridView] = useState<"attended" | "saved">(
-    savedEvents.length > 0 ? "saved" : "attended"
-  );
+  // #180/#199/#201: the Attended/Saved toggle and its two walls live in
+  // AttendedSavedWalls, which keeps the active wall in ?wall so the back button
+  // restores it. Default (upcoming "Saved" first) is decided there.
   // #102: the settings sheet lives in ?settings=1 so the back button closes it
   // instead of leaving the profile. The Stripe payout round-trip (below) and the
   // gear button both open it through this.
@@ -652,53 +684,16 @@ export default function ProfileClient({
 
       {user.role === "fan" && !isPro ? (
         <>
-          {/* The two stats double as a toggle (#180): tap Attended to see the
-              memories wall (#116), tap Saved to see upcoming saved shows. The
-              active one is ringed; a stat with nothing behind it isn't tappable
-              (no empty shelf). */}
-          <div className="mb-8 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              disabled={attendedEvents.length === 0}
-              onClick={() => setGridView("attended")}
-              className={`rounded-2xl bg-surface p-4 text-center transition enabled:hover:bg-surface/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                gridView === "attended" && attendedEvents.length > 0
-                  ? "ring-2 ring-primary"
-                  : ""
-              }`}
-            >
-              <p className="font-display text-3xl text-foreground">{attendedCount}</p>
-              <p className="text-sm text-muted">{t("profile.attended")}</p>
-            </button>
-            <button
-              type="button"
-              disabled={savedEvents.length === 0}
-              onClick={() => setGridView("saved")}
-              className={`rounded-2xl bg-surface p-4 text-center transition enabled:hover:bg-surface/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                gridView === "saved" && savedEvents.length > 0 ? "ring-2 ring-primary" : ""
-              }`}
-            >
-              <p className="font-display text-3xl text-foreground">{savedCount}</p>
-              <p className="text-sm text-muted">{t("profile.saved")}</p>
-            </button>
-          </div>
-
-          {gridView === "saved" && savedEvents.length > 0 && (
-            <FanPosterGrid
-              title={t("profile.savedShowsTitle")}
-              subtitle={t("profile.savedShowsSubtitle")}
-              events={savedEvents}
-              dl={dl}
+          {/* Active wall lives in the URL so the back button restores it - see
+              AttendedSavedWalls. Suspense because it reads useSearchParams. */}
+          <Suspense>
+            <AttendedSavedWalls
+              attendedCount={attendedCount}
+              savedCount={savedCount}
+              attendedEvents={attendedEvents}
+              savedEvents={savedEvents}
             />
-          )}
-          {gridView === "attended" && attendedEvents.length > 0 && (
-            <FanPosterGrid
-              title={t("profile.pastShowsTitle")}
-              subtitle={t("profile.pastShowsSubtitle")}
-              events={attendedEvents}
-              dl={dl}
-            />
-          )}
+          </Suspense>
 
           {/* #116 manual attendance: past shows the fan saved but wasn't scanned
               in to (e.g. tickets bought outside the app). "Yes, I went" adds one
