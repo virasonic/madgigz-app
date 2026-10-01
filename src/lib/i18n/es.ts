@@ -244,6 +244,15 @@ export const es: Messages = {
     refundedBody:
       "El pago se ha devuelto a tu método de pago original; puede tardar unos días en aparecer en tu extracto. Esta entrada ya no es válida para entrar.",
     refundPolicyNote: "Venta final: solo se reembolsa automáticamente si se cancela el evento.",
+    refundRequest: "Solicitar un reembolso",
+    refundReasonLabel: "¿Por qué solicitas el reembolso? (opcional)",
+    refundReasonPlaceholder: "Añade una nota para el equipo…",
+    refundSend: "Enviar solicitud",
+    refundBack: "Atrás",
+    refundWorking: "Procesando…",
+    refundRequestedTitle: "Reembolso solicitado",
+    refundRequestedBody: "Hemos recibido tu solicitud: el equipo la revisará y te responderá.",
+    refundCancelRequest: "Cancelar solicitud",
     transfer: "Transferir entrada",
     transferPendingTitle: "Transferencia pendiente",
     transferPendingBody:

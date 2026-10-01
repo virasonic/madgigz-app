@@ -537,6 +537,18 @@ export async function fetchPendingTransfers(
   return map;
 }
 
+// Ticket ids the current fan has an open refund request on (#146), so the
+// owned-ticket sheet can show a "requested" state. RLS scopes this to the
+// caller's own rows; returns [] on a pre-addendum_056 DB (42P01).
+export async function fetchPendingRefundRequests(supabase: SupabaseClient): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("refund_requests")
+    .select("ticket_id")
+    .eq("status", "pending");
+  if (error) return [];
+  return ((data ?? []) as { ticket_id: string }[]).map((r) => r.ticket_id);
+}
+
 export async function validateDiscountCode(
   supabase: SupabaseClient,
   code: string,

@@ -266,6 +266,15 @@ export const en = {
     refundedBody:
       "The payment has been returned to your original payment method - it can take a few days to appear on your statement. This ticket is no longer valid for entry.",
     refundPolicyNote: "Final sale — refunded automatically only if the show is cancelled.",
+    refundRequest: "Request a refund",
+    refundReasonLabel: "Why are you requesting a refund? (optional)",
+    refundReasonPlaceholder: "Add a note for the team…",
+    refundSend: "Send request",
+    refundBack: "Back",
+    refundWorking: "Working…",
+    refundRequestedTitle: "Refund requested",
+    refundRequestedBody: "We've received your request — the team will review it and get back to you.",
+    refundCancelRequest: "Cancel request",
     transfer: "Transfer ticket",
     transferPendingTitle: "Transfer pending",
     transferPendingBody:

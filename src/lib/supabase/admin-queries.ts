@@ -656,6 +656,84 @@ export async function fetchContentReports(admin: SupabaseClient): Promise<AdminR
     }));
 }
 
+// Fan-initiated refund requests (#146) for the /admin/refunds queue. Joins the
+// ticket, its event and the buyer so the admin can judge and act without hunting.
+export interface AdminRefundRow {
+  id: string;
+  reason: string | null;
+  status: string;
+  adminNote: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  buyerId: string | null;
+  buyerUsername: string | null;
+  ticketId: string;
+  pricePaidCents: number;
+  quantity: number;
+  ticketRefunded: boolean;
+  ticketCheckedIn: boolean;
+  eventId: string | null;
+  eventTitle: string | null;
+  eventDate: string | null;
+}
+
+export async function fetchRefundRequests(admin: SupabaseClient): Promise<AdminRefundRow[]> {
+  const { data, error } = await admin
+    .from("refund_requests")
+    .select(
+      "id, reason, status, admin_note, created_at, resolved_at, user_id, buyer:profiles!refund_requests_user_id_fkey(username), tickets(id, price_paid, quantity, refunded, checked_in_at, event_id, events(title, event_date))"
+    )
+    .order("created_at", { ascending: false });
+
+  // 42P01 = addendum_056 not run yet. Empty queue beats a thrown admin panel.
+  if (error) {
+    if (error.code !== "42P01") console.error("fetchRefundRequests failed:", error);
+    return [];
+  }
+
+  type Row = {
+    id: string;
+    reason: string | null;
+    status: string;
+    admin_note: string | null;
+    created_at: string;
+    resolved_at: string | null;
+    user_id: string | null;
+    buyer: { username: string } | null;
+    tickets: {
+      id: string;
+      price_paid: number | string;
+      quantity: number;
+      refunded: boolean;
+      checked_in_at: string | null;
+      event_id: string | null;
+      events: { title: string; event_date: string } | null;
+    } | null;
+  };
+
+  return ((data ?? []) as unknown as Row[])
+    // A request whose ticket was hard-deleted has nothing to act on.
+    .filter((r) => r.tickets)
+    .map((r) => ({
+      id: r.id,
+      reason: r.reason,
+      status: r.status,
+      adminNote: r.admin_note,
+      createdAt: r.created_at,
+      resolvedAt: r.resolved_at,
+      buyerId: r.user_id,
+      buyerUsername: r.buyer?.username ?? null,
+      ticketId: r.tickets!.id,
+      pricePaidCents: Math.round(Number(r.tickets!.price_paid) * 100),
+      quantity: r.tickets!.quantity,
+      ticketRefunded: r.tickets!.refunded,
+      ticketCheckedIn: Boolean(r.tickets!.checked_in_at),
+      eventId: r.tickets!.event_id,
+      eventTitle: r.tickets!.events?.title ?? null,
+      eventDate: r.tickets!.events?.event_date ?? null,
+    }));
+}
+
 export async function fetchOpenReportCount(admin: SupabaseClient): Promise<number> {
   const { count, error } = await admin
     .from("content_reports")

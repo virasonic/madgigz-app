@@ -49,6 +49,8 @@ interface SavedClientProps {
   initialTickets: Ticket[];
   /** ticketId → claim token for tickets with a live transfer link (#145). */
   initialPendingTransfers: Record<string, string>;
+  /** ticketIds with an open refund request (#146). */
+  initialPendingRefunds: string[];
   /** tierId → tier name, for tickets bought at a specific type (#151). */
   tierNames: Record<string, string>;
   appleWalletEnabled: boolean;
@@ -60,6 +62,7 @@ export default function SavedClient({
   initialSavedIds,
   initialTickets,
   initialPendingTransfers,
+  initialPendingRefunds,
   tierNames,
   appleWalletEnabled,
 }: SavedClientProps) {
@@ -78,6 +81,9 @@ export default function SavedClient({
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
   const [pendingTransfers, setPendingTransfers] =
     useState<Record<string, string>>(initialPendingTransfers);
+  const [pendingRefunds, setPendingRefunds] = useState<Set<string>>(
+    () => new Set(initialPendingRefunds)
+  );
   const [removingTicketId, setRemovingTicketId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | undefined>();
 
@@ -178,6 +184,17 @@ export default function SavedClient({
       const next = { ...current };
       if (token) next[ticketId] = token;
       else delete next[ticketId];
+      return next;
+    });
+  }
+
+  // Keep the pending-refund set in step with requests sent/cancelled from the
+  // ticket sheet (#146), so the sheet reflects it without a reload.
+  function handleRefundChange(ticketId: string, pending: boolean) {
+    setPendingRefunds((current) => {
+      const next = new Set(current);
+      if (pending) next.add(ticketId);
+      else next.delete(ticketId);
       return next;
     });
   }
@@ -425,8 +442,10 @@ export default function SavedClient({
           event={activeTicket.event}
           walletEnabled={appleWalletEnabled}
           pendingTransferToken={pendingTransfers[activeTicket.ticket.id] ?? null}
+          pendingRefund={pendingRefunds.has(activeTicket.ticket.id)}
           tierName={activeTicket.ticket.tierId ? tierNames[activeTicket.ticket.tierId] : undefined}
           onTransferChange={handleTransferChange}
+          onRefundChange={handleRefundChange}
           onClose={() => setActiveTicket(null)}
         />
       )}

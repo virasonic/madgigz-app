@@ -8,6 +8,7 @@ import { openExternal } from "@/lib/native";
 import { shareUrl } from "@/lib/share";
 import { createWalletPassUrl } from "@/app/(app)/saved/wallet-actions";
 import { createTransfer, cancelTransfer } from "@/app/(app)/saved/transfer-actions";
+import { requestRefund, cancelRefundRequest } from "@/app/(app)/saved/refund-request-actions";
 import { emailTicket } from "@/app/(app)/saved/ticket-email-actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
@@ -24,6 +25,10 @@ interface TicketQRModalProps {
   tierName?: string;
   /** Keep the parent's pending-transfer map in sync when a link is created/cancelled. */
   onTransferChange?: (ticketId: string, token: string | null) => void;
+  /** Whether this ticket already has an open refund request (#146). */
+  pendingRefund?: boolean;
+  /** Keep the parent's pending-refund set in sync when a request is sent/cancelled. */
+  onRefundChange?: (ticketId: string, pending: boolean) => void;
   onClose: () => void;
 }
 
@@ -45,8 +50,10 @@ export default function TicketQRModal({
   event,
   walletEnabled,
   pendingTransferToken,
+  pendingRefund,
   tierName,
   onTransferChange,
+  onRefundChange,
   onClose,
 }: TicketQRModalProps) {
   const { t, locale } = useT();
@@ -59,11 +66,48 @@ export default function TicketQRModal({
   const [copied, setCopied] = useState(false);
   const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [emailedTo, setEmailedTo] = useState<string | null>(null);
+  // Refund request (#146): idle → the form (optional reason) → pending once sent.
+  const [refundStage, setRefundStage] = useState<"idle" | "form" | "pending">(
+    pendingRefund ? "pending" : "idle"
+  );
+  const [refundReason, setRefundReason] = useState("");
+  const [refundBusy, setRefundBusy] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
   const { handleProps, sheetStyle } = useDragToDismiss(onClose);
 
   // A ticket can be handed on only while it's a live, un-used ticket to a show
   // that hasn't happened — same rule the server enforces (#145).
   const canTransfer = !ticket.refunded && !ticket.checkedInAt && event.date >= TODAY;
+  // A refund can be requested under the same conditions (#146) — refunded, used,
+  // or past tickets have nothing to refund.
+  const canRequestRefund = canTransfer;
+
+  async function handleRequestRefund() {
+    setRefundBusy(true);
+    setRefundError(null);
+    const result = await requestRefund(ticket.id, refundReason);
+    setRefundBusy(false);
+    if (result.error) {
+      setRefundError(result.error);
+      return;
+    }
+    setRefundStage("pending");
+    setRefundReason("");
+    onRefundChange?.(ticket.id, true);
+  }
+
+  async function handleCancelRefund() {
+    setRefundBusy(true);
+    setRefundError(null);
+    const result = await cancelRefundRequest(ticket.id);
+    setRefundBusy(false);
+    if (result.error) {
+      setRefundError(result.error);
+      return;
+    }
+    setRefundStage("idle");
+    onRefundChange?.(ticket.id, false);
+  }
   const claimUrl =
     transferToken && typeof window !== "undefined"
       ? `${window.location.origin}/claim/${transferToken}`
@@ -320,12 +364,73 @@ export default function TicketQRModal({
               </div>
             )}
 
-            {/* Restates the policy the buyer already saw at checkout (#146), now
-                on the ticket itself. No new policy — just makes it visible after
-                the purchase, not only before it. */}
-            <p className="mt-5 text-center text-[11px] text-muted">
-              {t("ticket.refundPolicyNote")}
-            </p>
+            {/* Refund policy + request (#146). The note restates the checkout
+                policy; below it, while the ticket is still live, the fan can ASK
+                for a refund — it routes to the admin queue, it doesn't refund on
+                its own. */}
+            <div className="mt-5">
+              <p className="text-center text-[11px] text-muted">{t("ticket.refundPolicyNote")}</p>
+
+              {canRequestRefund &&
+                (refundStage === "pending" ? (
+                  <div className="mt-3 rounded-2xl bg-background/40 p-4 text-center">
+                    <p className="font-heading text-sm text-foreground">
+                      {t("ticket.refundRequestedTitle")}
+                    </p>
+                    <p className="mt-1 text-xs text-muted">{t("ticket.refundRequestedBody")}</p>
+                    <button
+                      type="button"
+                      onClick={handleCancelRefund}
+                      disabled={refundBusy}
+                      className="mt-3 text-xs font-heading text-muted underline underline-offset-4 disabled:opacity-50"
+                    >
+                      {refundBusy ? t("ticket.refundWorking") : t("ticket.refundCancelRequest")}
+                    </button>
+                  </div>
+                ) : refundStage === "form" ? (
+                  <div className="mt-3 rounded-2xl bg-background/40 p-4">
+                    <label className="text-xs text-muted">{t("ticket.refundReasonLabel")}</label>
+                    <textarea
+                      value={refundReason}
+                      onChange={(e) => setRefundReason(e.target.value)}
+                      rows={3}
+                      maxLength={500}
+                      placeholder={t("ticket.refundReasonPlaceholder")}
+                      className="mt-2 w-full resize-none rounded-lg bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted/60"
+                    />
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleRequestRefund}
+                        disabled={refundBusy}
+                        className="flex-1 rounded-full bg-primary py-2 text-sm font-heading text-foreground disabled:opacity-50"
+                      >
+                        {refundBusy ? t("ticket.refundWorking") : t("ticket.refundSend")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRefundStage("idle");
+                          setRefundError(null);
+                        }}
+                        disabled={refundBusy}
+                        className="flex-1 rounded-full border border-muted/30 py-2 text-sm font-heading text-foreground disabled:opacity-50"
+                      >
+                        {t("ticket.refundBack")}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setRefundStage("form")}
+                    className="mx-auto mt-3 block text-xs font-heading text-accent underline underline-offset-4"
+                  >
+                    {t("ticket.refundRequest")}
+                  </button>
+                ))}
+              {refundError && <p className="mt-2 text-center text-xs text-danger">{refundError}</p>}
+            </div>
           </>
         )}
       </div>

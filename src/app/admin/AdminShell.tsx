@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: "/admin/events", label: "Events" },
   { href: "/admin/venues", label: "Venues" },
   { href: "/admin/billing", label: "Billing" },
+  { href: "/admin/refunds", label: "Refunds" },
   { href: "/admin/payouts", label: "Payouts" },
   { href: "/admin/discounts", label: "Discounts" },
   { href: "/admin/feedback", label: "Feedback" },

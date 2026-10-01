@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   fetchCurrentUser,
   fetchEvents,
+  fetchPendingRefundRequests,
   fetchPendingTransfers,
   fetchSavedEventIds,
   fetchTickets,
@@ -15,11 +16,12 @@ export default async function SavedPage() {
   const user = await fetchCurrentUser(supabase);
   if (!user) redirect("/");
 
-  const [events, savedIds, tickets, pendingTransfers] = await Promise.all([
+  const [events, savedIds, tickets, pendingTransfers, pendingRefunds] = await Promise.all([
     fetchEvents(supabase),
     fetchSavedEventIds(supabase, user.id),
     fetchTickets(supabase, user.id),
     fetchPendingTransfers(supabase),
+    fetchPendingRefundRequests(supabase),
   ]);
 
   // Tier names for tickets bought at a specific type (#151), so a fan holding
@@ -38,6 +40,7 @@ export default async function SavedPage() {
       initialSavedIds={savedIds}
       initialTickets={tickets}
       initialPendingTransfers={pendingTransfers}
+      initialPendingRefunds={pendingRefunds}
       tierNames={tierNames}
       appleWalletEnabled={isAppleWalletConfigured()}
     />
