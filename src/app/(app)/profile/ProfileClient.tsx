@@ -170,6 +170,55 @@ function FanPosterGrid({
   );
 }
 
+// The Saved wall is deliberately NOT the collage (Vir 1 Oct): it's upcoming
+// shows the fan wants to navigate to, so it stays a normal, scannable 2-col grid
+// of EventCards with the title + date on each (the same tile as Explore), soonest
+// first. The visual poster collage is only for the Attended "memories" wall.
+function SavedShowsGrid({
+  title,
+  subtitle,
+  events,
+}: {
+  title: string;
+  subtitle: string;
+  events: EventItem[];
+}) {
+  const { locale } = useT();
+  const dl = dateLocale(locale);
+  const ordered = [...events].sort((a, b) => a.date.localeCompare(b.date));
+  return (
+    <div className="mb-8">
+      <h2 className="font-heading text-sm uppercase tracking-wide text-muted">{title}</h2>
+      <p className="mt-1 text-xs text-muted">{subtitle}</p>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        {ordered.map((event) => (
+          // Same tile as Explore (poster + title + date), but a Link straight to
+          // the event, and guarded against an empty image so a posterless saved
+          // show can't crash next/image.
+          <Link
+            key={event.id}
+            href={`/e/${event.id}`}
+            className="relative block aspect-[3/4] w-full overflow-hidden rounded-2xl bg-surface"
+          >
+            {event.image ? (
+              <Image src={event.image} alt={event.title} fill sizes="200px" className="object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center p-3 text-center">
+                <span className="line-clamp-3 font-heading text-sm text-muted">{event.title}</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-3">
+              <p className="line-clamp-1 font-display text-sm text-foreground">{event.title}</p>
+              <p className="text-xs text-muted">{formatDate(event.date, dl)}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // The Attended / Saved walls and the two stat tiles that toggle between them.
 // Isolated so it can drive the active wall from the URL (?wall=attended|saved)
 // via useSearchParams - which needs a Suspense boundary. Keeping the wall in the
@@ -238,7 +287,7 @@ function AttendedSavedWalls({
       </div>
 
       {wall === "saved" && savedEvents.length > 0 && (
-        <FanPosterGrid
+        <SavedShowsGrid
           title={t("profile.savedShowsTitle")}
           subtitle={t("profile.savedShowsSubtitle")}
           events={savedEvents}
