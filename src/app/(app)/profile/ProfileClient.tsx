@@ -62,35 +62,47 @@ function FanPosterGrid({
     <div className="mb-8">
       <h2 className="font-heading text-sm uppercase tracking-wide text-muted">{title}</h2>
       <p className="mt-1 text-xs text-muted">{subtitle}</p>
-      <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {events.map((event) => (
-          <Link
-            key={event.id}
-            href={`/e/${event.id}`}
-            className="group relative aspect-[3/4] overflow-hidden rounded-xl bg-surface"
-          >
-            {event.image ? (
-              <Image
-                src={event.image}
-                alt={event.title}
-                fill
-                sizes="(min-width: 640px) 160px, 33vw"
-                className="object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center p-2 text-center">
-                <span className="line-clamp-3 font-heading text-xs text-muted">{event.title}</span>
+      {/* #201: a collage of "stickers" rather than a tidy grid - masonry columns
+          (robust, never leaves grid gaps), mixed poster shapes for size variety,
+          a slight per-tile tilt and a white border + shadow so each reads like a
+          stuck-on photo. Deterministic by index so it's stable across renders.
+          Tilt straightens and lifts on hover; tap target and the /e/ link are
+          unchanged. */}
+      <div className="mt-3 gap-2.5 [column-fill:balance] columns-2 sm:columns-3">
+        {events.map((event, i) => {
+          const shape = ["aspect-[3/4]", "aspect-square", "aspect-[4/5]", "aspect-[3/4]", "aspect-[3/5]"][
+            i % 5
+          ];
+          const tilt = ["-rotate-2", "rotate-1", "rotate-2", "-rotate-1", "rotate-[0.5deg]"][i % 5];
+          return (
+            <Link
+              key={event.id}
+              href={`/e/${event.id}`}
+              className={`group relative mb-2.5 block break-inside-avoid overflow-hidden rounded-lg border-2 border-white/85 bg-surface shadow-lg shadow-black/40 transition-transform duration-150 hover:rotate-0 hover:scale-[1.03] ${shape} ${tilt}`}
+            >
+              {event.image ? (
+                <Image
+                  src={event.image}
+                  alt={event.title}
+                  fill
+                  sizes="(min-width: 640px) 150px, 45vw"
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center p-2 text-center">
+                  <span className="line-clamp-3 font-heading text-xs text-muted">{event.title}</span>
+                </div>
+              )}
+              {/* A quiet gradient so the title stays legible on any poster. */}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 pt-6">
+                <p className="truncate font-heading text-[11px] leading-tight text-white">
+                  {event.title}
+                </p>
+                <p className="truncate text-[10px] text-white/70">{formatDate(event.date, dl)}</p>
               </div>
-            )}
-            {/* A quiet gradient so the title stays legible on any poster. */}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 pt-6">
-              <p className="truncate font-heading text-[11px] leading-tight text-white">
-                {event.title}
-              </p>
-              <p className="truncate text-[10px] text-white/70">{formatDate(event.date, dl)}</p>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
