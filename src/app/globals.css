@@ -6,8 +6,12 @@
   --surface-raised: #211a17;
   --primary: #d76616;
   --primary-dark: #73241d;
-  --accent: #54c3bd;
-  --accent-dark: #0d5c6d;
+  /* #202: dropped the teal for a cool silver/gunmetal grey matching the logo M.
+     --accent is the lighter silver (links, tints, secondary-button hover);
+     --accent-dark is the gunmetal secondary-button fill, kept dark enough for
+     cream text. Exact shade pending Vir's eyeball on staging. */
+  --accent: #9aa0a6;
+  --accent-dark: #42464b;
   --foreground: #f3f1d1;
   --muted: #a89f8c;
   --danger: #e0554a;
