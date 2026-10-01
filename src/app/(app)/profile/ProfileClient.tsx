@@ -44,6 +44,42 @@ function formatDate(iso: string, dl: string) {
   });
 }
 
+// #201: a dynamic poster-wall collage for the attended/saved walls. Tiles are
+// packed into rows whose column spans sum to 6 (the grid width), each row given
+// one height - so the wall is ALWAYS gap-free at any count, while the mix of
+// widths (2/3/4/6) and per-row heights gives a real big/small collage like the
+// vintage-poster mural Vir referenced. Fewer gigs -> the first rows are large
+// and the wall still looks full; as gigs accumulate it fills into a denser
+// mosaic. Newest gig leads the big top row. Returns [colSpan, rowSpan] per tile.
+function packMosaic(n: number): [number, number][] {
+  const cycle: [number[], number][] = [
+    [[4, 2], 4],
+    [[2, 2, 2], 3],
+    [[3, 3], 4],
+    [[2, 2, 2], 3],
+    [[2, 4], 4],
+    [[2, 2, 2], 3],
+  ];
+  const spans: [number, number][] = [];
+  let i = 0;
+  let c = 0;
+  while (i < n) {
+    const rem = n - i;
+    let tpl: [number[], number];
+    if (rem === 1) tpl = [[6], 5];
+    else if (rem === 2) tpl = c % 2 ? [[3, 3], 4] : [[4, 2], 4];
+    else if (rem === 3) tpl = [[2, 2, 2], 3];
+    else tpl = cycle[c % cycle.length];
+    const [widths, h] = tpl;
+    for (const w of widths) {
+      spans.push([w, h]);
+      i++;
+    }
+    c++;
+  }
+  return spans;
+}
+
 // A poster grid of the fan's shows - the attended "memories" wall (#116) and the
 // upcoming-saved grid (#180) are the same thing with different data, toggled by
 // the two stat tiles, so they share one renderer.
@@ -58,33 +94,30 @@ function FanPosterGrid({
   events: EventItem[];
   dl: string;
 }) {
+  // Most recent gig first (newest leads the big top row), then packed into the
+  // gap-free mosaic above.
+  const ordered = [...events].sort((a, b) => b.date.localeCompare(a.date));
+  const spans = packMosaic(ordered.length);
   return (
     <div className="mb-8">
       <h2 className="font-heading text-sm uppercase tracking-wide text-muted">{title}</h2>
       <p className="mt-1 text-xs text-muted">{subtitle}</p>
-      {/* #201: a dense, tightly-tessellated poster wall (ref: vintage-poster
-          mural Vir shared) rather than a tidy grid - masonry columns pack
-          variable-height posters with no gaps, mixed shapes give real size
-          variety, and tight spacing + no frames makes it read as one collaged
-          wall. Deterministic by index so it's stable across renders; a poster
-          lifts slightly on hover. Tap target and the /e/ link are unchanged. */}
-      <div className="mt-3 gap-1 [column-fill:balance] columns-3">
-        {events.map((event, i) => {
-          const shape = ["aspect-[3/4]", "aspect-[2/3]", "aspect-[3/4]", "aspect-[4/5]", "aspect-[3/5]"][
-            i % 5
-          ];
+      <div className="mt-3 grid grid-cols-6 gap-1 [grid-auto-rows:3rem]">
+        {ordered.map((event, i) => {
+          const [c, r] = spans[i];
           return (
             <Link
               key={event.id}
               href={`/e/${event.id}`}
-              className={`group relative mb-1 block break-inside-avoid overflow-hidden rounded-sm bg-surface transition-transform duration-150 hover:z-10 hover:scale-[1.04] ${shape}`}
+              style={{ gridColumn: `span ${c}`, gridRow: `span ${r}` }}
+              className="group relative block overflow-hidden rounded-sm bg-surface transition-transform duration-150 hover:z-10 hover:scale-[1.03]"
             >
               {event.image ? (
                 <Image
                   src={event.image}
                   alt={event.title}
                   fill
-                  sizes="(min-width: 640px) 150px, 33vw"
+                  sizes="(min-width: 480px) 220px, 50vw"
                   className="object-cover"
                 />
               ) : (
