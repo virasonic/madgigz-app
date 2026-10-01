@@ -301,6 +301,8 @@ export const es: Messages = {
     copyLink: "Copia este enlace:",
     newHere: "¿Nuevo por aquí?",
     createAccount: "Crea una cuenta de MadGigz",
+    addContent: "Añadir contenido",
+    addContentSoon: "Muy pronto — podrás compartir tus fotos y vídeos de esa noche.",
   },
   guest: {
     title: "Crea una cuenta gratis",

@@ -17,10 +17,12 @@ export default function PublicEventActions({
   event,
   signedIn,
   soldOut,
+  isPast,
 }: {
   event: EventItem;
   signedIn: boolean;
   soldOut: boolean;
+  isPast: boolean;
 }) {
   const { t } = useT();
   const router = useRouter();
@@ -31,6 +33,7 @@ export default function PublicEventActions({
   const modalOpen = buyModal.isOpen;
   const [shareLabel, setShareLabel] = useState<string | null>(null);
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
+  const [contentSoon, setContentSoon] = useState(false);
 
   async function handleShare() {
     const outcome = await shareEvent(event);
@@ -51,6 +54,16 @@ export default function PublicEventActions({
 
   function ticketButton() {
     if (event.cancelled) return null;
+
+    // A past show can't be bought - the gig already happened, so "Get tickets"
+    // was a dead end (worse for an external show, which bounced to a ticket page
+    // for a date that's gone). Instead the fan's entry point here is adding their
+    // own photos/clips from the night - the forthcoming fan-content feature
+    // (#195). Until that ships this is a clear "coming soon" placeholder so the
+    // expectation is set rather than the button simply vanishing.
+    if (isPast) {
+      return <Button onClick={() => setContentSoon(true)}>{t("publicEvent.addContent")}</Button>;
+    }
 
     // Externally ticketed shows need no MadGigz account at all - sending someone
     // to sign up first, only to bounce them straight out to Entradium, would be
@@ -101,6 +114,12 @@ export default function PublicEventActions({
         {shareLabel ?? t("publicEvent.share")}
       </Button>
 
+      {contentSoon && (
+        <div className="rounded-xl bg-surface px-4 py-3">
+          <p className="text-xs text-muted">{t("publicEvent.addContentSoon")}</p>
+        </div>
+      )}
+
       {fallbackUrl && (
         <div className="rounded-xl bg-surface px-4 py-3">
           <p className="text-xs text-muted">{t("publicEvent.copyLink")}</p>
@@ -113,7 +132,7 @@ export default function PublicEventActions({
         </div>
       )}
 
-      {!signedIn && !event.cancelled && (
+      {!signedIn && !event.cancelled && !isPast && (
         <p className="text-center text-xs text-muted">
           {t("publicEvent.newHere")}{" "}
           <Link

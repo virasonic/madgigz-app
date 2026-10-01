@@ -246,7 +246,9 @@
       "linkCopied": "Link copied",
       "copyLink": "Copy this link:",
       "newHere": "New here?",
-      "createAccount": "Create a MadGigz account"
+      "createAccount": "Create a MadGigz account",
+      "addContent": "Add content",
+      "addContentSoon": "Coming soon — you'll be able to share your photos and clips from this night."
     },
     "guest": {
       "title": "Create a free account",
@@ -1255,7 +1257,9 @@
       "linkCopied": "Enlace copiado",
       "copyLink": "Copia este enlace:",
       "newHere": "¿Nuevo por aquí?",
-      "createAccount": "Crea una cuenta de MadGigz"
+      "createAccount": "Crea una cuenta de MadGigz",
+      "addContent": "Añadir contenido",
+      "addContentSoon": "Muy pronto — podrás compartir tus fotos y vídeos de esa noche."
     },
     "guest": {
       "title": "Crea una cuenta gratis",

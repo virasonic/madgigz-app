@@ -193,7 +193,7 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
           {event.price === 0 ? t("eventPage.freeEntry") : `€${event.price.toFixed(2)}`}
         </p>
 
-        <PublicEventActions event={event} signedIn={signedIn} soldOut={soldOut} />
+        <PublicEventActions event={event} signedIn={signedIn} soldOut={soldOut} isPast={isPast} />
 
         {signedIn && isPast && (
           <AttendedToggle eventId={event.id} initialAttended={attendedThis} />

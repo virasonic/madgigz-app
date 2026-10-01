@@ -323,6 +323,8 @@ export const en = {
     copyLink: "Copy this link:",
     newHere: "New here?",
     createAccount: "Create a MadGigz account",
+    addContent: "Add content",
+    addContentSoon: "Coming soon — you'll be able to share your photos and clips from this night.",
   },
   guest: {
     title: "Create a free account",

@@ -62,30 +62,29 @@ function FanPosterGrid({
     <div className="mb-8">
       <h2 className="font-heading text-sm uppercase tracking-wide text-muted">{title}</h2>
       <p className="mt-1 text-xs text-muted">{subtitle}</p>
-      {/* #201: a collage of "stickers" rather than a tidy grid - masonry columns
-          (robust, never leaves grid gaps), mixed poster shapes for size variety,
-          a slight per-tile tilt and a white border + shadow so each reads like a
-          stuck-on photo. Deterministic by index so it's stable across renders.
-          Tilt straightens and lifts on hover; tap target and the /e/ link are
-          unchanged. */}
-      <div className="mt-3 gap-2.5 [column-fill:balance] columns-2 sm:columns-3">
+      {/* #201: a dense, tightly-tessellated poster wall (ref: vintage-poster
+          mural Vir shared) rather than a tidy grid - masonry columns pack
+          variable-height posters with no gaps, mixed shapes give real size
+          variety, and tight spacing + no frames makes it read as one collaged
+          wall. Deterministic by index so it's stable across renders; a poster
+          lifts slightly on hover. Tap target and the /e/ link are unchanged. */}
+      <div className="mt-3 gap-1 [column-fill:balance] columns-3">
         {events.map((event, i) => {
-          const shape = ["aspect-[3/4]", "aspect-square", "aspect-[4/5]", "aspect-[3/4]", "aspect-[3/5]"][
+          const shape = ["aspect-[3/4]", "aspect-[2/3]", "aspect-[3/4]", "aspect-[4/5]", "aspect-[3/5]"][
             i % 5
           ];
-          const tilt = ["-rotate-2", "rotate-1", "rotate-2", "-rotate-1", "rotate-[0.5deg]"][i % 5];
           return (
             <Link
               key={event.id}
               href={`/e/${event.id}`}
-              className={`group relative mb-2.5 block break-inside-avoid overflow-hidden rounded-lg border-2 border-white/85 bg-surface shadow-lg shadow-black/40 transition-transform duration-150 hover:rotate-0 hover:scale-[1.03] ${shape} ${tilt}`}
+              className={`group relative mb-1 block break-inside-avoid overflow-hidden rounded-sm bg-surface transition-transform duration-150 hover:z-10 hover:scale-[1.04] ${shape}`}
             >
               {event.image ? (
                 <Image
                   src={event.image}
                   alt={event.title}
                   fill
-                  sizes="(min-width: 640px) 150px, 45vw"
+                  sizes="(min-width: 640px) 150px, 33vw"
                   className="object-cover"
                 />
               ) : (
