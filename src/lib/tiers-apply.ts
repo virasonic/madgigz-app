@@ -21,22 +21,37 @@ export interface TierInput {
   maxPerOrder?: number;
 }
 
+/**
+ * The shape rules a ticket type must satisfy, with no database in the way.
+ * Split out of applyEventTiers so the CREATE form can run exactly the same
+ * checks *before* it creates the show: a tier rejected after the insert leaves
+ * a single-price show behind and sends the organiser to a list page, which is
+ * how "the panel won't let me add ticket types" actually looked from outside.
+ * One implementation, so the form can never disagree with the server about
+ * what a valid tier is. Returns the message, or null when the list is fine.
+ */
+export function validateTiers(tiers: TierInput[]): string | null {
+  for (const t of tiers) {
+    if (!t.name.trim()) return "Every ticket type needs a name.";
+    if (!Number.isFinite(t.price) || t.price < 0) return `"${t.name}" has an invalid price.`;
+    if (!Number.isInteger(t.capacity) || t.capacity < 1) {
+      return `"${t.name}" needs an availability of at least 1.`;
+    }
+    const mpo = t.maxPerOrder ?? 6;
+    if (!Number.isInteger(mpo) || mpo < 1) {
+      return `"${t.name}" needs a max-per-order of at least 1.`;
+    }
+  }
+  return null;
+}
+
 export async function applyEventTiers(
   admin: SupabaseClient,
   eventId: string,
   tiers: TierInput[]
 ): Promise<{ error: string | null }> {
-  for (const t of tiers) {
-    if (!t.name.trim()) return { error: "Every ticket type needs a name." };
-    if (!Number.isFinite(t.price) || t.price < 0) return { error: `"${t.name}" has an invalid price.` };
-    if (!Number.isInteger(t.capacity) || t.capacity < 1) {
-      return { error: `"${t.name}" needs an availability of at least 1.` };
-    }
-    const mpo = t.maxPerOrder ?? 6;
-    if (!Number.isInteger(mpo) || mpo < 1) {
-      return { error: `"${t.name}" needs a max-per-order of at least 1.` };
-    }
-  }
+  const invalid = validateTiers(tiers);
+  if (invalid) return { error: invalid };
 
   // Types may oversubscribe the room on purpose (#151): 100 General + 20 VIP
   // against a 100-cap room is fine because the reservation enforces the shared

@@ -13,6 +13,7 @@ import { setEventTiers } from "@/app/admin/events/tier-actions";
 import { setProEventTiers } from "@/app/pro/events/tier-actions";
 import { TierRowsFields } from "@/components/organiser/TierManager";
 import { tierRowsToInput, type TierRow } from "@/components/artist/TierRowsEditor";
+import { validateTiers } from "@/lib/tiers-apply";
 import { breakdownFor, FEE_PERCENT, formatEuros, MIN_FEE_CENTS, toCents, VAT_PERCENT } from "@/lib/pricing";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
@@ -175,6 +176,22 @@ export default function EventForm({
     e.preventDefault();
     setError(null);
 
+    // Check the ticket types BEFORE anything is created or uploaded.
+    // applyEventTiers rejects the same rows a moment later, but by then the show
+    // exists and the only honest move is to navigate away - so a blank
+    // "Available" produced a single-price show and no visible complaint, which
+    // from outside looks like the panel refusing ticket types altogether. Runs
+    // the same validateTiers the server does, so the two can't disagree, and
+    // runs before the poster upload so a rejected tier doesn't strand a file.
+    const tierInput = tierRowsToInput(tierRows);
+    if (!existing && tierInput.length > 0) {
+      const invalidTier = validateTiers(tierInput);
+      if (invalidTier) {
+        setError(invalidTier);
+        return;
+      }
+    }
+
     startTransition(async () => {
       let imageUrl = "";
       if (posterFile) {
@@ -230,7 +247,6 @@ export default function EventForm({
       // show was created, and sending the organiser back to a form that would
       // create a second one is worse than a single-price show they can fix.
       let tierWarning: string | null = null;
-      const tierInput = tierRowsToInput(tierRows);
       if (!existing && result.id && tierInput.length > 0) {
         const tierResult = await setTiers(result.id, tierInput);
         if (tierResult.error)
