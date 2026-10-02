@@ -146,6 +146,12 @@ export default function ManageShowModal({
   // Price tiers (#151) for this show, loaded for the editor. tiersVersion bumps
   // after a save so the editor remounts with the freshly-saved rows (which now
   // carry real ids — otherwise a second save would re-insert the new ones).
+  // Who gets paid for this night decides whether a commission exists at all.
+  // A MadGigz house show (#157) has no artist and no pro account - it is ours
+  // end to end - so the 5% + IVA never applies and every "you keep" figure on
+  // this sheet would be stating a deduction that doesn't happen. An artist's or
+  // a promoter's show absorbs the fee as normal.
+  const paysCommission = Boolean(show.artistId || show.proAccountId);
   const [tiers, setTiers] = useState<ArtistTier[]>([]);
   const [tiersVersion, setTiersVersion] = useState(0);
   // Pricing shows a read-only fee breakdown by default (one card per tier), and
@@ -520,13 +526,14 @@ export default function ManageShowModal({
                     key={tiersVersion}
                     eventId={show.id}
                     initialTiers={tiers}
+                    showNet={paysCommission}
                     onSaved={() => {
                       loadTiers();
                       setEditingPrice(false);
                     }}
                   />
                 ) : tiers.length === 0 ? (
-                  <FeeBreakdown priceEuros={show.price} />
+                  <FeeBreakdown priceEuros={show.price} paysCommission={paysCommission} />
                 ) : (
                   <div className="flex flex-col gap-3">
                     {tiers.map((tier) => (
@@ -541,7 +548,7 @@ export default function ManageShowModal({
                             })}
                           </span>
                         </div>
-                        <FeeBreakdown priceEuros={tier.price} />
+                        <FeeBreakdown priceEuros={tier.price} paysCommission={paysCommission} />
                       </div>
                     ))}
                   </div>

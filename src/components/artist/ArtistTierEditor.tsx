@@ -28,10 +28,13 @@ export default function ArtistTierEditor({
   eventId,
   initialTiers,
   onSaved,
+  showNet = true,
 }: {
   eventId: string;
   initialTiers: ArtistTier[];
   onSaved?: () => void;
+  /** False on a MadGigz house show - no organiser, so no commission to show. */
+  showNet?: boolean;
 }) {
   const { t } = useT();
   const [rows, setRows] = useState<TierRow[]>(initialTiers.map(tierToRow));
@@ -59,7 +62,7 @@ export default function ArtistTierEditor({
 
   return (
     <div className="flex flex-col gap-3">
-      <TierRowsEditor rows={rows} onChange={handleChange} />
+      <TierRowsEditor rows={rows} onChange={handleChange} showNet={showNet} />
       <div className="flex items-center gap-3">
         <button
           type="button"

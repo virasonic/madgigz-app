@@ -5,8 +5,39 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveVenue, syncEventArtists, syncEventGenres } from "@/lib/show-sync";
 import { applyEventTiers, type TierInput } from "@/lib/tiers-apply";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type { TierInput };
+
+/**
+ * May this signed-in user manage this show from the app's own manage sheet?
+ *
+ * Normally: only its owner. The exception is #157's house shows. A MadGigz gig
+ * is created with `artist_id = null` on purpose - giving it an owner would hand
+ * an artist edit and delete rights over a night they don't run - and it is then
+ * surfaced on the admin's own profile (fetchMadGigzShows) so an admin can run it
+ * from their phone. Without this, every write on that sheet answered "Not your
+ * show", because an ownerless show can never equal the caller's id.
+ *
+ * Deliberately narrow: an admin manages an OWNERLESS show, never an artist's
+ * own. That is the same line updateAdminEvent draws in the panel ("this show
+ * belongs to an artist - they edit it from their own profile"), and it keeps the
+ * exemption from becoming a general admin override of other people's shows.
+ */
+async function canManageEvent(
+  admin: SupabaseClient,
+  userId: string,
+  artistId: string | null
+): Promise<boolean> {
+  if (artistId === userId) return true;
+  if (artistId !== null) return false;
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+  return profile?.role === "admin";
+}
 
 // An artist manages the price tiers (#151) on their OWN show. Same shared write
 // as the admin panel; the only difference is the authorization check — the
@@ -29,7 +60,9 @@ export async function saveArtistTiers(
     .eq("id", eventId)
     .single();
   if (!event) return { error: "Show not found" };
-  if (event.artist_id !== user.id) return { error: "Not your show" };
+  if (!(await canManageEvent(admin, user.id, event.artist_id))) {
+    return { error: "Not your show" };
+  }
 
   const result = await applyEventTiers(admin, eventId, tiers);
   if (!result.error) revalidatePath("/profile");
@@ -80,7 +113,9 @@ export async function updateShow(
     .single();
 
   if (!event) return { error: "Show not found" };
-  if (event.artist_id !== user.id) return { error: "Not your show" };
+  if (!(await canManageEvent(admin, user.id, event.artist_id))) {
+    return { error: "Not your show" };
+  }
   if (event.cancelled) return { error: "This show has been cancelled and can't be edited" };
 
   const venue = await resolveVenue(admin, edits.venueName, edits.venueId);
@@ -108,7 +143,10 @@ export async function updateShow(
     return { error: "Couldn't save those changes. Please try again." };
   }
 
-  const tagError = await syncEventArtists(admin, eventId, user.id, edits.taggedArtistIds);
+  // The owner to leave out of the tag list is the SHOW's, not the caller's -
+  // on a house show there is none, and excluding the admin would drop them from
+  // a line-up they may legitimately be on.
+  const tagError = await syncEventArtists(admin, eventId, event.artist_id, edits.taggedArtistIds);
   if (tagError) return { error: tagError };
 
   const genreError = await syncEventGenres(admin, eventId, edits.genreIds);

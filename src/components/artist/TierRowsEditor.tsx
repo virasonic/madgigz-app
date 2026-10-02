@@ -78,9 +78,17 @@ const numberField =
 export default function TierRowsEditor({
   rows,
   onChange,
+  showNet = true,
 }: {
   rows: TierRow[];
   onChange: (rows: TierRow[]) => void;
+  /**
+   * What the organiser keeps per type, after commission. Off for a MadGigz house
+   * show, which pays none - see FeeBreakdown's paysCommission for why inventing
+   * that deduction is worse than showing nothing. Mirrors the back-office
+   * TierRowsFields prop of the same name.
+   */
+  showNet?: boolean;
 }) {
   const { t } = useT();
 
@@ -107,7 +115,7 @@ export default function TierRowsEditor({
       {rows.map((r, i) => {
         const priceNum = parseEuros(r.price);
         const bd =
-          r.price.trim() && !Number.isNaN(priceNum) && priceNum > 0
+          showNet && r.price.trim() && !Number.isNaN(priceNum) && priceNum > 0
             ? breakdownFor(toCents(priceNum))
             : null;
         const net = bd ? formatEuros(bd.artistReceivesCents) : null;
@@ -164,7 +172,8 @@ export default function TierRowsEditor({
             </label>
             <div className="flex items-center justify-between text-xs">
               <span className="flex items-center gap-1.5 text-muted">
-                {net ? t("tierEditor.youKeep", { amount: net }) : t("tierEditor.freeType")}
+                {showNet &&
+                  (net ? t("tierEditor.youKeep", { amount: net }) : t("tierEditor.freeType"))}
                 {bd && (
                   <InfoTip
                     text={t("tierEditor.breakdownTip", {
@@ -177,7 +186,10 @@ export default function TierRowsEditor({
                     })}
                   />
                 )}
-                {r.sold > 0 && ` · ${t("tierEditor.sold", { n: r.sold })}`}
+                {r.sold > 0 &&
+                  (showNet
+                    ? ` · ${t("tierEditor.sold", { n: r.sold })}`
+                    : t("tierEditor.sold", { n: r.sold }))}
               </span>
               <button
                 type="button"

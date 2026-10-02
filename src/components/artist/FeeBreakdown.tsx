@@ -14,13 +14,35 @@ import { useT } from "@/lib/i18n/LocaleProvider";
 // Shown to artists wherever they set or review a ticket price, so they always
 // know what they actually net before publishing. The artist absorbs the fee:
 // the price they type is exactly what fans pay.
-export default function FeeBreakdown({ priceEuros }: { priceEuros: number }) {
+export default function FeeBreakdown({
+  priceEuros,
+  paysCommission = true,
+}: {
+  priceEuros: number;
+  /**
+   * Off for a MadGigz house show, which has no organiser to pay and therefore no
+   * commission - MadGigz doesn't charge itself. Showing the usual "you keep
+   * €7.52" there doesn't just look odd, it states a deduction that never
+   * happens, on the one show where the whole €8 is ours. Falls back to the
+   * fans-pay line, which is the only true row of the table in that case.
+   */
+  paysCommission?: boolean;
+}) {
   const { t } = useT();
   if (!Number.isFinite(priceEuros) || priceEuros <= 0) {
     return (
       <p className="rounded-2xl bg-background p-3 text-xs text-muted">
         {t("pickers.freeEventNote")}
       </p>
+    );
+  }
+
+  if (!paysCommission) {
+    return (
+      <div className="flex items-center justify-between rounded-2xl bg-background p-3 text-xs">
+        <span className="text-muted">{t("pickers.fansPay")}</span>
+        <span className="font-heading text-foreground">{formatEuros(toCents(priceEuros))}</span>
+      </div>
     );
   }
 
