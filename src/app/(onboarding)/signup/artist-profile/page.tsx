@@ -22,7 +22,10 @@ export default async function ArtistProfilePage() {
     .eq("id", user.id)
     .single();
 
-  const isPendingArtist = profile?.role === "artist" && profile?.artist_status === "pending";
+  // #209: an applicant is a fan with a pending flag, so the role says nothing
+  // here. Keyed on the application alone, which also still matches the legacy
+  // role-artist rows from before the backfill.
+  const isPendingArtist = profile?.artist_status === "pending";
   if (!isPendingArtist) redirect("/feed");
 
   return <ArtistClaimForm />;

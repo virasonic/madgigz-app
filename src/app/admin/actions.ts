@@ -11,10 +11,34 @@ import { removeEventMedia } from "@/lib/supabase/storage";
 import { deleteStreamVideo } from "@/lib/cloudflare-stream-server";
 import { ArtistStatus } from "@/lib/types";
 
+// Approving or rejecting an application now also moves the ROLE (#209): an
+// applicant stays a fan until approved, and a rejection puts them back to one
+// rather than leaving them stranded as an artist nothing in the app serves.
+// An ADMIN's role is never touched - approving MadGigz's own account as an
+// artist must not demote it out of /admin.
 export async function setArtistStatus(profileId: string, email: string, status: ArtistStatus) {
   const currentAdmin = await requireAdmin();
   const admin = adminClient();
-  await admin.from("profiles").update({ artist_status: status }).eq("id", profileId);
+
+  const { data: target } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", profileId)
+    .maybeSingle();
+
+  const roleChange =
+    target?.role === "admin"
+      ? {}
+      : status === "approved"
+        ? { role: "artist" }
+        : status === "rejected"
+          ? { role: "fan" }
+          : {};
+
+  await admin
+    .from("profiles")
+    .update({ artist_status: status, ...roleChange })
+    .eq("id", profileId);
   revalidatePath("/admin/artists");
 
   if (status === "approved" || status === "rejected") {

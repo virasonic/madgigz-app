@@ -110,10 +110,11 @@ export async function fetchDashboardStats(admin: SupabaseClient) {
       // count toward the total.
       admin.from("profiles").select("*", { count: "exact", head: true }).is("deleted_at", null),
       admin.from("events").select("*", { count: "exact", head: true }),
+      // The application, not the role (#209) - an applicant is a fan until
+      // approved, so filtering on role would show a permanent zero.
       admin
         .from("profiles")
         .select("*", { count: "exact", head: true })
-        .eq("role", "artist")
         .eq("artist_status", "pending"),
       admin.from("tickets").select("quantity, price_paid, purchased_at, refunded"),
     ]);
@@ -215,7 +216,15 @@ export async function fetchArtistApplications(
     .select(
       "id, username, artist_name, instagram, tiktok, twitter, spotify, youtube, artist_status, stripe_account_id, stripe_payouts_ready, created_at"
     )
-    .eq("role", "artist");
+    // Role OR application (#209). An applicant is a fan with artist_status set,
+    // so the old role-only filter would have emptied this queue of the very
+    // people it exists to review; the role half still catches approved artists
+    // (and any legacy row whose status was never written). Admins are excluded
+    // exactly as the old role filter excluded them - they carry
+    // artist_status='approved' so the MadGigz account can run its own shows, and
+    // they are not applications anybody reviews.
+    .or("role.eq.artist,artist_status.not.is.null")
+    .neq("role", "admin");
 
   const emailById = new Map((authData?.users ?? []).map((u) => [u.id, u.email ?? ""]));
 

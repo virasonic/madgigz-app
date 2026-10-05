@@ -811,6 +811,17 @@ export default function ProfileClient({
 
       {user.role === "fan" && !isPro ? (
         <>
+          {/* #209: an artist application is a flag on a fan, not a role. Without
+              a word here, tapping "Switch to artist account" looks like it did
+              nothing at all - the profile is unchanged. A rejection says nothing:
+              the account is simply a fan again, and the decision email is what
+              invites them to send more evidence. */}
+          {user.artistStatus === "pending" && (
+            <div className="mb-8 rounded-2xl bg-surface p-5 text-center">
+              <p className="font-heading text-foreground">{t("profile.underReviewTitle")}</p>
+              <p className="mt-1 text-sm text-muted">{t("profile.underReviewBody")}</p>
+            </div>
+          )}
           {/* Active wall lives in the URL so the back button restores it - see
               AttendedSavedWalls. Suspense because it reads useSearchParams. */}
           <Suspense>
