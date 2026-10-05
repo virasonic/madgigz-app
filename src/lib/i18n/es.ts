@@ -1136,7 +1136,9 @@ export const es: Messages = {
     maxPerOrder: "Máximo de entradas por pedido",
     ticketTypes: "Tipos de entrada (opcional)",
     ticketTypesHint:
-      "Déjalo vacío para un precio único. Con tipos, el precio de arriba pasa a ser el más barato y el aforo se calcula a partir de ellos.",
+      "Déjalo vacío para un precio único. Si añades tipos, el público elige uno de ellos — el campo Precio de arriba deja de ser una entrada que se pueda comprar.",
+    priceFromTypesHint: "Se toma del tipo de entrada más barato. El público lo ve como «desde» en la tarjeta.",
+    capacityWithTypesHint: "El aforo total de la sala. Los tipos lo comparten, así que pueden sumar más — las ventas se paran en este número.",
     genres: "Géneros",
     lineup: "Cartel",
     lineupHint:

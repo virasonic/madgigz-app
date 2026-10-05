@@ -1165,7 +1165,9 @@ export const en = {
     maxPerOrder: "Max tickets per order",
     ticketTypes: "Ticket types (optional)",
     ticketTypesHint:
-      "Leave empty for a single-price show. With types, the price above becomes the cheapest one and capacity is set from them.",
+      "Leave empty for a single-price show. Add types and fans pick one of these instead — the Price field above is no longer an option they can buy.",
+    priceFromTypesHint: "Taken from the cheapest ticket type. Fans see it as “from” on the card.",
+    capacityWithTypesHint: "The room total. Types share it, so they can add up to more — sales stop at this number.",
     genres: "Genres",
     lineup: "Line-up",
     lineupHint:

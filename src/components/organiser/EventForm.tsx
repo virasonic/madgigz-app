@@ -12,9 +12,9 @@ import { createProEvent, updateProEvent } from "@/app/pro/events/event-actions";
 import { setEventTiers } from "@/app/admin/events/tier-actions";
 import { setProEventTiers } from "@/app/pro/events/tier-actions";
 import { TierRowsFields } from "@/components/organiser/TierManager";
-import { tierRowsToInput, type TierRow } from "@/components/artist/TierRowsEditor";
+import { tierRowIsBlank, tierRowsToInput, type TierRow } from "@/components/artist/TierRowsEditor";
 import { validateTiers } from "@/lib/tiers-apply";
-import { breakdownFor, FEE_PERCENT, formatEuros, MIN_FEE_CENTS, toCents, VAT_PERCENT } from "@/lib/pricing";
+import { breakdownFor, FEE_PERCENT, formatEuros, MIN_FEE_CENTS, parseEuros, toCents, VAT_PERCENT } from "@/lib/pricing";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -158,6 +158,16 @@ export default function EventForm({
   // unrelated date change, and two tier editors on one page would be worse.
   const [tierRows, setTierRows] = useState<TierRow[]>([]);
 
+  // Once there are ticket types, the single Price field stops being a thing
+  // anyone can set: applyEventTiers overwrites events.price with the cheapest
+  // type, because that is what "from \u20ac8" on a card means. The field used to
+  // stay editable, so a price typed here was silently thrown away - it looked
+  // like the show had simply dropped an option. Show the derived number instead.
+  const activeTierRows = tierRows.filter((r) => !tierRowIsBlank(r));
+  const tierPrices = activeTierRows.map((r) => parseEuros(r.price)).filter(Number.isFinite);
+  const cheapestTierPrice = tierPrices.length > 0 ? Math.min(...tierPrices) : null;
+  const priceFromTypes = !existing && ticketing === "internal" && cheapestTierPrice !== null;
+
   // A promoter or venue sells on their own account and pays the commission; an
   // admin's internal show is a MadGigz house show, which pays none.
   const organiserSells = mode === "pro";
@@ -218,7 +228,9 @@ export default function EventForm({
         venueId: venue.venueId,
         date,
         time,
-        price: Number(price),
+        // The cheapest type when there are types - applyEventTiers would set it a
+        // moment later anyway, and this way the row is never briefly wrong.
+        price: priceFromTypes ? (cheapestTierPrice as number) : Number(price),
         capacity: Number(capacity),
         maxPerOrder: Number(maxPerOrder),
         description,
@@ -298,7 +310,10 @@ export default function EventForm({
         <Field label={t("organiserForm.time")}>
           <input type="time" className={inputClass} value={time} onChange={(e) => setTime(e.target.value)} />
         </Field>
-        <Field label={t("organiserForm.capacity")}>
+        <Field
+          label={t("organiserForm.capacity")}
+          hint={priceFromTypes ? t("organiserForm.capacityWithTypesHint") : undefined}
+        >
           <input type="number" onWheel={blurOnWheel} min={1} className={inputClass} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
         </Field>
         <Field label={t("organiserForm.age")}>
@@ -374,9 +389,24 @@ export default function EventForm({
       <div className="grid gap-4 md:grid-cols-2">
         <Field
           label={t("organiserForm.price")}
-          hint={ticketing === "external" ? t("organiserForm.priceExternalHint") : undefined}
+          hint={
+            priceFromTypes
+              ? t("organiserForm.priceFromTypesHint")
+              : ticketing === "external"
+                ? t("organiserForm.priceExternalHint")
+                : undefined
+          }
         >
-          <input type="number" onWheel={blurOnWheel} min={0} step="0.01" className={inputClass} value={price} onChange={(e) => setPrice(e.target.value)} />
+          <input
+            type="number"
+            onWheel={blurOnWheel}
+            min={0}
+            step="0.01"
+            className={`${inputClass} ${priceFromTypes ? "opacity-60" : ""}`}
+            value={priceFromTypes ? String(cheapestTierPrice) : price}
+            onChange={(e) => setPrice(e.target.value)}
+            disabled={priceFromTypes}
+          />
           {/* What you actually keep. The organiser absorbs the fee - the price
               set here is exactly what the fan pays - so without this the number
               typed above quietly isn't the number received. Omitted for an admin
