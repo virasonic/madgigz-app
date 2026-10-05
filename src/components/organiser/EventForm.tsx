@@ -12,7 +12,7 @@ import { createProEvent, updateProEvent } from "@/app/pro/events/event-actions";
 import { setEventTiers } from "@/app/admin/events/tier-actions";
 import { setProEventTiers } from "@/app/pro/events/tier-actions";
 import { TierRowsFields } from "@/components/organiser/TierManager";
-import { tierRowIsBlank, tierRowsToInput, type TierRow } from "@/components/artist/TierRowsEditor";
+import { tierRowIsBlank, tierRowsToInput, type TierRow } from "@/lib/tier-rows";
 import { validateTiers } from "@/lib/tiers-apply";
 import { breakdownFor, FEE_PERCENT, formatEuros, MIN_FEE_CENTS, parseEuros, toCents, VAT_PERCENT } from "@/lib/pricing";
 import { uploadEventMedia } from "@/lib/supabase/storage";

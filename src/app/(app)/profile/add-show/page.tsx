@@ -7,12 +7,13 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import DateInput from "@/components/ui/DateInput";
 import BackButton from "@/components/ui/BackButton";
-import TierRowsEditor, {
+import TierRowsEditor from "@/components/artist/TierRowsEditor";
+import {
   type TierRow,
   emptyTierRow,
   tierRowIsBlank,
   tierRowsToInput,
-} from "@/components/artist/TierRowsEditor";
+} from "@/lib/tier-rows";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
 import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
 import GenrePicker from "@/components/artist/GenrePicker";

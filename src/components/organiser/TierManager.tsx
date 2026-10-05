@@ -8,7 +8,7 @@ import {
   tierRowsToInput,
   tierToRow,
   type TierRow,
-} from "@/components/artist/TierRowsEditor";
+} from "@/lib/tier-rows";
 import type { OrganiserMode } from "@/components/organiser/EventForm";
 import { breakdownFor, formatEuros, parseEuros, toCents } from "@/lib/pricing";
 import { useT } from "@/lib/i18n/LocaleProvider";

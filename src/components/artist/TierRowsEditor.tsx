@@ -8,7 +8,7 @@ import {
   parseEuros,
   toCents,
 } from "@/lib/pricing";
-import type { TierInput } from "@/lib/tiers-apply";
+import { emptyTierRow, type TierRow } from "@/lib/tier-rows";
 import InfoTip from "@/components/ui/InfoTip";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
@@ -17,60 +17,6 @@ import { useT } from "@/lib/i18n/LocaleProvider";
 // tiers submitted with the show) and when managing one (ArtistTierEditor wraps
 // this with a Save button). Laid out to fit a phone: no horizontal overflow, and
 // a compact one-line "you keep" rather than a full fee table per row.
-
-export interface TierRow {
-  id?: string;
-  name: string;
-  price: string;
-  capacity: string; // how many of this type are available
-  maxPerOrder: string;
-  availableUntil: string; // datetime-local value ("" = no cutoff)
-  sold: number;
-}
-
-export function emptyTierRow(): TierRow {
-  return { name: "", price: "", capacity: "", maxPerOrder: "6", availableUntil: "", sold: 0 };
-}
-
-// A row the user actually started filling in — a wholly blank row is ignored
-// (not a real ticket type), so a stray empty row never blocks the form.
-export function tierRowIsBlank(r: TierRow): boolean {
-  return !r.name.trim() && !r.price.trim() && !r.capacity.trim();
-}
-
-export function tierToRow(t: {
-  id: string;
-  name: string;
-  price: number;
-  capacity: number;
-  maxPerOrder: number;
-  availableUntil: string | null;
-  sold: number;
-}): TierRow {
-  return {
-    id: t.id,
-    name: t.name,
-    price: String(t.price),
-    capacity: String(t.capacity),
-    maxPerOrder: String(t.maxPerOrder),
-    availableUntil: t.availableUntil ? new Date(t.availableUntil).toISOString().slice(0, 16) : "",
-    sold: t.sold,
-  };
-}
-
-export function tierRowsToInput(rows: TierRow[]): TierInput[] {
-  return rows
-    .filter((r) => !tierRowIsBlank(r))
-    .map((r, idx) => ({
-      id: r.id,
-      name: r.name,
-      price: parseEuros(r.price),
-      capacity: Number(r.capacity),
-      maxPerOrder: r.maxPerOrder ? Number(r.maxPerOrder) : undefined,
-      availableUntil: r.availableUntil ? new Date(r.availableUntil).toISOString() : null,
-      sortOrder: idx,
-    }));
-}
 
 const numberField =
   "w-full min-w-0 rounded-lg border border-muted/20 bg-background px-2 py-2 text-sm text-foreground";

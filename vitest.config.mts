@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 // Unit tests run in Node (no jsdom) — the gated logic is pure math, no DOM. A
@@ -11,6 +12,13 @@ import { defineConfig } from "vitest/config";
 // threshold blocking the build. Add a module to `include` only when "correct"
 // is non-obvious and the blast radius is real.
 export default defineConfig({
+  // The same "@/" the app and tsconfig use. Without it a test can only reach a
+  // module whose own imports are all relative, which quietly decides what is
+  // testable - the tier-row conversion (#206) was untestable for exactly that
+  // reason.
+  resolve: {
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+  },
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],

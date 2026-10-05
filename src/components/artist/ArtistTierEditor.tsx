@@ -1,11 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import TierRowsEditor, {
-  type TierRow,
-  tierRowsToInput,
-  tierToRow,
-} from "@/components/artist/TierRowsEditor";
+import TierRowsEditor from "@/components/artist/TierRowsEditor";
+import { type TierRow, tierRowsToInput, tierToRow } from "@/lib/tier-rows";
 import { saveArtistTiers } from "@/app/(app)/profile/show-actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
