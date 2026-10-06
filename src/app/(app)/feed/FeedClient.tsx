@@ -46,6 +46,29 @@ function loadFeedPos(): string | null {
   }
 }
 
+// ...and which pane they were on, for the same reason (#202). Remembering the
+// reel but not the tab it lives in only half-worked: a round trip to an artist
+// profile re-mounted this component at the #174 default, This Week, and the
+// restore below is guarded on For You being open - so the saved reel sat there
+// unreached until the fan tapped "For You" themselves, at which point it
+// suddenly appeared. Two mechanisms, and only one of them was persisted.
+const FEED_PANE_KEY = "mg.feed.pane";
+function saveFeedPane(pane: Pane) {
+  try {
+    sessionStorage.setItem(FEED_PANE_KEY, pane);
+  } catch {
+    // best-effort, same as the position above
+  }
+}
+function loadFeedPane(): Pane | null {
+  try {
+    const v = sessionStorage.getItem(FEED_PANE_KEY);
+    return v === "forYou" || v === "thisWeek" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 interface FeedEntry {
   post: ContentPost;
   /** Null for a MadGigz announcement - see addendum_028. */
@@ -170,6 +193,18 @@ export default function FeedClient({
   // and This Week is the populated schedule. Temporary product call - revisit
   // once For You carries enough to be the landing pane again.
   const [pane, setPane] = useState<Pane>("thisWeek");
+  // Restored after mount, not in a lazy initialiser: the server has no window,
+  // so reading sessionStorage during render would hydrate a different pane than
+  // it rendered. Same shape (and the same disable) as the seen-announcements
+  // read further down. Costs one paint of This Week on the way back, which is
+  // the price of the pane being server-rendered at all - the alternative, a URL
+  // param, puts a history entry behind every tab tap.
+  useEffect(() => {
+    const saved = loadFeedPane();
+    if (!saved) return;
+    /* eslint-disable-next-line react-hooks/set-state-in-effect -- see above */
+    setPane(saved);
+  }, []);
   const [allPosts, setAllPosts] = useState<ContentPost[]>(initialPosts);
   // Announcements (posts with no event) can be aimed at fans or at organisers
   // (addendum_055); hide the ones not meant for this viewer. Reel posts (with an
@@ -511,7 +546,10 @@ export default function FeedClient({
         ).map(([value, label]) => (
           <button
             key={value}
-            onClick={() => setPane(value)}
+            onClick={() => {
+              setPane(value);
+              saveFeedPane(value);
+            }}
             className={`rounded-full px-5 py-2 text-sm font-heading ${
               pane === value ? "bg-primary text-foreground" : "bg-surface text-muted"
             }`}
