@@ -29,7 +29,7 @@ export default function EventCard({
   return (
     <button
       onClick={onOpen}
-      className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl text-left"
+      className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl text-left transition-transform duration-150 hover:scale-[1.02]"
     >
       <Image src={event.image} alt={event.title} fill sizes="200px" className="object-cover" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />

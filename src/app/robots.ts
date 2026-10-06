@@ -23,11 +23,13 @@ export default function robots(): MetadataRoute.Robots {
           "/checkout",
           "/claim/",
           "/notifications",
-          // Login-gated for now (the artist page redirects a guest to sign-in),
-          // so it is nothing a crawler can read. Worth revisiting if artist
-          // profiles ever open to guests - they would be good landing pages.
+          // The /pro back-office panel is login-gated; crawlers get nothing.
           "/pro",
-          "/profile",
+          // NOTE: /profile is intentionally NOT blocked. Public artist/venue
+          // profiles opened to guests in #196 (/profile/<username>), so they are
+          // real, crawlable landing pages for act and venue names and are listed
+          // in the sitemap. The private own-profile view at the bare /profile
+          // still redirects a guest to sign-in, which is a harmless soft gate.
           "/saved",
           "/signin",
           "/signup",

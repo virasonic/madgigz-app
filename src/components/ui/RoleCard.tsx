@@ -28,7 +28,7 @@ export default function RoleCard({
   return (
     <Link
       href={href}
-      className={`relative block rounded-3xl p-6 transition-transform duration-150 active:scale-[0.98] ${roleStyles[role]}`}
+      className={`relative block rounded-3xl p-6 transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98] ${roleStyles[role]}`}
     >
       {badge && (
         <span className="absolute right-6 top-6 rounded-full bg-black/25 px-3 py-1 text-xs font-heading uppercase tracking-wide text-foreground">

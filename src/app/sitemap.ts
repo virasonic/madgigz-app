@@ -57,6 +57,38 @@ async function upcomingEvents(): Promise<EventSitemapRow[]> {
   return data ?? [];
 }
 
+type ProfileSitemapRow = { username: string };
+
+// Public artist/venue profiles (#196 opened them to guests). A profile is a
+// landing page for an act or venue name, so these are worth indexing. "Public"
+// = an approved artist OR an active pro account (pro_type set), matching the
+// visibility test the /profile page itself enforces. username, artist_status and
+// pro_type are all anon-granted (Explore reads them for guests).
+async function publicProfiles(): Promise<ProfileSitemapRow[]> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return [];
+
+  const supabase = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("username")
+    .or("artist_status.eq.approved,pro_type.not.is.null")
+    .limit(5000);
+
+  // Best-effort, like upcomingEvents: a missing pro_type column (pre-addendum
+  // _053) or any other error just drops the profile section rather than 500ing
+  // the whole sitemap.
+  if (error) {
+    console.error("sitemap: could not load profiles", error.message);
+    return [];
+  }
+  return (data ?? []) as ProfileSitemapRow[];
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const origin = siteOrigin();
   const now = new Date();
@@ -87,7 +119,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const events = await upcomingEvents();
+  const [events, profiles] = await Promise.all([upcomingEvents(), publicProfiles()]);
 
   return [
     ...staticRoutes,
@@ -99,6 +131,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(event.created_at),
       changeFrequency: "weekly" as const,
       priority: 0.8,
+    })),
+    ...profiles.map((p) => ({
+      url: `${origin}/profile/${encodeURIComponent(p.username)}`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
     })),
   ];
 }

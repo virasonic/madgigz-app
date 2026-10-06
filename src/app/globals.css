@@ -39,6 +39,43 @@ body {
   font-family: var(--font-dm-sans), Arial, Helvetica, sans-serif;
 }
 
+/* Tailwind's Preflight drops the default pointer cursor on <button>, so on the
+   desktop web every button (tabs, event cards — EventCard is a <button>, the
+   role-picker cards) reads as non-interactive (#206). Restore it; anchors and
+   next/link already get it, disabled controls deliberately don't. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+}
+
+/* A thin, themed scrollbar for the desktop web — the fat grey default clashes
+   with the dark theme (#206). Scoped to fine pointers so touch devices are
+   untouched, and the reel's .no-scrollbar still wins by specificity. */
+@media (pointer: fine) {
+  * {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--surface-raised) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--surface-raised);
+    border-radius: 9999px;
+    border: 2px solid var(--background);
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--muted);
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
 /* Installed to the home screen there's no browser chrome, so the layout runs
    edge to edge under the notch and home indicator. These keep content clear of
    both; they collapse to zero in a normal browser tab. */

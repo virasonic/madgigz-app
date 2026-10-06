@@ -35,8 +35,12 @@ export const metadata: Metadata = {
   // wrong Vercel alias (aurasonic.es) and the card 404s for crawlers. siteOrigin
   // never throws, so this is safe at module scope.
   metadataBase: new URL(siteOrigin()),
-  title: "MadGigz",
-  description: "Local Gigs & Concerts",
+  // The public pages (landing, Explore, /e, /profile, /for-artists) each set
+  // their own localized, keyword-rich title/description; these are only the
+  // fallback for anything that doesn't, so keep them on-brand rather than thin.
+  title: "MadGigz - Live Gigs & Concerts in Madrid",
+  description:
+    "Discover live music in Madrid: scroll reels from independent artists and venues near you, and buy tickets in the same swipe.",
   applicationName: "MadGigz",
   // iOS Safari Smart App Banner (the "MadGigz — OPEN" strip). Renders
   // <meta name="apple-itunes-app" content="app-id=6800783921">. Safari-only,

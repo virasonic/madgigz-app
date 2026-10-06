@@ -550,8 +550,10 @@ export default function FeedClient({
               setPane(value);
               saveFeedPane(value);
             }}
-            className={`rounded-full px-5 py-2 text-sm font-heading ${
-              pane === value ? "bg-primary text-foreground" : "bg-surface text-muted"
+            className={`rounded-full px-5 py-2 text-sm font-heading transition-colors ${
+              pane === value
+                ? "bg-primary text-foreground"
+                : "bg-surface text-muted hover:bg-surface-raised hover:text-foreground"
             }`}
           >
             {label}
