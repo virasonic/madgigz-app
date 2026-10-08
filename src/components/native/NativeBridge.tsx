@@ -53,7 +53,18 @@ export default function NativeBridge() {
           return;
         }
 
-        // 2. Universal / App Link into our own origin (#134): a tapped
+        // 2. madgigz://open — the marketing site's "Abrir MadGigz" button (via
+        //    /open) fires this to foreground the installed app. No payload to
+        //    process; just land on the feed, which is what "open the app" means.
+        if (url.startsWith("madgigz://open")) {
+          if (window.location.pathname !== "/feed") {
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+            window.location.href = `${window.location.origin}/feed`;
+          }
+          return;
+        }
+
+        // 3. Universal / App Link into our own origin (#134): a tapped
         //    https://madgigz.aurasonic.es/e/<id> or /profile/<name> link (and the
         //    AASA auth paths) opens the app here. The shell IS this origin, so
         //    route the webview to the link's path rather than leaving it on

@@ -30,6 +30,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="madgigz" android:host="auth-callback" />
+                <!-- madgigz://open — the marketing site's "Abrir MadGigz" button
+                     (via /open) fires this to foreground the installed app, which
+                     works from inside in-app browsers (e.g. Instagram) where
+                     https App Links don't hand off. iOS accepts any madgigz://
+                     host already, so only Android needs it listed. -->
+                <data android:scheme="madgigz" android:host="open" />
             </intent-filter>
 
             <!-- App Links (#134): verified https links to our own domain open the
