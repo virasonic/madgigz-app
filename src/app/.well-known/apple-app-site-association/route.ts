@@ -6,13 +6,18 @@
 // as application/json, NO redirect and NO .json extension — Apple's fetcher is
 // strict about all three.
 //
-// Gated on env so it goes live the moment the value is set, no code change:
-//   APPLE_APP_ID   the full App ID = <TeamID>.<bundleId>,
-//                  e.g. ABCDE12345.es.aurasonic.madgigz
-// Until it's set the file returns empty `details`, which simply means "this
-// domain claims no app yet" — completely inert, safe to ship ahead of the build
-// that adds the Associated Domains entitlement. Read at request time (not baked
-// at build) so setting the env var takes effect on the next request.
+// Gated on env so it goes live the moment the value is set, no code change.
+// The full App ID Apple wants is <TeamID>.<bundleId>. We derive it from the
+// Team ID the app already stores for Apple Wallet (APPLE_TEAM_ID, see
+// src/lib/apple-wallet-config.ts) plus the fixed bundle id — so NO new env var
+// is needed; whatever environment has APPLE_TEAM_ID set serves a live file.
+// An explicit APPLE_APP_ID still wins if ever set (e.g. a different bundle id).
+//   APPLE_TEAM_ID  e.g. N5JHWZ9434   → composed as <TeamID>.es.aurasonic.madgigz
+//   APPLE_APP_ID   optional override, the full id e.g. N5JHWZ9434.es.aurasonic.madgigz
+// Until one is resolvable the file returns empty `details`, which simply means
+// "this domain claims no app yet" — completely inert, safe to ship ahead of the
+// build that adds the Associated Domains entitlement. Read at request time (not
+// baked at build) so setting the env var takes effect on the next request.
 //
 // Claimed paths are deliberately specific (not "/") so only these deep-link into
 // the app; everything else keeps opening normally:
@@ -22,8 +27,14 @@
 //   /profile/*      — shared artist/venue profiles (guest-open, #196)
 export const dynamic = "force-dynamic";
 
+// The iOS bundle identifier — fixed, matching capacitor.config.ts and the Xcode
+// project's PRODUCT_BUNDLE_IDENTIFIER.
+const BUNDLE_ID = "es.aurasonic.madgigz";
+
 export function GET() {
-  const appId = process.env.APPLE_APP_ID?.trim();
+  const explicit = process.env.APPLE_APP_ID?.trim();
+  const teamId = process.env.APPLE_TEAM_ID?.trim();
+  const appId = explicit || (teamId ? `${teamId}.${BUNDLE_ID}` : undefined);
 
   const body = {
     applinks: {

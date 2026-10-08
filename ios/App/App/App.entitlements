@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal Links (#134): iOS checks /.well-known/apple-app-site-association
+	     on this domain and, for the paths it claims, opens shared gig / profile /
+	     auth links in the app instead of Safari. The matching capability must also
+	     be enabled on the App ID in the Apple Developer portal (Xcode's
+	     Signing & Capabilities → Associated Domains does this when "Automatically
+	     manage signing" is on); then the provisioning profile regenerates to carry
+	     it. NativeBridge's appUrlOpen routes the opened path into the webview. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:madgigz.aurasonic.es</string>
+	</array>
+</dict>
+</plist>

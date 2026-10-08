@@ -31,6 +31,27 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="madgigz" android:host="auth-callback" />
             </intent-filter>
+
+            <!-- App Links (#134): verified https links to our own domain open the
+                 app instead of the browser. autoVerify makes Android fetch
+                 /.well-known/assetlinks.json at install and, once the domain is
+                 verified, these links open straight here with no chooser. Scoped
+                 by pathPrefix to the SAME paths the iOS AASA claims (shared
+                 events, profiles, and the auth return) so unrelated links on the
+                 domain still open normally. singleTask routes it into the running
+                 MainActivity, where the App plugin fires appUrlOpen and
+                 NativeBridge navigates the webview to the path. assetlinks is
+                 already served (both signing fingerprints) — this is the on-device
+                 half that needs the native rebuild. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="madgigz.aurasonic.es" />
+                <data android:pathPrefix="/e/" />
+                <data android:pathPrefix="/profile/" />
+                <data android:pathPrefix="/auth/" />
+            </intent-filter>
         </activity>
 
         <provider
