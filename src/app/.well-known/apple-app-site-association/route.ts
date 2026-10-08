@@ -19,6 +19,7 @@
 //   /auth/confirm   — email verification link (the point of #134)
 //   /auth/callback  — OAuth return
 //   /e/*            — shared public event links
+//   /profile/*      — shared artist/venue profiles (guest-open, #196)
 export const dynamic = "force-dynamic";
 
 export function GET() {
@@ -35,6 +36,7 @@ export function GET() {
                 { "/": "/auth/confirm", comment: "email verification link opens the app" },
                 { "/": "/auth/callback", comment: "OAuth return opens the app" },
                 { "/": "/e/*", comment: "shared event links open the app" },
+                { "/": "/profile/*", comment: "shared artist/venue profiles open the app (#196 guest-open)" },
               ],
             },
           ]

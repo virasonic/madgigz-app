@@ -38,17 +38,43 @@ export default function NativeBridge() {
       SplashScreen.hide().catch(() => {});
 
       const sub = await App.addListener("appUrlOpen", ({ url }) => {
-        if (!url.startsWith(NATIVE_AUTH_REDIRECT)) return;
-        Browser.close().catch(() => {});
-        const query = url.split("?")[1] ?? "";
-        // A full document navigation is intentional: /auth/callback is a server
-        // Route Handler that exchanges the code, sets the session cookie and
-        // redirects onward - router.push() wouldn't hit it. So the lint rule
-        // (meant for navigating between Next pages) doesn't apply here.
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-        window.location.href = `${window.location.origin}/auth/callback${
-          query ? `?${query}` : ""
-        }`;
+        // 1. OAuth return trip (the madgigz:// custom scheme).
+        if (url.startsWith(NATIVE_AUTH_REDIRECT)) {
+          Browser.close().catch(() => {});
+          const query = url.split("?")[1] ?? "";
+          // A full document navigation is intentional: /auth/callback is a server
+          // Route Handler that exchanges the code, sets the session cookie and
+          // redirects onward - router.push() wouldn't hit it. So the lint rule
+          // (meant for navigating between Next pages) doesn't apply here.
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+          window.location.href = `${window.location.origin}/auth/callback${
+            query ? `?${query}` : ""
+          }`;
+          return;
+        }
+
+        // 2. Universal / App Link into our own origin (#134): a tapped
+        //    https://madgigz.aurasonic.es/e/<id> or /profile/<name> link (and the
+        //    AASA auth paths) opens the app here. The shell IS this origin, so
+        //    route the webview to the link's path rather than leaving it on
+        //    whatever screen it was on. Only same-origin links; anything else is
+        //    left to the OS. Inert until Universal/App Links are actually
+        //    configured (this listener only fires for https once the OS has
+        //    verified the domain), so it's safe to ship ahead of the native work.
+        try {
+          const target = new URL(url);
+          if (target.origin === window.location.origin) {
+            const dest = target.pathname + target.search + target.hash;
+            const current =
+              window.location.pathname + window.location.search + window.location.hash;
+            if (dest && dest !== current) {
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+              window.location.href = `${window.location.origin}${dest}`;
+            }
+          }
+        } catch {
+          // Not a parseable absolute URL - ignore and let the OS default apply.
+        }
       });
       removeListener = () => sub.remove();
     })();

@@ -3,6 +3,8 @@ package es.aurasonic.madgigz;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 
 import androidx.core.graphics.Insets;
@@ -10,6 +12,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebViewClient;
 
 public class MainActivity extends BridgeActivity {
   @Override
@@ -59,5 +62,29 @@ public class MainActivity extends BridgeActivity {
     // Swallow long-press so Android's WebView stops popping the raw-URL tooltip.
     webView.setOnLongClickListener(v -> true);
     webView.setLongClickable(false);
+
+    // #159 - offline cold-launch fallback. The app loads from a remote
+    // server.url (https://madgigz.aurasonic.es), so with no connection the
+    // top-level navigation fails. Capacitor's own error fallback
+    // (bridge.getErrorUrl()) points back at that SAME remote host, which is
+    // exactly what's unreachable offline, so it fails again and the user sees a
+    // blank screen (iOS/WKWebView serves the bundled page; Android didn't).
+    // Override the main-frame error to load the BUNDLED offline shell instead -
+    // it's always present on-device and reads the saved tickets from Preferences
+    // to render them (#129). Sub-resource errors fall through to the default, and
+    // the guard stops a loop if the offline page itself ever errors.
+    final String offlineUrl = "file:///android_asset/public/index.html";
+    getBridge().setWebViewClient(new BridgeWebViewClient(getBridge()) {
+      @Override
+      public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+        if (request != null
+            && request.isForMainFrame()
+            && !request.getUrl().toString().startsWith("file:///android_asset/public/")) {
+          view.loadUrl(offlineUrl);
+          return;
+        }
+        super.onReceivedError(view, request, error);
+      }
+    });
   }
 }
