@@ -65,25 +65,73 @@ public class MainActivity extends BridgeActivity {
 
     // #159 - offline cold-launch fallback. The app loads from a remote
     // server.url (https://madgigz.aurasonic.es), so with no connection the
-    // top-level navigation fails. Capacitor's own error fallback
-    // (bridge.getErrorUrl()) points back at that SAME remote host, which is
-    // exactly what's unreachable offline, so it fails again and the user sees a
-    // blank screen (iOS/WKWebView serves the bundled page; Android didn't).
-    // Override the main-frame error to load the BUNDLED offline shell instead -
-    // it's always present on-device and reads the saved tickets from Preferences
-    // to render them (#129). Sub-resource errors fall through to the default, and
-    // the guard stops a loop if the offline page itself ever errors.
-    final String offlineUrl = "file:///android_asset/public/index.html";
+    // top-level navigation fails and the user would see a blank WebView error
+    // page. Override the main-frame error to load the BUNDLED offline shell
+    // (always present on-device). Sub-resource errors fall through to the
+    // default, and the guard stops a loop if the offline page itself errors.
+    //
+    // Crucially, unlike iOS/WKWebView, a file:// page on Android gets NO
+    // Capacitor bridge - so the shell can neither read the saved tickets
+    // (@capacitor/preferences) nor hide the launch splash (launchAutoHide is
+    // off) by itself. onPageFinished below does BOTH natively: it injects the
+    // tickets from the same SharedPreferences the Preferences plugin writes,
+    // then lifts the splash. This is the Android half of offline tickets (#129).
+    final String offlinePrefix = "file:///android_asset/public/";
+    final String offlineUrl = offlinePrefix + "index.html";
     getBridge().setWebViewClient(new BridgeWebViewClient(getBridge()) {
       @Override
       public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
         if (request != null
             && request.isForMainFrame()
-            && !request.getUrl().toString().startsWith("file:///android_asset/public/")) {
+            && !request.getUrl().toString().startsWith(offlinePrefix)) {
           view.loadUrl(offlineUrl);
           return;
         }
         super.onReceivedError(view, request, error);
+      }
+
+      @Override
+      public void onPageFinished(WebView view, String url) {
+        super.onPageFinished(view, url);
+        if (url == null || !url.startsWith(offlinePrefix)) return;
+
+        // @capacitor/preferences stores under SharedPreferences group
+        // "CapacitorStorage"; the key mirrors offline-tickets-native.ts. Feed
+        // the stored store JSON straight into the shell (it already holds the
+        // pre-rendered QR data URLs), or "null" when there's nothing saved.
+        String json = MainActivity.this
+            .getSharedPreferences("CapacitorStorage", android.content.Context.MODE_PRIVATE)
+            .getString("mg.offline.tickets.v1", null);
+        String payload = (json != null && !json.isEmpty()) ? json : "null";
+        view.evaluateJavascript(
+            "window.__OFFLINE_TICKETS=" + payload + ";"
+                + "window.__renderOffline&&window.__renderOffline();",
+            null);
+
+        hideSplash();
+      }
+
+      // launchAutoHide is false so the online path can hand the splash off
+      // explicitly from the web app; offline there's no bridge to do that, so
+      // lift it here via the SplashScreen plugin instance. Reflection keeps this
+      // Activity free of a compile-time dep on the plugin, and it's fully
+      // guarded - a miss just leaves the splash as it was, never crashes.
+      private void hideSplash() {
+        try {
+          com.getcapacitor.PluginHandle handle = getBridge().getPlugin("SplashScreen");
+          Object plugin = (handle != null) ? handle.getInstance() : null;
+          if (plugin == null) return;
+          java.lang.reflect.Field field = plugin.getClass().getDeclaredField("splashScreen");
+          field.setAccessible(true);
+          Object splash = field.get(plugin);
+          if (splash == null) return;
+          Class<?> settingsCls =
+              Class.forName("com.capacitorjs.plugins.splashscreen.SplashScreenSettings");
+          Object settings = settingsCls.getDeclaredConstructor().newInstance();
+          splash.getClass().getMethod("hide", settingsCls).invoke(splash, settings);
+        } catch (Throwable ignored) {
+          // Plugin shape changed or unavailable - leave the splash untouched.
+        }
       }
     });
   }

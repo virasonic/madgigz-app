@@ -226,18 +226,37 @@
         document.getElementById("tickets").hidden = false;
       }
 
+      // Native entry point for Android: a file:// offline page gets no Capacitor
+      // bridge, so it can't read Preferences itself. MainActivity reads the saved
+      // store from SharedPreferences, sets window.__OFFLINE_TICKETS and calls this.
+      window.__renderOffline = function () {
+        var store = window.__OFFLINE_TICKETS;
+        if (store && Array.isArray(store.tickets) && store.tickets.length) render(store);
+        else showEmpty(store && store.locale === "es" ? "es" : "en");
+      };
+
       (function () {
         var prefs = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Preferences;
-        if (!prefs) { showEmpty("en"); return; }
-        Promise.resolve(prefs.get({ key: KEY }))
-          .then(function (res) {
-            if (!res || !res.value) { showEmpty("en"); return; }
-            var store;
-            try { store = JSON.parse(res.value); } catch (e) { store = null; }
-            if (!store) { showEmpty("en"); return; }
-            render(store);
-          })
-          .catch(function () { showEmpty("en"); });
+        if (prefs) {
+          // iOS: the offline page keeps plugin access, so read Preferences here.
+          Promise.resolve(prefs.get({ key: KEY }))
+            .then(function (res) {
+              if (!res || !res.value) { showEmpty("en"); return; }
+              var store;
+              try { store = JSON.parse(res.value); } catch (e) { store = null; }
+              if (!store) { showEmpty("en"); return; }
+              render(store);
+            })
+            .catch(function () { showEmpty("en"); });
+          return;
+        }
+        // No bridge (Android offline): MainActivity injects the tickets and calls
+        // __renderOffline. If it already arrived, render now; otherwise wait
+        // briefly, then fall back to the empty state (plain web / no native host).
+        if (typeof window.__OFFLINE_TICKETS !== "undefined") { window.__renderOffline(); return; }
+        setTimeout(function () {
+          if (typeof window.__OFFLINE_TICKETS === "undefined") showEmpty("en");
+        }, 1000);
       })();
     </script>
   </body>
