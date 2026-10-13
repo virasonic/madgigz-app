@@ -49,6 +49,20 @@ function formatDate(iso: string, dl: string) {
   });
 }
 
+function BackIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M15 19l-7-7 7-7"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function TicketModal({
   event,
   initialTab = "tickets",
@@ -253,18 +267,31 @@ export default function TicketModal({
 
   return (
     <div
-      className="fixed inset-0 z-30 flex items-end justify-center bg-black/60"
+      className="fixed inset-0 z-30 flex items-end justify-center bg-black/60 lg:items-stretch lg:justify-end"
       onClick={onClose}
     >
       <div
-        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10"
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10 lg:h-full lg:max-h-none lg:max-w-lg lg:rounded-none lg:rounded-l-3xl lg:pb-6"
         style={sheetStyle}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Drag the handle down to dismiss (#130). Kept off the scrollable body
-            so it never fights the sheet's own overflow scrolling. */}
-        <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3">
+        {/* Mobile: drag the handle down to dismiss (#130). Kept off the
+            scrollable body so it never fights the sheet's own overflow scroll.
+            Desktop (#211b): the sheet is a right-docked, full-height panel, so a
+            sticky back arrow replaces the handle. */}
+        <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3 lg:hidden">
           <div className="h-1 w-10 rounded-full bg-muted/30" />
+        </div>
+        <div className="sticky top-0 z-10 -mx-6 -mt-6 mb-1 hidden items-center bg-surface px-6 pb-3 pt-5 lg:flex">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.back")}
+            className="-ml-1 flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3 text-sm font-heading text-muted transition-colors hover:text-foreground"
+          >
+            <BackIcon />
+            {t("common.back")}
+          </button>
         </div>
 
         {purchased ? (
