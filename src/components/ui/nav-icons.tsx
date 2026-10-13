@@ -92,9 +92,28 @@ export function ShieldIcon(active: boolean) {
   );
 }
 
-// (The rail's megaphone icon was removed with the announcements rail row in
-// #211c - announcements now live as a dropdown under the feed header, which
-// keeps its own small megaphone in FeedClient.)
+// Announcements ("From MadGigz"). Only the desktop SideNav uses it — mobile
+// keeps the small megaphone in the feed header. Same active-stroke treatment as
+// the rest of the rail so it sits naturally beside them.
+export function MegaphoneIcon(active: boolean) {
+  // A real bullhorn (Lucide "megaphone") - the old glyph was a speaker cone that
+  // read as a volume control (#feedback).
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={active ? 2.4 : 1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m3 11 18-5v12L3 14v-3z" />
+      <path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" />
+    </svg>
+  );
+}
 
 // Add show. Desktop SideNav only — an approved artist's create-a-gig action.
 // Mobile reaches Add Show from the profile screen, so the bottom nav skips it.

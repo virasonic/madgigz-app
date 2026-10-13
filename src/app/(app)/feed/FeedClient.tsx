@@ -505,27 +505,17 @@ export default function FeedClient({
         <CityBadge />
       </div>
       <div className="relative mx-auto flex w-full justify-center gap-2 px-4 pb-4 pt-2 lg:max-w-[26rem]">
-        {/* The "From MadGigz" trigger. Opens the bottom sheet on mobile and the
-            dropdown below (#211c) on desktop - same ?panel state, two renderers. */}
+        {/* Mobile only: desktop opens announcements from the SideNav rail and
+            shows them in a column beside the feed, not this header + sheet. */}
         {announcements.length > 0 && (
           <button
             type="button"
             onClick={() => announcementsModal.open("announcements")}
             aria-label={t("feed.fromMadgigz")}
-            className={`absolute left-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full transition-colors ${
-              announcementsOpen ? "bg-primary text-foreground" : "bg-surface text-muted"
-            }`}
+            className="absolute left-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface text-muted lg:hidden"
           >
             <MegaphoneIcon />
           </button>
-        )}
-        {/* Desktop (#211c): announcements reveal as a dropdown anchored under
-            this header's megaphone, replacing the old in-flow left column. */}
-        {announcementsOpen && (
-          <DesktopAnnouncementsDropdown
-            announcements={announcements}
-            onClose={announcementsModal.close}
-          />
         )}
         {user && canActAsOrganiser(user) && (
           <button
@@ -583,6 +573,16 @@ export default function FeedClient({
       </div>
 
       <div className="min-h-0 flex-1 lg:flex lg:flex-row">
+        {/* Desktop: announcements open in-flow as a column to the left of the
+            feed, which re-centres the reel in the remaining width — side by
+            side, no overlay. Hidden on mobile, where the bottom sheet below
+            handles it instead (right for a phone). */}
+        {announcementsOpen && (
+          <DesktopAnnouncements
+            announcements={announcements}
+            onClose={announcementsModal.close}
+          />
+        )}
         <div className="relative h-full min-h-0 min-w-0 lg:flex-1">
         {pane === "forYou" ? (
           forYouFeed.length === 0 ? (
@@ -888,7 +888,7 @@ function AnnouncementsList({ announcements }: { announcements: ContentPost[] }) 
 }
 
 // Mobile: the bottom sheet, unchanged - the right affordance on a phone. Hidden
-// on desktop, which shows the DesktopAnnouncementsDropdown under the header.
+// on desktop, which shows DesktopAnnouncements beside the feed instead.
 function AnnouncementsSheet({
   announcements,
   onClose,
@@ -921,12 +921,11 @@ function AnnouncementsSheet({
   );
 }
 
-// Desktop (#211c): announcements as a dropdown anchored under the feed header's
-// megaphone, replacing the old in-flow side column (#120) per the Oct audit. A
-// transparent click-away layer closes it - a dropdown shouldn't dim the page.
-// Rendered inside the header's `relative` container, so `top-full left-4` lands
-// it right under the megaphone. Hidden on mobile (the bottom sheet handles it).
-function DesktopAnnouncementsDropdown({
+// Desktop (#120): announcements as an in-flow column beside the feed, not an
+// overlay - it sits in the empty canvas the centred reel leaves and pushes the
+// reel to re-centre in the rest. Its own scroll, and a close button since there
+// is no backdrop to tap.
+function DesktopAnnouncements({
   announcements,
   onClose,
 }: {
@@ -935,33 +934,25 @@ function DesktopAnnouncementsDropdown({
 }) {
   const { t } = useT();
   return (
-    <div className="hidden lg:block">
-      <button
-        type="button"
-        aria-label={t("feed.closeAnnouncements")}
-        onClick={onClose}
-        className="fixed inset-0 z-30 cursor-default"
-      />
-      <div className="absolute left-4 top-full z-40 mt-2 flex max-h-[70vh] w-80 flex-col overflow-hidden rounded-2xl border border-muted/15 bg-surface shadow-xl shadow-black/40">
-        <div className="flex items-start justify-between gap-3 px-4 pb-2 pt-4">
-          <div className="min-w-0">
-            <h2 className="font-display text-lg text-foreground">{t("feed.fromMadgigz")}</h2>
-            <p className="mt-0.5 text-xs text-muted">{t("feed.announcementsSubtitle")}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("feed.closeAnnouncements")}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-background text-muted transition-colors hover:bg-primary hover:text-foreground"
-          >
-            <CloseIcon />
-          </button>
+    <aside className="hidden lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:border-r lg:border-muted/15">
+      <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
+        <div className="min-w-0">
+          <h2 className="font-display text-xl text-foreground">{t("feed.fromMadgigz")}</h2>
+          <p className="mt-1 text-sm text-muted">{t("feed.announcementsSubtitle")}</p>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-          <AnnouncementsList announcements={announcements} />
-        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t("feed.closeAnnouncements")}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-muted transition-colors hover:bg-primary hover:text-foreground"
+        >
+          <CloseIcon />
+        </button>
       </div>
-    </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+        <AnnouncementsList announcements={announcements} />
+      </div>
+    </aside>
   );
 }
 
