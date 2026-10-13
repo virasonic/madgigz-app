@@ -128,17 +128,24 @@ export default function AddContentModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-30 flex items-end justify-center bg-black/60 lg:items-center lg:p-6"
-      onClick={onClose}
-    >
-      {/* Mobile: a bottom sheet with a drag handle (phone-native). Desktop: a
-          centred, fully-rounded dialog with a close button - a web affordance
-          rather than a sheet stranded at the bottom of a monitor. */}
+    <>
+      {/* Click-away layer. A dark scrim on mobile (the bottom-sheet backdrop),
+          transparent on desktop where this is a lightweight popover anchored to
+          the feed header's "+" (#121). The card is a sibling, not a child, so
+          clicks inside it don't reach here. */}
+      <button
+        type="button"
+        aria-label={t("common.close")}
+        onClick={onClose}
+        className="fixed inset-0 z-30 cursor-default bg-black/60 lg:bg-transparent"
+      />
+      {/* Mobile: a bottom sheet with a drag handle (phone-native). Desktop
+          (#121): a compact popover dropping from the "+", anchored in the feed
+          header's relative container (right-4 / top-full), mirroring the
+          announcements dropdown on the left. */}
       <div
-        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10 lg:rounded-3xl lg:pb-6 lg:shadow-2xl"
+        className="fixed inset-x-0 bottom-0 z-40 mx-auto max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-surface p-6 pb-10 lg:absolute lg:inset-x-auto lg:bottom-auto lg:right-4 lg:top-full lg:mt-2 lg:max-h-[70vh] lg:w-80 lg:rounded-3xl lg:pb-6 lg:shadow-xl lg:shadow-black/40"
         style={sheetStyle}
-        onClick={(e) => e.stopPropagation()}
       >
         <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3 lg:hidden">
           <div className="h-1 w-10 rounded-full bg-muted/30" />
@@ -226,6 +233,6 @@ export default function AddContentModal({
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

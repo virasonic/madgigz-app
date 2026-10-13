@@ -537,6 +537,17 @@ export default function FeedClient({
             +
           </button>
         )}
+        {/* Compose (#121): rendered inside this relative header so its desktop
+            popover anchors under the "+" above (right-4 / top-full); on mobile
+            it's a bottom sheet. */}
+        {addContentOpen && user && (
+          <AddContentModal
+            shows={shows}
+            artistName={artistName}
+            onClose={() => setAddContentOpen(false)}
+            onPosted={refreshContent}
+          />
+        )}
         {/* #170: fans get a quick way into their discovery preferences from the
             feed. Organisers use this spot for the post "+", so fans only. */}
         {user && !canActAsOrganiser(user) && (
@@ -739,15 +750,6 @@ export default function FeedClient({
           liked={savedIds.includes(activeEvent.id)}
           onToggleLike={() => handleToggleLike(activeEvent.id)}
           onClose={ticketModal.close}
-        />
-      )}
-
-      {addContentOpen && user && (
-        <AddContentModal
-          shows={shows}
-          artistName={artistName}
-          onClose={() => setAddContentOpen(false)}
-          onPosted={refreshContent}
         />
       )}
 
