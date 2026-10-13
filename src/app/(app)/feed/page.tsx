@@ -9,6 +9,7 @@ import {
   fetchSavedEventIds,
   fetchShowsByArtist,
   fetchShowsByProAccount,
+  fetchTaggedShows,
 } from "@/lib/supabase/queries";
 import FeedClient from "./FeedClient";
 import { isArtistRole } from "@/lib/roles";
@@ -38,13 +39,22 @@ export default async function FeedPage() {
   const [events, posts, shows, savedIds, followedEventIds, intros] = await Promise.all([
     fetchEvents(supabase, { activeOnly: true, city: CURRENT_CITY }),
     fetchContentPosts(supabase),
-    // Which shows the "+" can post to. An artist's own, or - for a promoter or
-    // venue (#88) - the ones they booked. Never both: an account is one or the
-    // other, and the database (addendum_052) scopes the insert the same way.
+    // Which shows the "+" can post to. For a promoter or venue (#88), the ones
+    // they booked. For an artist, their own shows AND the ones they're only
+    // tagged in (someone else's show, artist in the line-up) - the content_posts
+    // RLS allows posting to both (addendum_013), and the profile already offers
+    // both, so the feed "+" must match it or a tagged show goes missing here.
     user?.proType
       ? fetchShowsByProAccount(supabase, user.id)
       : user && isArtistRole(user.role)
-        ? fetchShowsByArtist(supabase, user.id)
+        ? Promise.all([
+            fetchShowsByArtist(supabase, user.id),
+            fetchTaggedShows(supabase, user.id),
+          ]).then(([own, tagged]) =>
+            // Disjoint by construction (fetchTaggedShows excludes owned), so a
+            // plain concat; date-sorted like the profile's merged list.
+            [...own, ...tagged].sort((a, b) => a.date.localeCompare(b.date))
+          )
         : Promise.resolve([]),
     user ? fetchSavedEventIds(supabase, user.id) : Promise.resolve<string[]>([]),
     user ? fetchFollowedEventIds(supabase, user.id) : Promise.resolve(new Set<string>()),
