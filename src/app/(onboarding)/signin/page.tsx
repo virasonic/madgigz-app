@@ -1,16 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import AppleButton from "@/components/auth/AppleButton";
-import GoogleButton from "@/components/auth/GoogleButton";
-import { LegalNotice } from "@/components/legal/LegalNotice";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import SignInForm from "@/components/auth/SignInForm";
 import { safeNext } from "@/lib/site";
-import { signInWithIdentifier } from "./actions";
-import { useT } from "@/lib/i18n/LocaleProvider";
 
 // The route that sends people here only ever passes a safe code, never
 // Supabase's own error text (see src/app/auth/confirm/route.ts) - this maps
@@ -78,114 +71,21 @@ function LinkNotice({ code }: { code: string | null }) {
 }
 
 function SignInContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   // Set when a shared event link sent a logged-out visitor here. Validated
   // rather than trusted - see safeNext - because it ends up in a redirect.
   const next = safeNext(searchParams.get("next"));
 
-  // Email OR username now - the field takes either, and the server sorts out
-  // which (see signInWithIdentifier). The redirect logic that used to live here
-  // moved into that action so both paths share it.
-  const { t } = useT();
-  // Prefilled when arriving from the "check your email" screen's "Already
-  // confirmed? Sign in" link, so a fan coming back into the native app after
-  // confirming in Safari doesn't have to retype their address.
-  const [identifier, setIdentifier] = useState(searchParams.get("email") ?? "");
-  const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    const nextErrors: Record<string, string> = {};
-
-    if (!identifier.trim()) nextErrors.identifier = t("signin.errorIdentifier");
-    if (!password) nextErrors.password = t("signin.errorPassword");
-
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-
-    setSubmitting(true);
-    const result = await signInWithIdentifier({ identifier, password, next });
-    setSubmitting(false);
-
-    if (result.error || !result.destination) {
-      setErrors({ password: result.error ?? t("signin.errorWrong") });
-      return;
-    }
-
-    router.push(result.destination);
-    router.refresh();
-  }
-
+  // The form itself lives in SignInForm, shared with the desktop sign-in modal
+  // (#211a) so there's one code path. The page's job is just to feed it the
+  // query-string context: where to go next, a prefilled address (the "already
+  // confirmed? sign in" return trip), and the link-notice banner.
   return (
-    <div className="flex flex-1 flex-col">
-      <h1 className="font-display mt-8 text-3xl text-foreground">{t("signin.title")}</h1>
-      <p className="mt-1 text-sm text-muted">{t("signin.subtitle")}</p>
-
-      <LinkNotice code={searchParams.get("notice")} />
-
-      <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5">
-        <Input
-          label={t("signin.identifierLabel")}
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          error={errors.identifier}
-          autoComplete="username"
-        />
-        <Input
-          label={t("signin.passwordLabel")}
-          isPassword
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={errors.password}
-          autoComplete="current-password"
-        />
-
-        <Link
-          href="/signin/forgot-password"
-          className="-mt-2 self-end text-sm text-accent"
-        >
-          {t("signin.forgotPassword")}
-        </Link>
-
-        <Button type="submit" className="mt-2" disabled={submitting}>
-          {submitting ? t("signin.submitting") : t("signin.submit")}
-        </Button>
-      </form>
-
-      <div className="mt-6 flex items-center gap-3">
-        <span className="h-px flex-1 bg-muted/20" />
-        <span className="text-xs uppercase tracking-wide text-muted">{t("signin.orDivider")}</span>
-        <span className="h-px flex-1 bg-muted/20" />
-      </div>
-
-      {/* Apple above Google, per Apple's HIG (Sign in with Apple should be at
-          least as prominent as other providers) - matters for the iOS wrap
-          (#110). Both flow through the same provider-agnostic /auth/callback. */}
-      <div className="mt-6 flex flex-col gap-3">
-        <AppleButton next={next} label={t("signin.withApple")} />
-        <GoogleButton next={next} label={t("signin.withGoogle")} />
-      </div>
-
-      {/* Google sign-in doubles as account creation for anyone new, so the
-          acceptance line lives on this page too. */}
-      <LegalNotice
-        messageKey="signin.legalNotice"
-        className="mt-3 text-center text-xs text-muted"
-      />
-
-      <p className="mt-8 text-center text-sm text-muted">
-        {t("signin.noAccount")}{" "}
-        <Link
-          href={next ? `/?next=${encodeURIComponent(next)}` : "/"}
-          className="font-heading text-foreground"
-        >
-          {t("common.signUp")}
-        </Link>
-      </p>
-    </div>
+    <SignInForm
+      next={next}
+      defaultIdentifier={searchParams.get("email") ?? ""}
+      notice={<LinkNotice code={searchParams.get("notice")} />}
+    />
   );
 }
 

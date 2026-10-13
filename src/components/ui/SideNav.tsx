@@ -9,6 +9,7 @@ import { canActAsArtist, isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useLiveUnreadCount } from "@/lib/realtime";
 import { BellIcon, ExploreIcon, FeedIcon, GearIcon, MegaphoneIcon, NoteIcon, PersonIcon, PlusIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
+import SignInModal from "@/components/auth/SignInModal";
 
 interface NavItem {
   href: string;
@@ -54,6 +55,11 @@ export default function SideNav({
   // server component doesn't re-run and scroll doesn't jump; from any other page
   // we navigate to Explore once, then subsequent keystrokes go shallow.
   const [search, setSearch] = useState("");
+
+  // #211a: a guest clicking a gated tab opens the sign-in modal in place (set to
+  // the tab they wanted) instead of being thrown to the full /signin screen.
+  const [signInNext, setSignInNext] = useState<string | null>(null);
+
   function runSearch(value: string) {
     setSearch(value);
     const q = value.trim();
@@ -114,6 +120,7 @@ export default function SideNav({
   items.push({ href: "/profile?settings=1", label: t("settings.title"), icon: GearIcon });
 
   return (
+    <>
     <nav className="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:gap-1 lg:border-r lg:border-muted/15 lg:px-3 lg:py-5">
       <Link href="/feed" className="mb-4 px-3" aria-label="MadGigz">
         <Image src="/logos/madgigz-wordmark.png" alt="MadGigz" width={148} height={47} priority />
@@ -137,20 +144,14 @@ export default function SideNav({
 
       {items.map((item) => {
         const active = pathname === item.href;
-        const href =
-          isGuest && GUEST_GATED.has(item.href)
-            ? `/signin?next=${encodeURIComponent(item.href)}`
-            : item.href;
-        return (
-          <Link
-            key={item.href}
-            href={href}
-            className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-heading transition-colors ${
-              active
-                ? "bg-surface text-primary"
-                : "text-muted hover:bg-surface/60 hover:text-foreground"
-            }`}
-          >
+        const gated = isGuest && GUEST_GATED.has(item.href);
+        const className = `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-heading transition-colors ${
+          active
+            ? "bg-surface text-primary"
+            : "text-muted hover:bg-surface/60 hover:text-foreground"
+        }`;
+        const inner = (
+          <>
             {item.icon(active)}
             <span>{item.label}</span>
             {item.badge ? (
@@ -158,10 +159,30 @@ export default function SideNav({
                 {item.badge}
               </span>
             ) : null}
+          </>
+        );
+        // Gated tab + guest: open the sign-in modal in place (#211a) rather than
+        // navigate to /signin. Otherwise a normal rail link.
+        return gated ? (
+          <button
+            key={item.href}
+            type="button"
+            onClick={() => setSignInNext(item.href)}
+            className={`${className} w-full text-left`}
+          >
+            {inner}
+          </button>
+        ) : (
+          <Link key={item.href} href={item.href} className={className}>
+            {inner}
           </Link>
         );
       })}
     </nav>
+    {signInNext !== null && (
+      <SignInModal next={signInNext} onClose={() => setSignInNext(null)} />
+    )}
+    </>
   );
 }
 
