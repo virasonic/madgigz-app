@@ -8,7 +8,7 @@ import { ArtistStatus, Role } from "@/lib/types";
 import { canActAsArtist, isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useLiveUnreadCount } from "@/lib/realtime";
-import { BellIcon, ExploreIcon, FeedIcon, GearIcon, MegaphoneIcon, NoteIcon, PersonIcon, PlusIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
+import { BellIcon, ExploreIcon, FeedIcon, GearIcon, NoteIcon, PersonIcon, PlusIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
 import SignInModal from "@/components/auth/SignInModal";
 
 interface NavItem {
@@ -78,12 +78,9 @@ export default function SideNav({
 
   const items: NavItem[] = [
     { href: "/feed", label: t("nav.feed"), icon: FeedIcon },
-    // "From MadGigz" announcements. Desktop gives them a first-class rail row
-    // that opens the panel beside the feed (via the ?panel= param FeedClient
-    // reads) rather than the awkward bottom sheet the mobile header still uses.
-    // Never pathname-active (its href carries a query the pathname never has),
-    // which is right — it's an action, not a destination.
-    { href: "/feed?panel=announcements", label: t("feed.announcements"), icon: MegaphoneIcon },
+    // "From MadGigz" announcements used to have a rail row here that opened a
+    // side column (#120). Per the Oct audit (#211c) they now live as a dropdown
+    // under the feed header's megaphone, so the rail row is gone.
     { href: "/explore", label: t("nav.explore"), icon: ExploreIcon },
     { href: "/saved", label: t("nav.tickets"), icon: TicketIcon },
     { href: "/notifications", label: t("notifications.title"), icon: BellIcon, badge: liveUnread },
