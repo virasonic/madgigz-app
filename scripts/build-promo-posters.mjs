@@ -30,7 +30,7 @@ const H = 3508;
 
 const WM =
   "data:image/png;base64," +
-  fs.readFileSync(path.join(ROOT, "public/logos/madgigz-wordmark.png")).toString("base64");
+  fs.readFileSync(path.join(ROOT, "public/logos/madgigz-wordmark-galdern.png")).toString("base64");
 
 // The real For-You feed screenshot used on the store listings.
 const FEED =

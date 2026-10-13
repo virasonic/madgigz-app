@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { Wordmark } from "@/components/ui/Wordmark";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ProAccountType } from "@/lib/pro";
@@ -56,17 +56,10 @@ function NavLinks({
   );
 }
 
-function Wordmark({ suffix }: { suffix: string }) {
+function PanelWordmark({ suffix }: { suffix: string }) {
   return (
     <div className="flex items-center gap-2">
-      <Image
-        src="/logos/madgigz-wordmark.png"
-        alt="MadGigz"
-        width={148}
-        height={47}
-        className="w-28"
-        priority
-      />
+      <Wordmark width={148} className="w-28" />
       <span className="font-heading text-[10px] uppercase tracking-widest text-muted">{suffix}</span>
     </div>
   );
@@ -121,7 +114,7 @@ export default function ProShell({
           phone at the door, hence the drawer below. */}
       <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-muted/15 px-3 py-5 lg:flex">
         <Link href="/feed" className="mb-6 px-2" aria-label="MadGigz Pro">
-          <Wordmark suffix={t("pro.panelSuffix")} />
+          <PanelWordmark suffix={t("pro.panelSuffix")} />
         </Link>
         <NavLinks pathname={pathname} t={t} />
         {footer}
@@ -139,7 +132,7 @@ export default function ProShell({
               <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
-          <Wordmark suffix={t("pro.panelSuffix")} />
+          <PanelWordmark suffix={t("pro.panelSuffix")} />
         </header>
 
         <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8">{children}</main>
@@ -155,7 +148,7 @@ export default function ProShell({
           <div className="absolute inset-0 bg-black/60" onClick={() => setDrawerOpen(false)} />
           <aside className="pt-safe-page relative flex w-64 max-w-[80%] flex-col overflow-y-auto border-r border-muted/15 bg-background px-3 pb-6">
             <div className="mb-6 flex items-start justify-between gap-2 px-2">
-              <Wordmark suffix={t("pro.panelSuffix")} />
+              <PanelWordmark suffix={t("pro.panelSuffix")} />
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}

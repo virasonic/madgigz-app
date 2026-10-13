@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import Image from "next/image";
+import { Wordmark } from "@/components/ui/Wordmark";
 import Link from "next/link";
 import { isNativeApp } from "@/lib/native";
 
@@ -58,14 +58,7 @@ export default function OpenRedirect() {
       {/* Tapping the wordmark is the manual fallback if the auto-redirect is
           blocked; alt text keeps it accessible without any translated string. */}
       <Link href="/feed" aria-label="MadGigz">
-        <Image
-          src="/logos/madgigz-wordmark.png"
-          alt="MadGigz"
-          width={280}
-          height={89}
-          priority
-          className="w-48"
-        />
+        <Wordmark width={280} className="w-48" />
       </Link>
       <div
         className="size-7 animate-spin rounded-full border-2 border-surface-raised border-t-foreground"

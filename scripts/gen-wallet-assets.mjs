@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MARK = join(ROOT, "public/logos/mgz-mark.png");
-const WORDMARK = join(ROOT, "public/logos/madgigz-wordmark.png");
+const WORDMARK = join(ROOT, "public/logos/madgigz-wordmark-galdern.png");
 
 async function pngB64(src, opts) {
   const buf = await sharp(src).resize(opts).png().toBuffer();

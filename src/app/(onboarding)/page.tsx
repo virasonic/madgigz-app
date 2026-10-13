@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import { Wordmark } from "@/components/ui/Wordmark";
 import { redirect } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import RoleCard from "@/components/ui/RoleCard";
 import LanguageToggle from "@/components/ui/LanguageToggle";
@@ -89,14 +89,7 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
       </div>
       <div className="flex flex-1 flex-col justify-center">
       <div className="flex flex-col items-center text-center">
-        <Image
-          src="/logos/madgigz-wordmark.png"
-          alt="MadGigz"
-          width={280}
-          height={89}
-          priority
-          className="w-56"
-        />
+        <Wordmark width={280} className="w-56" />
         <p className="mt-3 font-heading text-sm uppercase tracking-[0.2em] text-muted">
           {t("landing.tagline")}
         </p>

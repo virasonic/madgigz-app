@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Wordmark } from "@/components/ui/Wordmark";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -125,14 +126,7 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
             affordance instead. */}
         {signedIn && <BackButton />}
         <Link href="/" aria-label={t("eventPage.homeAria")}>
-          <Image
-            src="/logos/madgigz-wordmark.png"
-            alt="MadGigz"
-            width={280}
-            height={89}
-            className="w-28"
-            priority
-          />
+          <Wordmark width={280} className="w-28" />
         </Link>
         {!signedIn && (
           <Link href="/signin" className="ml-auto font-heading text-sm text-accent">

@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { Wordmark } from "@/components/ui/Wordmark";
 import BackButton from "@/components/ui/BackButton";
 import { getServerT } from "@/lib/i18n/server";
 
@@ -19,14 +19,7 @@ export default async function EventNotFound() {
             and cold-opened shared links home. */}
         <BackButton fallbackHref="/" />
         <Link href="/" aria-label={t("eventPage.homeAria")}>
-          <Image
-            src="/logos/madgigz-wordmark.png"
-            alt="MadGigz"
-            width={280}
-            height={89}
-            className="w-28"
-            priority
-          />
+          <Wordmark width={280} className="w-28" />
         </Link>
       </header>
 

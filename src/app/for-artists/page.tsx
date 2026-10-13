@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { Wordmark } from "@/components/ui/Wordmark";
 import Link from "next/link";
 import { getServerT } from "@/lib/i18n/server";
 import { legalUrl } from "@/lib/legal";
@@ -79,14 +79,7 @@ export default async function ForArtistsPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-12">
-      <Image
-        src="/logos/madgigz-wordmark.png"
-        alt="MadGigz"
-        width={280}
-        height={89}
-        priority
-        className="w-40"
-      />
+      <Wordmark width={280} className="w-40" />
 
       <p className="mt-10 font-heading text-xs uppercase tracking-[0.2em] text-muted">
         {t("forArtists.eyebrow")}
