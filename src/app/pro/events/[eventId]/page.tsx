@@ -65,6 +65,9 @@ export default async function ProEditEventPage({ params }: PageProps<"/pro/event
         <p className="text-sm text-muted">
           {event.title} · {t("pro.soldOfCapacity", { sold: event.sold, capacity: event.capacity })}
         </p>
+        <Link href={`/profile/fan-photos/${event.id}`} className="mt-2 inline-block text-sm text-accent">
+          {t("pro.fanPhotos")} &rarr;
+        </Link>
       </div>
 
       {event.cancelled ? (

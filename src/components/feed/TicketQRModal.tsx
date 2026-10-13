@@ -13,6 +13,7 @@ import { emailTicket } from "@/app/(app)/saved/ticket-email-actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
+import SendToFriendSheet from "@/components/friends/SendToFriendSheet";
 
 interface TicketQRModalProps {
   ticket: Ticket;
@@ -62,6 +63,8 @@ export default function TicketQRModal({
   const [walletPending, setWalletPending] = useState(false);
   const [transferToken, setTransferToken] = useState<string | null>(pendingTransferToken ?? null);
   const [transferBusy, setTransferBusy] = useState(false);
+  // Deliver the claim link to a friend in-app (#149 Phase B).
+  const [sendingTo, setSendingTo] = useState(false);
   const [transferError, setTransferError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -321,11 +324,29 @@ export default function TicketQRModal({
                         {claimUrl}
                       </p>
                     )}
-                    <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSendingTo(true)}
+                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-primary py-2 text-sm font-heading text-foreground"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M21 3L10 14M21 3l-7 18-4-7-7-4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      {t("ticket.sendTicketToFriend")}
+                    </button>
+                    {sendingTo && transferToken && (
+                      <SendToFriendSheet
+                        mode="ticket"
+                        event={event}
+                        token={transferToken}
+                        onClose={() => setSendingTo(false)}
+                      />
+                    )}
+                    <div className="mt-2 flex gap-2">
                       <button
                         type="button"
                         onClick={handleShareClaim}
-                        className="flex-1 rounded-full bg-primary py-2 text-sm font-heading text-foreground"
+                        className="flex-1 rounded-full border border-muted/30 py-2 text-sm font-heading text-foreground"
                       >
                         {copied ? t("ticket.transferCopied") : t("ticket.transferShare")}
                       </button>

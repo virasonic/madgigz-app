@@ -1,7 +1,9 @@
 "use client";
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import Button from "@/components/ui/Button";
+import { fetchPendingPhotoCount } from "@/lib/fan-photos";
 import FeeBreakdown from "@/components/artist/FeeBreakdown";
 import ArtistTierEditor, { type ArtistTier } from "@/components/artist/ArtistTierEditor";
 import { removeSelfFromShow } from "@/app/(app)/profile/show-actions";
@@ -142,6 +144,15 @@ export default function ManageShowModal({
     fetchShowContent(supabase, show.id).then(setPosts);
     fetchShowTicketCounts(supabase, show.id).then(setTicketCounts);
   }, [show.id]);
+
+  // Fan photos waiting for review (#195). null = not a past show (or not the
+  // manager), so the row doesn't render; the date compare lives in the effect
+  // so render stays pure.
+  const [pendingPhotos, setPendingPhotos] = useState<number | null>(null);
+  useEffect(() => {
+    if (!canManage || show.date >= new Date().toISOString().slice(0, 10)) return;
+    fetchPendingPhotoCount(createClient(), show.id).then(setPendingPhotos);
+  }, [canManage, show.id, show.date]);
 
   // Price tiers (#151) for this show, loaded for the editor. tiersVersion bumps
   // after a save so the editor remounts with the freshly-saved rows (which now
@@ -478,6 +489,17 @@ export default function ManageShowModal({
 
         {tab === "overview" ? (
           <div className="mt-6 flex flex-col gap-5">
+            {pendingPhotos !== null && (
+              <Link
+                href={`/profile/fan-photos/${show.id}`}
+                className="flex items-center justify-between rounded-2xl bg-background px-4 py-3 text-sm"
+              >
+                <span className="font-heading text-foreground">{t("fanPhotos.manageRow")}</span>
+                <span className={pendingPhotos > 0 ? "font-heading text-primary" : "text-muted"}>
+                  {t("fanPhotos.manageWaiting", { count: pendingPhotos })} &rarr;
+                </span>
+              </Link>
+            )}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted">{t("manageShow.location")}</p>

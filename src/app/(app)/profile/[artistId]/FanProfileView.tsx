@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import BackButton from "@/components/ui/BackButton";
 import EventCard from "@/components/feed/EventCard";
 import TicketModal from "@/components/feed/TicketModal";
 import FriendButton from "@/components/friends/FriendButton";
+import FanPhotoStrip from "@/components/fan-photos/FanPhotoStrip";
+import type { FanPhoto } from "@/lib/fan-photos";
 import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { useUrlModal } from "@/lib/useUrlModal";
@@ -30,6 +32,7 @@ export default function FanProfileView({
   events,
   myGoingIds,
   initialSavedIds,
+  photos,
 }: {
   card: FanCard;
   status: FriendStatus;
@@ -40,10 +43,24 @@ export default function FanProfileView({
   events: Record<Tab, EventItem[]> | null;
   myGoingIds: string[];
   initialSavedIds: string[];
+  /** Their approved fan photos; only passed for a friend. */
+  photos: FanPhoto[];
 }) {
   const { t, locale } = useT();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("going");
+
+  // A logged-out visitor opening a fan's page got here from that fan's invite
+  // link or QR (#149). Remember who, so after they sign up the Find friends
+  // screen can suggest the person who brought them in. Per-device only.
+  useEffect(() => {
+    if (!isGuest) return;
+    try {
+      localStorage.setItem("mg_invite_ref", card.username);
+    } catch {
+      // storage unavailable (private mode) - the suggestion just won't appear
+    }
+  }, [isGuest, card.username]);
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
   const ticketModal = useUrlModal("ticket");
   const allShows = useMemo(
@@ -119,6 +136,8 @@ export default function FanProfileView({
               </button>
             ))}
           </div>
+
+          <FanPhotoStrip photos={photos} className="mt-6" />
 
           {events[tab].length === 0 ? (
             <p className="mt-6 text-center text-sm text-muted">{t(emptyKey[tab])}</p>

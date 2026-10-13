@@ -15,6 +15,8 @@ import { buildLineupLinks, normName } from "@/lib/lineup-links";
 import { absoluteUrl, eventPath, mapsUrl } from "@/lib/site";
 import PublicEventActions from "./PublicEventActions";
 import AttendedToggle from "./AttendedToggle";
+import FanPhotosSection from "@/components/fan-photos/FanPhotosSection";
+import { fetchFanPhotosForEvent } from "@/lib/fan-photos";
 import BackButton from "@/components/ui/BackButton";
 import ClampText from "@/components/ui/ClampText";
 import { getServerT } from "@/lib/i18n/server";
@@ -106,6 +108,25 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
       ? await fetchIsManuallyAttended(supabase, auth.user.id, event.id)
       : false;
 
+  // Fan photos (#195): everything this viewer may see on a past show (RLS
+  // decides), plus whether they count as an attendee - a scanned-in ticket or
+  // the manual mark - which is what gates adding their own.
+  const [fanPhotos, scannedIn] = isPast
+    ? await Promise.all([
+        fetchFanPhotosForEvent(supabase, event.id),
+        auth.user
+          ? supabase
+              .from("tickets")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", auth.user.id)
+              .eq("event_id", event.id)
+              .not("checked_in_at", "is", null)
+              .then((r) => (r.count ?? 0) > 0)
+          : Promise.resolve(false),
+      ])
+    : [[], false];
+  const canAddPhotos = attendedThis || scannedIn;
+
   // Line-up act name -> profile id, for the ones that are tagged MadGigz artists
   // (or the owner). Non-matching acts stay plain text.
   const lineupLinks = buildLineupLinks(tagged, { id: event.artistId, name: event.artist });
@@ -191,6 +212,15 @@ export default async function PublicEventPage({ params }: PageProps<"/e/[eventId
 
         {signedIn && isPast && (
           <AttendedToggle eventId={event.id} initialAttended={attendedThis} />
+        )}
+
+        {isPast && (
+          <FanPhotosSection
+            eventId={event.id}
+            photos={fanPhotos}
+            userId={auth.user?.id ?? null}
+            attended={canAddPhotos}
+          />
         )}
 
         {event.description && (

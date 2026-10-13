@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { EventItem, EventRow, mapEvent } from "@/lib/types";
 import ClaimClient, { ClaimState } from "./ClaimClient";
+import { FanCard, FriendStatus, fetchFanCard, fetchFriendships, friendStatusWith } from "@/lib/friends";
 
 // Public claim page for a transferred ticket (#145). Sits OUTSIDE the authed
 // (app) group on purpose: a signed-out recipient must be able to open the link
@@ -63,5 +64,20 @@ export default async function ClaimPage({ params }: PageProps<"/claim/[token]">)
     }
   }
 
-  return <ClaimClient token={token} state={state} event={event} />;
+  // Who sent it, and whether they're already a friend (#149): a ticket from
+  // someone is the most natural moment to add them.
+  let sender: FanCard | null = null;
+  let senderStatus: FriendStatus = "none";
+  if (state === "claimable" && user && transfer) {
+    const [card, links] = await Promise.all([
+      fetchFanCard(admin, transfer.from_user_id),
+      fetchFriendships(supabase, user.id),
+    ]);
+    sender = card;
+    senderStatus = friendStatusWith(links, transfer.from_user_id);
+  }
+
+  return (
+    <ClaimClient token={token} state={state} event={event} sender={sender} senderStatus={senderStatus} />
+  );
 }

@@ -114,11 +114,16 @@ export default function NotificationsClient({
           // Only the ones tied to a show, or to a friend, go anywhere. "X started
           // following you" has no page worth opening - a dead tap is worse than
           // none.
-          const href = n.eventId
-            ? `/e/${n.eventId}`
-            : n.type === "friend_accepted" && n.actorId
-              ? `/profile/${n.actorId}`
-              : null;
+          const href =
+            n.type === "ticket_offer" && n.payload?.token
+              ? `/claim/${n.payload.token}`
+              : n.type === "fan_photo_pending" && n.eventId
+                ? `/profile/fan-photos/${n.eventId}`
+                : n.eventId
+                  ? `/e/${n.eventId}`
+                  : n.type === "friend_accepted" && n.actorId
+                    ? `/profile/${n.actorId}`
+                    : null;
           return href ? (
             <button
               key={g.key}

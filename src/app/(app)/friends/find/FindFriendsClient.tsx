@@ -65,6 +65,27 @@ export default function FindFriendsClient({
     };
   }, [profileUrl]);
 
+  // The person whose invite link brought this account in (#149), remembered
+  // on this device by the fan page they opened while logged out. Shown until
+  // they're friends or the request is out.
+  const [inviteCard, setInviteCard] = useState<FanCard | null>(null);
+  useEffect(() => {
+    let ref: string | null = null;
+    try {
+      ref = localStorage.getItem("mg_invite_ref");
+    } catch {
+      return;
+    }
+    if (!ref || ref.toLowerCase() === username.toLowerCase()) return;
+    const wanted = ref.toLowerCase();
+    searchFans(ref).then((found) => {
+      const card = found.find((c) => c.username.toLowerCase() === wanted) ?? null;
+      setInviteCard(card);
+    });
+  }, [username]);
+  const inviteStatus = inviteCard ? friendStatusWith(links, inviteCard.id) : "none";
+  const showInvite = inviteCard !== null && inviteStatus === "none";
+
   const [shared, setShared] = useState<"copied" | "failed" | null>(null);
   async function share() {
     const outcome = await shareUrl(profileUrl, t("friends.inviteTitle", { username }));
@@ -148,10 +169,11 @@ export default function FindFriendsClient({
         )}
       </section>
 
-      {suggestions.length > 0 && (
+      {(suggestions.length > 0 || showInvite) && (
         <section className="mt-6">
           <h2 className="mb-1 font-heading text-sm text-muted">{t("friends.suggested")}</h2>
           <div className="flex flex-col divide-y divide-muted/10">
+            {showInvite && inviteCard && row(inviteCard, t("friends.fromYourLink"))}
             {suggestions.map((s) =>
               row(
                 s.profile,

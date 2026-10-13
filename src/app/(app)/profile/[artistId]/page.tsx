@@ -23,6 +23,8 @@ import FollowButton from "@/components/artist/FollowButton";
 import FriendButton from "@/components/friends/FriendButton";
 import IntroReel from "@/components/artist/IntroReel";
 import FanProfileView from "./FanProfileView";
+import FanPhotoStrip from "@/components/fan-photos/FanPhotoStrip";
+import { fetchApprovedPhotosForFan, fetchApprovedPhotosForOrganiser } from "@/lib/fan-photos";
 import Avatar from "@/components/ui/Avatar";
 import SocialLinks from "@/components/ui/SocialLinks";
 import ArtistShowsGrid from "./ArtistShowsGrid";
@@ -80,11 +82,14 @@ export default async function PublicArtistProfilePage({
 
     let events: Parameters<typeof FanProfileView>[0]["events"] = null;
     let myGoingIds: string[] = [];
+    let photos: Parameters<typeof FanProfileView>[0]["photos"] = [];
     if (status === "friends" && currentUser) {
-      const [activity, tickets] = await Promise.all([
+      const [activity, tickets, approved] = await Promise.all([
         fetchFriendActivity(supabase),
         fetchTickets(supabase, currentUser.id),
+        fetchApprovedPhotosForFan(supabase, artistId),
       ]);
+      photos = approved;
       const theirs = activity.filter((a) => a.friendId === artistId);
       const goingIds = new Set(theirs.filter((a) => a.kind === "going").map((a) => a.eventId));
       const interestedIds = new Set(
@@ -111,6 +116,7 @@ export default async function PublicArtistProfilePage({
         events={events}
         myGoingIds={myGoingIds}
         initialSavedIds={savedIds}
+        photos={photos}
       />
     );
   }
@@ -126,6 +132,10 @@ export default async function PublicArtistProfilePage({
         fetchShowsByArtist(supabase, artistId),
         fetchTaggedShows(supabase, artistId),
       ]);
+
+  // Approved fan photos from this organiser's shows (#195): real content from
+  // the crowd on the page, kept or hidden by the organiser themselves.
+  const fanPhotos = await fetchApprovedPhotosForOrganiser(supabase, artistId);
 
   const roleLabel = artist.proType
     ? artist.proType === "venue"
@@ -204,6 +214,8 @@ export default async function PublicArtistProfilePage({
       )}
 
       <SocialLinks source={artist} className="mt-4" />
+
+      <FanPhotoStrip photos={fanPhotos} className="mt-6" />
 
       <ArtistShowsGrid
         userId={currentUser?.id ?? null}

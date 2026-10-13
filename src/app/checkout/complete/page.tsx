@@ -5,6 +5,7 @@ import { fulfilCheckoutSession } from "@/lib/fulfilment";
 import { createClient } from "@/lib/supabase/server";
 import { getServerT } from "@/lib/i18n/server";
 import TicketEmailPrompt from "@/components/feed/TicketEmailPrompt";
+import PurchaseFollowUp from "./PurchaseFollowUp";
 
 // Stripe redirects the fan here after payment. The webhook is the authoritative
 // fulfilment path, but it frequently lands *after* the browser does - so this
@@ -51,14 +52,19 @@ export default async function CheckoutCompletePage({
   // the free-ticket success screen. Keyed by session id, so it works whichever
   // path fulfilled the ticket (this page or the webhook).
   let ticketId: string | null = null;
+  let eventId: string | null = null;
+  let quantity = 1;
   if (ok) {
+    // One row per seat (#036), so the list length is the quantity bought.
     const { data } = await supabase
       .from("tickets")
-      .select("id")
+      .select("id, event_id")
       .eq("stripe_session_id", sessionId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    ticketId = (data?.id as string | null) ?? null;
+      .eq("user_id", user.id);
+    const rows = (data ?? []) as { id: string; event_id: string }[];
+    ticketId = rows[0]?.id ?? null;
+    eventId = rows[0]?.event_id ?? null;
+    quantity = Math.max(1, rows.length);
   }
 
   return (
@@ -77,7 +83,10 @@ export default async function CheckoutCompletePage({
       {ok ? (
         // The "saved in the app" note + "email me this ticket" option, identical
         // to the free-ticket success screen inside TicketModal.
-        <TicketEmailPrompt ticketId={ticketId} />
+        <>
+          <TicketEmailPrompt ticketId={ticketId} />
+          <PurchaseFollowUp eventId={eventId} quantity={quantity} />
+        </>
       ) : (
         <p className="max-w-xs text-sm text-muted">{message}</p>
       )}

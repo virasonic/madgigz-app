@@ -13,6 +13,8 @@ import { EventItem, EventTier, EventTierRow, mapEventTier, tierIsAvailable } fro
 import { eventPath } from "@/lib/site";
 import ShareEventButton from "./ShareEventButton";
 import FriendsGoingStrip from "@/components/friends/FriendsGoingStrip";
+import SendToFriendSheet from "@/components/friends/SendToFriendSheet";
+import PostPurchaseActions from "@/components/friends/PostPurchaseActions";
 import LikeButton from "./LikeButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
@@ -89,6 +91,8 @@ export default function TicketModal({
   const [purchasedTicketId, setPurchasedTicketId] = useState<string | null>(null);
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState<string | undefined>();
+  // "Send to a friend" (#149 Phase B): the in-app route beside the OS share.
+  const [sendingToFriend, setSendingToFriend] = useState(false);
 
   const [promoCode, setPromoCode] = useState("");
   const [promoLabel, setPromoLabel] = useState<string | null>(null);
@@ -320,7 +324,12 @@ export default function TicketModal({
               <TicketEmailPrompt ticketId={purchasedTicketId} accentColor={event.accentColor} />
             </div>
 
-            <Button className="mt-4" onClick={onClose}>
+            {/* Who's already in, invite more, hand a spare on (#149 Phase B). */}
+            <div className="mt-2 w-full">
+              <PostPurchaseActions event={event} quantity={quantity} />
+            </div>
+
+            <Button variant="ghost" className="mt-4" onClick={onClose}>
               {t("common.done")}
             </Button>
           </div>
@@ -342,8 +351,24 @@ export default function TicketModal({
                   <LikeButton event={event} liked={liked} onToggle={onToggleLike} showLabel />
                 )}
                 <ShareEventButton event={event} showLabel />
+                {!isGuest && (
+                  <button
+                    type="button"
+                    onClick={() => setSendingToFriend(true)}
+                    aria-label={t("friends.sendToFriend")}
+                    className="flex flex-col items-center gap-1 text-foreground"
+                  >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M21 3L10 14M21 3l-7 18-4-7-7-4z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span className="whitespace-nowrap text-xs text-muted">{t("friends.sendShort")}</span>
+                  </button>
+                )}
               </div>
             </div>
+            {sendingToFriend && (
+              <SendToFriendSheet mode="event" event={event} onClose={() => setSendingToFriend(false)} />
+            )}
             {event.artistId ? (
               <Link href={`/profile/${event.artistId}`} className="mt-1 inline-block text-sm text-accent">
                 {event.artist}

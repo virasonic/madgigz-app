@@ -4,7 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
+import FriendButton from "@/components/friends/FriendButton";
+import type { FanCard, FriendStatus } from "@/lib/friends";
 import { claimTransfer } from "@/app/(app)/saved/transfer-actions";
 import { EventItem } from "@/lib/types";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -19,6 +22,9 @@ interface ClaimClientProps {
   token: string;
   state: ClaimState;
   event: EventItem | null;
+  /** The sender, when the viewer is signed in and could add them (#149). */
+  sender?: FanCard | null;
+  senderStatus?: FriendStatus;
 }
 
 function formatDate(iso: string, dl: string) {
@@ -30,7 +36,7 @@ function formatDate(iso: string, dl: string) {
   });
 }
 
-export default function ClaimClient({ token, state, event }: ClaimClientProps) {
+export default function ClaimClient({ token, state, event, sender = null, senderStatus = "none" }: ClaimClientProps) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
   const router = useRouter();
@@ -123,6 +129,15 @@ export default function ClaimClient({ token, state, event }: ClaimClientProps) {
                 {busy ? t("claim.claiming") : t("claim.claim")}
               </Button>
               {error && <p className="mt-3 text-center text-sm text-danger">{error}</p>}
+              {sender && (
+                <div className="mt-5 flex items-center gap-3 rounded-2xl bg-background p-3">
+                  <Avatar photoUrl={sender.photoUrl} name={sender.username} size={36} />
+                  <span className="min-w-0 flex-1 truncate text-sm text-muted">
+                    {t("friends.sentBy", { username: sender.username })}
+                  </span>
+                  <FriendButton otherId={sender.id} status={senderStatus} size="sm" />
+                </div>
+              )}
             </>
           )}
         </div>
