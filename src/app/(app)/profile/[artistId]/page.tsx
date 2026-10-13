@@ -9,10 +9,19 @@ import {
   fetchShowsByArtist,
   fetchShowsByProAccount,
   fetchTaggedShows,
+  fetchTickets,
   resolveProfileHandle,
 } from "@/lib/supabase/queries";
+import {
+  fetchEventsByIds,
+  fetchFanCard,
+  fetchFriendActivity,
+  fetchFriendships,
+  friendStatusWith,
+} from "@/lib/friends";
 import FollowButton from "@/components/artist/FollowButton";
 import IntroReel from "@/components/artist/IntroReel";
+import FanProfileView from "./FanProfileView";
 import Avatar from "@/components/ui/Avatar";
 import SocialLinks from "@/components/ui/SocialLinks";
 import ArtistShowsGrid from "./ArtistShowsGrid";
@@ -55,7 +64,53 @@ export default async function PublicArtistProfilePage({
     getServerT(),
   ]);
 
-  if (!artist) notFound();
+  // Not an organiser with a public page: a fan (#149). Friends get the going /
+  // interested / been lists; everyone else, signed in or not, gets avatar,
+  // username and the friend button - so an invite link opened cold still lands
+  // somewhere that makes sense.
+  if (!artist) {
+    const card = await fetchFanCard(supabase, artistId);
+    if (!card) notFound();
+    const links = currentUser ? await fetchFriendships(supabase, currentUser.id) : [];
+    const link = links.find((l) => l.profile.id === artistId);
+    const status = friendStatusWith(links, artistId);
+
+    let events: Parameters<typeof FanProfileView>[0]["events"] = null;
+    let myGoingIds: string[] = [];
+    if (status === "friends" && currentUser) {
+      const [activity, tickets] = await Promise.all([
+        fetchFriendActivity(supabase),
+        fetchTickets(supabase, currentUser.id),
+      ]);
+      const theirs = activity.filter((a) => a.friendId === artistId);
+      const goingIds = new Set(theirs.filter((a) => a.kind === "going").map((a) => a.eventId));
+      const interestedIds = new Set(
+        theirs.filter((a) => a.kind === "interested" && !goingIds.has(a.eventId)).map((a) => a.eventId)
+      );
+      const beenIds = new Set(theirs.filter((a) => a.kind === "been").map((a) => a.eventId));
+      const all = await fetchEventsByIds(supabase, [...goingIds, ...interestedIds, ...beenIds]);
+      const pick = (ids: Set<string>) => all.filter((e) => ids.has(e.id));
+      events = {
+        going: pick(goingIds),
+        interested: pick(interestedIds),
+        been: pick(beenIds).sort((a, b) => b.date.localeCompare(a.date)),
+      };
+      myGoingIds = [...new Set(tickets.filter((tk) => !tk.refunded).map((tk) => tk.eventId))];
+    }
+
+    return (
+      <FanProfileView
+        card={card}
+        status={status}
+        since={link?.since ?? null}
+        isGuest={!currentUser}
+        userId={currentUser?.id ?? null}
+        events={events}
+        myGoingIds={myGoingIds}
+        initialSavedIds={savedIds}
+      />
+    );
+  }
 
   // Which shows this page is about depends on what kind of organiser it is. An
   // act's page bills what they played; a promoter's bills what they booked, and

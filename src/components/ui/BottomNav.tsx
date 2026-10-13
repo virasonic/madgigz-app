@@ -8,7 +8,7 @@ import { isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useLiveUnreadCount } from "@/lib/realtime";
 import { FEED_TO_TOP_EVENT } from "@/lib/ui-events";
-import { ExploreIcon, FeedIcon, NoteIcon, PersonIcon, TicketIcon } from "@/components/ui/nav-icons";
+import { ExploreIcon, FeedIcon, FriendsIcon, NoteIcon, PersonIcon, TicketIcon } from "@/components/ui/nav-icons";
 
 interface NavItem {
   href: string;
@@ -53,6 +53,7 @@ export default function BottomNav({
     { href: "/feed", label: t("nav.feed"), icon: FeedIcon },
     { href: "/explore", label: t("nav.explore"), icon: ExploreIcon },
     { href: "/saved", label: t("nav.tickets"), icon: TicketIcon },
+    { href: "/friends", label: t("nav.friends"), icon: FriendsIcon },
     {
       href: "/profile",
       label: t("nav.profile"),
@@ -74,7 +75,8 @@ export default function BottomNav({
         // A guest can browse Feed and Explore, but the Tickets and Profile tabs
         // are personal - send them to sign in (with next, so they land back on
         // the tab they wanted) rather than to a page that just bounces them.
-        const requiresAccount = isGuest && (item.href === "/saved" || item.href === "/profile");
+        const requiresAccount =
+          isGuest && (item.href === "/saved" || item.href === "/friends" || item.href === "/profile");
         const href = requiresAccount
           ? `/signin?next=${encodeURIComponent(item.href)}`
           : item.href;

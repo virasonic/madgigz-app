@@ -147,6 +147,18 @@ export function GearIcon(active: boolean) {
   );
 }
 
+// Friends (#149): two people, the second behind the first.
+export function FriendsIcon(active: boolean) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="8" r="3.5" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" />
+      <circle cx="17" cy="9" r="2.5" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+      <path d="M15.5 14.5a5 5 0 0 1 6 5" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // Notifications. The bell lives on the Profile tab dot on mobile, but the
 // desktop sidebar gives it its own row, so it needs its own icon.
 export function BellIcon(active: boolean) {

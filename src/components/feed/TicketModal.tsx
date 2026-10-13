@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { EventItem, EventTier, EventTierRow, mapEventTier, tierIsAvailable } from "@/lib/types";
 import { eventPath } from "@/lib/site";
 import ShareEventButton from "./ShareEventButton";
+import FriendsGoingStrip from "@/components/friends/FriendsGoingStrip";
 import LikeButton from "./LikeButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
@@ -353,6 +354,11 @@ export default function TicketModal({
             <p className="text-sm text-muted">
               {event.venue} · {formatDate(event.date, dl)} · {event.time}
             </p>
+
+            {/* Which of your friends are going / interested / were there (#149).
+                Renders nothing for guests and nothing when no friend is on the
+                show, so the sheet is unchanged for everyone else. */}
+            <FriendsGoingStrip eventId={event.id} isGuest={isGuest} />
 
             <div className="mt-5 flex gap-2 rounded-full bg-background p-1">
               <button

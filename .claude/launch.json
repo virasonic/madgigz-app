@@ -4,8 +4,20 @@
     {
       "name": "madgigz-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "madgigz-staging-db",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "set -a; . ./.env.staging; set +a; npm run dev -- -p 3001"
+      ],
+      "port": 3001
     }
   ]
 }

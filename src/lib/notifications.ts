@@ -5,7 +5,10 @@ export type NotificationType =
   | "new_follower"
   | "followed_artist_show"
   | "event_upcoming"
-  | "ticket_sold";
+  | "ticket_sold"
+  | "friend_request"
+  | "friend_accepted"
+  | "friend_going";
 
 export interface AppNotification {
   id: string;
@@ -16,6 +19,8 @@ export interface AppNotification {
   eventTitle: string | null;
   eventDate: string | null;
   actorName: string | null;
+  /** Who caused it (#149 needs it: a friend request is accepted against the requester). */
+  actorId: string | null;
 }
 
 interface NotificationRow {
@@ -24,6 +29,7 @@ interface NotificationRow {
   created_at: string;
   read_at: string | null;
   event_id: string | null;
+  actor_id: string | null;
   events: { title: string; event_date: string } | null;
   actor: { artist_name: string | null; username: string } | null;
 }
@@ -39,7 +45,7 @@ export async function fetchNotifications(
   const { data, error } = await supabase
     .from("notifications")
     .select(
-      "id, type, created_at, read_at, event_id, events(title, event_date), actor:profiles!notifications_actor_id_fkey(artist_name, username)"
+      "id, type, created_at, read_at, event_id, actor_id, events(title, event_date), actor:profiles!notifications_actor_id_fkey(artist_name, username)"
     )
     .eq("recipient_id", userId)
     .order("created_at", { ascending: false })
@@ -61,6 +67,7 @@ export async function fetchNotifications(
     eventTitle: row.events?.title ?? null,
     eventDate: row.events?.event_date ?? null,
     actorName: row.actor?.artist_name ?? row.actor?.username ?? null,
+    actorId: row.actor_id,
   }));
 }
 
@@ -116,6 +123,15 @@ export function describeNotification(
       };
     case "ticket_sold":
       return { title: t("notifications.ticketSoldTitle", { who, what }) };
+    case "friend_request":
+      return { title: t("notifications.friendRequest", { who }) };
+    case "friend_accepted":
+      return { title: t("notifications.friendAccepted", { who }) };
+    case "friend_going":
+      return {
+        title: t("notifications.friendGoing", { who, what }),
+        detail: t("notifications.friendGoingDetail"),
+      };
   }
 }
 
@@ -146,7 +162,9 @@ export function groupNotifications(list: AppNotification[]): NotificationGroup[]
   const buckets = new Map<string, AppNotification[]>();
 
   for (const n of list) {
-    const key = `${n.type}:${n.eventId ?? "-"}`;
+    // A friend request carries its own Accept/Decline, so it is never folded
+    // into a tally - each one stays its own line.
+    const key = n.type === "friend_request" ? `${n.type}:${n.id}` : `${n.type}:${n.eventId ?? "-"}`;
     buckets.set(key, [...(buckets.get(key) ?? []), n]);
   }
 
@@ -217,6 +235,13 @@ export function describeGroup(
       };
     case "followed_artist_show":
       return { title: t("notifications.newShowsGrouped", { count: g.count }) };
+    case "friend_accepted":
+      return { title: t("notifications.friendAcceptedGrouped", { names: nameList(g.actorNames, g.count, t) }) };
+    case "friend_going":
+      return {
+        title: t("notifications.friendGoingGrouped", { names: nameList(g.actorNames, g.count, t), what }),
+        detail: t("notifications.friendGoingDetail"),
+      };
     default:
       // tagged_in_event and event_upcoming don't repeat per show, so they
       // shouldn't reach here - fall back to the single-item wording rather

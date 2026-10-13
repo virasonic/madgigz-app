@@ -8,7 +8,7 @@ import { ArtistStatus, Role } from "@/lib/types";
 import { canActAsArtist, isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useLiveUnreadCount } from "@/lib/realtime";
-import { BellIcon, ExploreIcon, FeedIcon, GearIcon, MegaphoneIcon, NoteIcon, PersonIcon, PlusIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
+import { BellIcon, ExploreIcon, FeedIcon, FriendsIcon, GearIcon, MegaphoneIcon, NoteIcon, PersonIcon, PlusIcon, ShieldIcon, TicketIcon } from "@/components/ui/nav-icons";
 import SignInModal from "@/components/auth/SignInModal";
 
 interface NavItem {
@@ -24,7 +24,7 @@ interface NavItem {
 // active-state logic with BottomNav so the two can't drift.
 // Personal rows a guest can't use - routed to sign-in (with next) instead of
 // opening a page that would just bounce them.
-const GUEST_GATED = new Set(["/saved", "/notifications", "/profile", "/profile?settings=1"]);
+const GUEST_GATED = new Set(["/saved", "/friends", "/notifications", "/profile", "/profile?settings=1"]);
 
 export default function SideNav({
   role,
@@ -86,6 +86,7 @@ export default function SideNav({
     { href: "/feed?panel=announcements", label: t("feed.announcements"), icon: MegaphoneIcon },
     { href: "/explore", label: t("nav.explore"), icon: ExploreIcon },
     { href: "/saved", label: t("nav.tickets"), icon: TicketIcon },
+    { href: "/friends", label: t("nav.friends"), icon: FriendsIcon },
     { href: "/notifications", label: t("notifications.title"), icon: BellIcon, badge: liveUnread },
     { href: "/profile", label: t("nav.profile"), icon: isArtistRole(role) ? NoteIcon : PersonIcon },
   ];

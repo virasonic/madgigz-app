@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppNotification, describeGroup, groupNotifications, Translate } from "@/lib/notifications";
 import { markNotificationsRead } from "./actions";
 import BackButton from "@/components/ui/BackButton";
+import FriendButton from "@/components/friends/FriendButton";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
 
@@ -93,12 +94,35 @@ export default function NotificationsClient({
             </>
           );
 
-          // Only the ones tied to a show go anywhere. "X started following you"
-          // has no page worth opening - a dead tap is worse than none.
-          return n.eventId ? (
+          // A friend request carries its Accept / Decline inline (#149); the
+          // text opens the requester's page.
+          if (n.type === "friend_request" && n.actorId) {
+            return (
+              <div key={g.key} className="flex items-center gap-3 rounded-2xl bg-surface p-3.5">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/profile/${n.actorId}`)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  {body}
+                </button>
+                <FriendButton otherId={n.actorId} status="pending_in" size="sm" />
+              </div>
+            );
+          }
+
+          // Only the ones tied to a show, or to a friend, go anywhere. "X started
+          // following you" has no page worth opening - a dead tap is worse than
+          // none.
+          const href = n.eventId
+            ? `/e/${n.eventId}`
+            : n.type === "friend_accepted" && n.actorId
+              ? `/profile/${n.actorId}`
+              : null;
+          return href ? (
             <button
               key={g.key}
-              onClick={() => router.push(`/e/${n.eventId}`)}
+              onClick={() => router.push(href)}
               className="rounded-2xl bg-surface p-3.5 text-left"
             >
               {body}
