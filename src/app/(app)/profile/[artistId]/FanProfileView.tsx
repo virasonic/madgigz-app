@@ -111,7 +111,7 @@ export default function FanProfileView({
                 type="button"
                 onClick={() => setTab(tb.key)}
                 aria-pressed={tab === tb.key}
-                className={`flex-1 rounded-full py-2 text-sm font-heading ${
+                className={`flex-1 whitespace-nowrap rounded-full px-1 py-2 text-xs font-heading sm:text-sm ${
                   tab === tb.key ? "bg-surface-raised text-foreground" : "text-muted"
                 }`}
               >

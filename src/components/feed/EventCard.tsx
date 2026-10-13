@@ -31,7 +31,14 @@ export default function EventCard({
       onClick={onOpen}
       className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl text-left transition-transform duration-150 hover:scale-[1.02]"
     >
-      <Image src={event.image} alt={event.title} fill sizes="200px" className="object-cover" />
+      {/* A show with no poster yet (seeded or admin-created without an image)
+          gets its accent colour as the tile rather than the browser's broken-
+          image glyph over a black square. */}
+      {event.image ? (
+        <Image src={event.image} alt={event.title} fill sizes="200px" className="object-cover" />
+      ) : (
+        <div aria-hidden="true" className="absolute inset-0" style={{ backgroundColor: event.accentColor }} />
+      )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
       <div className="absolute bottom-0 left-0 right-0 p-3">
         <p className="font-display text-sm text-foreground line-clamp-1">{event.title}</p>
