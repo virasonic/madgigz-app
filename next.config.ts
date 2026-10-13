@@ -56,6 +56,12 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // Resizing happens on Supabase, not on Vercel - see src/lib/image-loader.ts
+    // for why (Vercel's optimizer hit its quota and 402'd every image on the
+    // site). remotePatterns below is unused while this is set, and kept only so
+    // switching back is a one-line change rather than an archaeology exercise.
+    loader: "custom",
+    loaderFile: "./src/lib/image-loader.ts",
     remotePatterns: [
       {
         protocol: "https",
