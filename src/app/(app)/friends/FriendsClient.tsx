@@ -238,8 +238,11 @@ export default function FriendsClient({
               shareInterested ? "bg-primary" : "bg-muted/30"
             }`}
           >
+            {/* left-0 matters: a <button> centres its content, so without an
+                explicit left the knob's static position is the middle of the
+                pill and the translate pushes it off the right edge. */}
             <span
-              className={`absolute top-1 h-5 w-5 rounded-full bg-foreground transition-transform ${
+              className={`absolute left-0 top-1 h-5 w-5 rounded-full bg-foreground transition-transform ${
                 shareInterested ? "translate-x-6" : "translate-x-1"
               }`}
             />
