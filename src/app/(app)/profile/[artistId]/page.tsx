@@ -20,6 +20,7 @@ import {
   friendStatusWith,
 } from "@/lib/friends";
 import FollowButton from "@/components/artist/FollowButton";
+import FriendButton from "@/components/friends/FriendButton";
 import IntroReel from "@/components/artist/IntroReel";
 import FanProfileView from "./FanProfileView";
 import Avatar from "@/components/ui/Avatar";
@@ -56,11 +57,14 @@ export default async function PublicArtistProfilePage({
   // cleans up in the address bar to /profile/<username>.
   if (handle !== resolved.username) redirect(`/profile/${resolved.username}`);
 
-  const [artist, savedIds, followedIds, intro, { t }] = await Promise.all([
+  const [artist, savedIds, followedIds, intro, links, { t }] = await Promise.all([
     fetchArtistProfile(supabase, artistId),
     currentUser ? fetchSavedEventIds(supabase, currentUser.id) : Promise.resolve([] as string[]),
     currentUser ? fetchFollowedArtistIds(supabase, currentUser.id) : Promise.resolve([] as string[]),
     fetchArtistIntro(supabase, artistId),
+    // Friends (#149) are between people, whatever their role: an artist or a
+    // promoter can be your friend as well as someone you follow.
+    currentUser ? fetchFriendships(supabase, currentUser.id) : Promise.resolve([]),
     getServerT(),
   ]);
 
@@ -71,7 +75,6 @@ export default async function PublicArtistProfilePage({
   if (!artist) {
     const card = await fetchFanCard(supabase, artistId);
     if (!card) notFound();
-    const links = currentUser ? await fetchFriendships(supabase, currentUser.id) : [];
     const link = links.find((l) => l.profile.id === artistId);
     const status = friendStatusWith(links, artistId);
 
@@ -164,11 +167,20 @@ export default async function PublicArtistProfilePage({
             {roleLabel}
           </span>
         </div>
-        <div className="shrink-0">
+        <div className="flex shrink-0 flex-col items-end gap-2">
           <FollowButton
             artistId={artist.id}
             initialFollowing={followedIds.includes(artist.id)}
             isGuest={!currentUser}
+          />
+          {/* Follow is the fan relationship; friends is the personal one (#149).
+              Both live here so an organiser's page offers the same friend
+              button a fan's does. */}
+          <FriendButton
+            otherId={artist.id}
+            status={friendStatusWith(links, artist.id)}
+            isGuest={!currentUser}
+            size="sm"
           />
         </div>
       </div>
