@@ -111,6 +111,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     { url: `${origin}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${origin}/complaints`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${origin}/report-content`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
     {
       url: `${origin}/delete-account`,
       lastModified: now,

@@ -49,6 +49,8 @@ export const en = {
     privacyPolicy: "Privacy Policy",
     legalNotice: "Legal Notice",
     cookiePolicy: "Cookie Policy",
+    complaints: "Complaints",
+    reportContent: "Report illegal content",
   },
 
   nav: {
@@ -541,6 +543,42 @@ export const en = {
       "Records of tickets you bought or sold are kept, without your name attached — we're legally required to hold them for six years. Payment details sit with Stripe and follow their own rules.",
     scheduling: "Scheduling...",
     deleteButton: "Delete my account",
+  },
+
+  legalForms: {
+    complaintsTitle: "Complaints",
+    complaintsIntro:
+      "Unhappy with a purchase, a show or our service? Tell us here and we'll reply by email. You can also write to {email}.",
+    reportTitle: "Report illegal content",
+    reportIntro:
+      "Tell us about anything on MadGigz you believe is illegal: a reel, a show, a profile or anything else. You don't need an account. You can also write to {email}.",
+    emailLabel: "Your email",
+    nameLabel: "Your name (optional)",
+    referenceLabel: "Event, ticket or order (optional)",
+    messageLabel: "Your complaint",
+    messagePlaceholder: "What happened, and what would you like us to do?",
+    contentLabel: "Link or ID of the content",
+    reasonLabel: "Why is it illegal?",
+    reasonPick: "Choose a reason",
+    reasons: {
+      intellectualProperty: "Copyright or trademark infringement",
+      hate: "Hate speech or incitement",
+      violence: "Threats or violent content",
+      privacy: "Privacy or personal data violation",
+      fraud: "Fraud or scam",
+      minors: "Harm to minors",
+      other: "Other illegal content",
+    },
+    explanationLabel: "Explain why you think it is illegal",
+    goodFaith: "I confirm in good faith that the information in this notice is accurate and complete.",
+    errorInvalid: "Check the form: a valid email and a short explanation are required.",
+    errorCaptcha: "We couldn't verify you're not a bot. Please try again.",
+    errorNotSent: "We couldn't send this. Please write to {email} instead.",
+    send: "Send",
+    sending: "Sending...",
+    sentTitle: "Received, thank you",
+    sentComplaint: "We'll reply to the email you gave us.",
+    sentReport: "We'll review the content and email you our decision.",
   },
 
   feedback: {

@@ -179,6 +179,42 @@ export async function sendFeedbackAlert(input: {
   }
 }
 
+// The address the Terms, Legal Notice and Privacy Policy publish for complaints
+// and illegal-content notices. Fixed rather than SUPPORT_EMAIL: the legal texts
+// promise this inbox, so it must not move with an env var.
+const LEGAL_INBOX = "info@aurasonic.es";
+
+// Delivers a submission from the public /complaints or /report-content forms.
+// Unlike the alerts above this is the submission itself - nothing is stored
+// elsewhere - so it reports whether it sent, and the form tells the person to
+// write to the inbox directly when it didn't, rather than claiming success.
+export async function sendLegalSubmission(input: {
+  kind: "complaint" | "content-report";
+  replyTo: string;
+  subject: string;
+  lines: string[];
+}): Promise<{ sent: boolean }> {
+  if (!resend) return { sent: false };
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: LEGAL_INBOX,
+      replyTo: input.replyTo,
+      subject: input.subject,
+      text: [...input.lines, "", `Received ${new Date().toISOString()} via the ${input.kind} form.`].join("\n"),
+    });
+    if (error) {
+      console.error(`Failed to send ${input.kind}:`, error);
+      return { sent: false };
+    }
+    return { sent: true };
+  } catch (error) {
+    console.error(`Failed to send ${input.kind}:`, error);
+    return { sent: false };
+  }
+}
+
 // The welcome email for a pro account MadGigz set up on someone's behalf (#88).
 // Unlike the artist emails this one is load-bearing rather than a courtesy: the
 // account is created with a password nobody knows, so this link is the only way

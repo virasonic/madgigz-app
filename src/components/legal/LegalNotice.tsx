@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment } from "react";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { LEGAL_DOCS, legalUrl, type LegalDocKey } from "@/lib/legal";
@@ -67,6 +68,15 @@ export function LegalLinksRow({ className }: { className?: string }) {
           </a>
         </Fragment>
       ))}
+      {/* The two channels the Terms name for complaints and DSA notices (#210). */}
+      <span aria-hidden>·</span>
+      <Link href="/complaints" className="underline underline-offset-2">
+        {t("legal.complaints")}
+      </Link>
+      <span aria-hidden>·</span>
+      <Link href="/report-content" className="underline underline-offset-2">
+        {t("legal.reportContent")}
+      </Link>
     </div>
   );
 }

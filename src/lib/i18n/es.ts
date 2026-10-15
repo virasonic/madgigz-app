@@ -46,6 +46,8 @@ export const es: Messages = {
     privacyPolicy: "Política de privacidad",
     legalNotice: "Aviso legal",
     cookiePolicy: "Política de cookies",
+    complaints: "Reclamaciones",
+    reportContent: "Denunciar contenido ilícito",
   },
 
   nav: {
@@ -512,6 +514,42 @@ export const es: Messages = {
       "Los registros de entradas que compraste o vendiste se conservan, sin tu nombre asociado — estamos obligados legalmente a guardarlos seis años. Los datos de pago están con Stripe y siguen sus propias reglas.",
     scheduling: "Programando...",
     deleteButton: "Eliminar mi cuenta",
+  },
+
+  legalForms: {
+    complaintsTitle: "Reclamaciones",
+    complaintsIntro:
+      "¿No estás satisfecho con una compra, un concierto o nuestro servicio? Cuéntanoslo aquí y te responderemos por correo. También puedes escribir a {email}.",
+    reportTitle: "Denunciar contenido ilícito",
+    reportIntro:
+      "Avísanos de cualquier contenido de MadGigz que consideres ilícito: un reel, un concierto, un perfil o cualquier otra cosa. No necesitas una cuenta. También puedes escribir a {email}.",
+    emailLabel: "Tu correo electrónico",
+    nameLabel: "Tu nombre (opcional)",
+    referenceLabel: "Concierto, entrada o pedido (opcional)",
+    messageLabel: "Tu reclamación",
+    messagePlaceholder: "¿Qué ha pasado y qué te gustaría que hiciéramos?",
+    contentLabel: "Enlace o ID del contenido",
+    reasonLabel: "¿Por qué es ilícito?",
+    reasonPick: "Elige un motivo",
+    reasons: {
+      intellectualProperty: "Infracción de derechos de autor o de marca",
+      hate: "Discurso de odio o incitación",
+      violence: "Amenazas o contenido violento",
+      privacy: "Vulneración de la privacidad o de datos personales",
+      fraud: "Fraude o estafa",
+      minors: "Daño a menores",
+      other: "Otro contenido ilícito",
+    },
+    explanationLabel: "Explica por qué consideras que es ilícito",
+    goodFaith: "Declaro de buena fe que la información de esta notificación es exacta y completa.",
+    errorInvalid: "Revisa el formulario: se necesita un correo válido y una breve explicación.",
+    errorCaptcha: "No hemos podido verificar que no eres un bot. Inténtalo de nuevo.",
+    errorNotSent: "No hemos podido enviarlo. Escribe directamente a {email}.",
+    send: "Enviar",
+    sending: "Enviando...",
+    sentTitle: "Recibido, gracias",
+    sentComplaint: "Te responderemos en el correo que nos has indicado.",
+    sentReport: "Revisaremos el contenido y te comunicaremos nuestra decisión por correo.",
   },
 
   feedback: {
