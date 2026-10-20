@@ -189,15 +189,15 @@ export default function FeedClient({
   const { t, locale } = useT();
   const router = useRouter();
   const { promptSignup, sheet: guestSheet } = useGuestGate();
-  // Open on This Week, not For You (#174): For You is thin on content for now,
-  // and This Week is the populated schedule. Temporary product call - revisit
-  // once For You carries enough to be the landing pane again.
-  const [pane, setPane] = useState<Pane>("thisWeek");
+  // Open on For You: now that there's enough content it's the right landing pane
+  // (it was temporarily switched to This Week under #174 while For You was thin).
+  // A within-session choice still wins via loadFeedPane below.
+  const [pane, setPane] = useState<Pane>("forYou");
   // Restored after mount, not in a lazy initialiser: the server has no window,
   // so reading sessionStorage during render would hydrate a different pane than
   // it rendered. Same shape (and the same disable) as the seen-announcements
-  // read further down. Costs one paint of This Week on the way back, which is
-  // the price of the pane being server-rendered at all - the alternative, a URL
+  // read further down. Costs one paint of For You on the way back, which is the
+  // price of the pane being server-rendered at all - the alternative, a URL
   // param, puts a history entry behind every tab tap.
   useEffect(() => {
     const saved = loadFeedPane();
