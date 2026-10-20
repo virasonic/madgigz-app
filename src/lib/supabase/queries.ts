@@ -314,6 +314,24 @@ export async function fetchPublicProAccounts(
   return ((data as PublicArtistProfileRow[]) ?? []).map(mapPublicArtistProfile);
 }
 
+// The people an organiser can TAG on a show so they get posting rights on it:
+// approved artists AND promoter/venue accounts (#88). Promoters present shows
+// but aren't on the printed line-up, so tagging is how they get to post about
+// the night (the content_posts RLS already lets a tagged profile post). Both
+// come back as PublicArtistProfile; merged and de-duped by id (a pro account
+// could, in theory, also be an approved artist).
+export async function fetchTaggablePeople(
+  supabase: SupabaseClient
+): Promise<PublicArtistProfile[]> {
+  const [artists, pros] = await Promise.all([
+    fetchApprovedArtists(supabase),
+    fetchPublicProAccounts(supabase),
+  ]);
+  const byId = new Map(artists.map((a) => [a.id, a]));
+  for (const p of pros) if (!byId.has(p.id)) byId.set(p.id, p);
+  return [...byId.values()];
+}
+
 // Which of these artists the current user follows. One query for the whole
 // list rather than one per card - Explore renders every approved artist.
 export async function fetchFollowedArtistIds(

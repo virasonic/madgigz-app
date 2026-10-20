@@ -19,7 +19,7 @@ import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
 import GenrePicker from "@/components/artist/GenrePicker";
 import { createClient } from "@/lib/supabase/client";
 import {
-  fetchApprovedArtists,
+  fetchTaggablePeople,
   fetchCurrentUser,
   fetchGenres,
   fetchVenues,
@@ -128,7 +128,7 @@ export default function AddShowPage() {
       if (!draft || !Array.isArray(draft.lineup)) {
         setLineup([{ name: current.artistName ?? current.username, profileId: null }]);
       }
-      fetchApprovedArtists(supabase).then(setArtists);
+      fetchTaggablePeople(supabase).then(setArtists);
       fetchVenues(supabase).then(setVenues);
       fetchGenres(supabase).then(setAllGenres);
     });

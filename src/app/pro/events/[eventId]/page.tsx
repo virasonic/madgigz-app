@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import EventForm from "@/components/organiser/EventForm";
 import {
-  fetchApprovedArtists,
+  fetchTaggablePeople,
   fetchEventGenreIds,
   fetchGenres,
   fetchTaggedArtistIds,
@@ -27,7 +27,7 @@ export default async function ProEditEventPage({ params }: PageProps<"/pro/event
     await Promise.all([
       fetchVenues(admin),
       fetchGenres(admin),
-      fetchApprovedArtists(admin),
+      fetchTaggablePeople(admin),
       fetchEventGenreIds(admin, eventId),
       fetchTaggedArtistIds(admin, eventId),
       // Price tiers (#151). No rows - or no table, pre-addendum_039 - is an

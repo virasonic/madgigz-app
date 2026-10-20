@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import {
-  fetchApprovedArtists,
+  fetchTaggablePeople,
   fetchEventById,
   fetchEventGenreIds,
   fetchGenres,
@@ -25,7 +25,7 @@ export default async function AdminEditEventPage({ params }: PageProps<"/admin/e
   const [venues, genres, artists, genreIds, taggedArtistIds] = await Promise.all([
     fetchVenues(admin),
     fetchGenres(admin),
-    fetchApprovedArtists(admin),
+    fetchTaggablePeople(admin),
     fetchEventGenreIds(admin, eventId),
     fetchTaggedArtistIds(admin, eventId),
   ]);

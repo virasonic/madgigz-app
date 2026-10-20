@@ -1110,7 +1110,7 @@ export const es: Messages = {
     headliner: "Cabeza de cartel",
     supportAct: "Telonero",
     tag: "Etiquetar",
-    tagSearchPlaceholder: "Busca artistas para etiquetar...",
+    tagSearchPlaceholder: "Busca personas para etiquetar...",
     removeFromLineup: "Quitar del cartel",
     taggedOnMadgigz: "Etiquetado en MadGigz",
     untag: "Quitar etiqueta",

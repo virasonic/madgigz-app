@@ -1,6 +1,6 @@
 import Link from "next/link";
 import EventForm from "@/components/organiser/EventForm";
-import { fetchApprovedArtists, fetchGenres, fetchVenues } from "@/lib/supabase/queries";
+import { fetchTaggablePeople, fetchGenres, fetchVenues } from "@/lib/supabase/queries";
 import { proClient, requirePro } from "@/lib/supabase/pro-queries";
 
 export default async function ProNewEventPage() {
@@ -10,7 +10,7 @@ export default async function ProNewEventPage() {
   const [venues, genres, artists] = await Promise.all([
     fetchVenues(admin),
     fetchGenres(admin),
-    fetchApprovedArtists(admin),
+    fetchTaggablePeople(admin),
   ]);
 
   const lockedVenue =

@@ -30,7 +30,7 @@ import DateInput from "@/components/ui/DateInput";
 import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
 import GenrePicker from "@/components/artist/GenrePicker";
 import {
-  fetchApprovedArtists,
+  fetchTaggablePeople,
   fetchEventGenreIds,
   fetchGenres,
   fetchTaggedArtistIds,
@@ -132,7 +132,7 @@ export default function ManageShowModal({
 
   useEffect(() => {
     const supabase = createClient();
-    fetchApprovedArtists(supabase).then(setArtists);
+    fetchTaggablePeople(supabase).then(setArtists);
     fetchTaggedArtistIds(supabase, show.id).then(setTaggedIds);
     fetchVenues(supabase).then(setVenues);
     fetchGenres(supabase).then(setAllGenres);

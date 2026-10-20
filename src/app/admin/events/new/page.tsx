@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
-import { fetchApprovedArtists, fetchGenres, fetchVenues } from "@/lib/supabase/queries";
+import { fetchTaggablePeople, fetchGenres, fetchVenues } from "@/lib/supabase/queries";
 import EventForm from "@/components/organiser/EventForm";
 
 // Shows MadGigz puts on the platform itself: a gig ticketed somewhere else that
@@ -12,7 +12,7 @@ export default async function AdminNewEventPage() {
   const [venues, genres, artists] = await Promise.all([
     fetchVenues(admin),
     fetchGenres(admin),
-    fetchApprovedArtists(admin),
+    fetchTaggablePeople(admin),
   ]);
 
   return (

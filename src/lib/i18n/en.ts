@@ -1140,7 +1140,7 @@ export const en = {
     headliner: "Headliner",
     supportAct: "Support act",
     tag: "Tag",
-    tagSearchPlaceholder: "Search artists to tag...",
+    tagSearchPlaceholder: "Search people to tag...",
     removeFromLineup: "Remove from lineup",
     taggedOnMadgigz: "Tagged on MadGigz",
     untag: "Untag",
