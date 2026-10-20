@@ -14,7 +14,7 @@ import FiscalIdentityCard from "@/components/artist/FiscalIdentityCard";
 import IntroReel from "@/components/artist/IntroReel";
 import IntroReelModal from "@/components/artist/IntroReelModal";
 import { removeIntroReel } from "./intro-actions";
-import { markAttended } from "./attendance-actions";
+import { markAttended, markNotAttended } from "./attendance-actions";
 import { clearSwitchOnSignOut } from "../account/actions";
 import { createClient } from "@/lib/supabase/client";
 import { clearOfflineTickets } from "@/lib/offline-tickets";
@@ -657,6 +657,16 @@ export default function ProfileClient({
     setCandidates((list) => list.filter((e) => e.id !== eventId));
     router.refresh();
   }
+
+  // "No, I didn't go": record it (so it stops re-asking) and drop it from the
+  // prompt. Nothing moves to the wall, so no refresh needed.
+  async function handleDidntGo(eventId: string) {
+    setMarkingId(eventId);
+    const { ok } = await markNotAttended(eventId);
+    setMarkingId(null);
+    if (!ok) return;
+    setCandidates((list) => list.filter((e) => e.id !== eventId));
+  }
   const [activeShow, setActiveShow] = useState<EventItem | null>(null);
   // Kept separate from activeShow so the modal knows which one it is looking at:
   // the artist's own show is managed, a show they are only tagged on is not.
@@ -870,14 +880,24 @@ export default function ProfileClient({
                       <p className="truncate text-sm text-foreground">{event.title}</p>
                       <p className="truncate text-xs text-muted">{formatDate(event.date, dl)}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleWent(event.id)}
-                      disabled={markingId === event.id}
-                      className="shrink-0 rounded-full bg-primary px-3 py-1.5 text-xs font-heading text-foreground disabled:opacity-50"
-                    >
-                      {markingId === event.id ? t("common.saving") : t("profile.wereYouThereYes")}
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleDidntGo(event.id)}
+                        disabled={markingId === event.id}
+                        className="rounded-full border border-muted/30 px-3 py-1.5 text-xs font-heading text-muted transition-colors hover:text-foreground disabled:opacity-50"
+                      >
+                        {t("profile.wereYouThereNo")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleWent(event.id)}
+                        disabled={markingId === event.id}
+                        className="rounded-full bg-primary px-3 py-1.5 text-xs font-heading text-foreground disabled:opacity-50"
+                      >
+                        {markingId === event.id ? t("common.saving") : t("profile.wereYouThereYes")}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

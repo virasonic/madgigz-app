@@ -438,6 +438,7 @@ export const es: Messages = {
     wereYouThereTitle: "¿Estuviste allí?",
     wereYouThereSubtitle: "Bolos que guardaste — añade los que fuiste.",
     wereYouThereYes: "Sí, fui",
+    wereYouThereNo: "No",
     logOut: "Cerrar sesión",
     deleteAccount: "Eliminar mi cuenta",
     promotions: "Promociones",

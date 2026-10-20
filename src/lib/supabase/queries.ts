@@ -744,6 +744,21 @@ export async function fetchAttendedEvents(
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
+// Shows the fan answered "No, I didn't go" to on the "Were you there?" prompt
+// (#116) - so the prompt excludes them for good. Returns just the ids; degrades
+// to [] if not_attended_events isn't there yet (42P01), which means the prompt
+// shows every candidate, the pre-migration behaviour.
+export async function fetchNotAttendedEventIds(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string[]> {
+  const { data } = await supabase
+    .from("not_attended_events")
+    .select("event_id")
+    .eq("user_id", userId);
+  return ((data ?? []) as { event_id: string }[]).map((row) => row.event_id);
+}
+
 // Shows the fan saved whose date has already passed - the candidates for the
 // profile's "Were you there?" prompt. The complement of the upcoming-only Saved
 // grid (#180). Caller subtracts the ones already on the wall.

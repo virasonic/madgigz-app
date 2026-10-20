@@ -464,6 +464,7 @@ export const en = {
     wereYouThereTitle: "Were you there?",
     wereYouThereSubtitle: "Past shows you saved — add the ones you went to.",
     wereYouThereYes: "Yes, I went",
+    wereYouThereNo: "No",
     logOut: "Log Out",
     deleteAccount: "Delete my account",
     // Settings sheet "coming soon" rows

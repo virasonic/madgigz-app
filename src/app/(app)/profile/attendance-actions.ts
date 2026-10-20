@@ -37,6 +37,25 @@ export async function markAttended(eventId: string): Promise<{ ok: boolean }> {
   return { ok: !error };
 }
 
+// "No, I didn't go" (#116): record a not-attended answer so the "Were you
+// there?" prompt drops this show and stops re-asking, without touching the
+// attended wall. Same past-only + owner guards as markAttended; upsert so a
+// repeat press is a no-op, and it soft-fails (ok:false) if the table isn't there
+// yet (42P01), exactly like the attendance writes above.
+export async function markNotAttended(eventId: string): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false };
+  if (!(await isPastEvent(supabase, eventId))) return { ok: false };
+
+  const { error } = await supabase
+    .from("not_attended_events")
+    .upsert({ user_id: user.id, event_id: eventId });
+  return { ok: !error };
+}
+
 export async function unmarkAttended(eventId: string): Promise<{ ok: boolean }> {
   const supabase = await createClient();
   const {

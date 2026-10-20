@@ -7,6 +7,7 @@ import {
   fetchAttendedEvents,
   fetchCurrentUser,
   fetchMadGigzShows,
+  fetchNotAttendedEventIds,
   fetchPastSavedEvents,
   fetchSavedEvents,
   fetchShowsByArtist,
@@ -39,6 +40,7 @@ export default async function ProfilePage() {
     proShows,
     attendedEvents,
     pastSaved,
+    notAttendedIds,
     unreadCount,
     intro,
     fiscalProvided,
@@ -63,6 +65,11 @@ export default async function ProfilePage() {
       user.role === "fan" ? fetchAttendedEvents(supabase, user.id) : Promise.resolve([]),
       // Past saved shows -> candidates for the "Were you there?" prompt.
       user.role === "fan" ? fetchPastSavedEvents(supabase, user.id) : Promise.resolve([]),
+      // Shows the fan already answered "No, I didn't go" to, so the prompt below
+      // can exclude them and stop re-asking (#116).
+      user.role === "fan"
+        ? fetchNotAttendedEventIds(supabase, user.id)
+        : Promise.resolve<string[]>([]),
       fetchUnreadCount(supabase, user.id),
       isArtistRole(user.role) ? fetchArtistIntro(supabase, user.id) : Promise.resolve(null),
       // Fiscal details (#97) are an organiser concern; fans never see the card.
@@ -88,7 +95,10 @@ export default async function ProfilePage() {
   // the wall (scanned or manually marked). Those are exactly the ones worth
   // asking about.
   const attendedIds = new Set(attendedEvents.map((e) => e.id));
-  const attendanceCandidates = pastSaved.filter((e) => !attendedIds.has(e.id));
+  const notAttended = new Set(notAttendedIds);
+  const attendanceCandidates = pastSaved.filter(
+    (e) => !attendedIds.has(e.id) && !notAttended.has(e.id)
+  );
 
   return (
     <ProfileClient
