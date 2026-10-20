@@ -110,11 +110,16 @@ export async function syncEventArtists(
       .from("profiles")
       .select("id")
       .in("id", wanted)
-      .in("role", ARTIST_CAPABLE_ROLES)
-      .eq("artist_status", "approved");
+      // Taggable = an approved artist/admin OR a promoter/venue account (#88).
+      // Promoters present shows but aren't approved artists, so tagging one for
+      // posting rights has to validate too - without the pro branch the whole tag
+      // save aborts the moment a promoter is in the list, and nothing persists.
+      .or(
+        `and(role.in.(${ARTIST_CAPABLE_ROLES.join(",")}),artist_status.eq.approved),pro_type.not.is.null`
+      );
 
     const validIds = new Set((valid ?? []).map((p) => p.id as string));
-    if (validIds.size !== wanted.length) return "Some tagged artists couldn't be found";
+    if (validIds.size !== wanted.length) return "Some tagged people couldn't be found";
   }
 
   const { error: clearError } = await admin
