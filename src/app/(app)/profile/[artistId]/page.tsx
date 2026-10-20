@@ -121,17 +121,16 @@ export default async function PublicArtistProfilePage({
     );
   }
 
-  // Which shows this page is about depends on what kind of organiser it is. An
-  // act's page bills what they played; a promoter's bills what they booked, and
-  // has no "tagged in" - being tagged means being on the line-up, which a
-  // promoter never is. Fetched after the profile because the answer decides the
-  // query.
-  const [shows, taggedShows] = artist.proType
-    ? [await fetchShowsByProAccount(supabase, artistId), []]
-    : await Promise.all([
-        fetchShowsByArtist(supabase, artistId),
-        fetchTaggedShows(supabase, artistId),
-      ]);
+  // Which shows this page bills: an act's page shows what they played; a
+  // promoter/venue's shows what they booked. BOTH also get the shows they were
+  // tagged on - promoters can now be tagged on a show (to post about it), and a
+  // tagged night belongs on their page too. Owned-shows query differs by type.
+  const [shows, taggedShows] = await Promise.all([
+    artist.proType
+      ? fetchShowsByProAccount(supabase, artistId)
+      : fetchShowsByArtist(supabase, artistId),
+    fetchTaggedShows(supabase, artistId),
+  ]);
 
   // Approved fan photos from this organiser's shows (#195): real content from
   // the crowd on the page, kept or hidden by the organiser themselves.
@@ -147,9 +146,11 @@ export default async function PublicArtistProfilePage({
   // fan - fetchShowsByArtist returns everything because the artist's own
   // Manage view needs to see hidden shows too. Shows they were tagged on are
   // billed the same way here: to a fan, being on the bill is being on the bill.
-  const visibleShows = [...shows, ...taggedShows].filter(
-    (show) => show.active && !show.cancelled
-  );
+  const seen = new Set<string>();
+  const visibleShows = [...shows, ...taggedShows]
+    .filter((show) => show.active && !show.cancelled)
+    // A promoter could both book a show and be tagged on it - show it once.
+    .filter((show) => (seen.has(show.id) ? false : (seen.add(show.id), true)));
 
   // Split upcoming from past (#141): upcoming soonest-first, past most-recent-first.
   // Server-rendered per request, so "today" is always fresh.

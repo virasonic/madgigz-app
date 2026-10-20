@@ -52,7 +52,11 @@ export default async function ProfilePage() {
       user.role === "fan" ? fetchSavedEvents(supabase, user.id) : Promise.resolve([]),
       fetchTickets(supabase, user.id),
       isArtistRole(user.role) ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
-      isArtistRole(user.role) ? fetchTaggedShows(supabase, user.id) : Promise.resolve([]),
+      // Promoters/venues can be tagged on shows now too (to post about them), so
+      // their own profile fetches tagged shows as well, not just artists'.
+      isArtistRole(user.role) || user.proType
+        ? fetchTaggedShows(supabase, user.id)
+        : Promise.resolve([]),
       // Admins run MadGigz's own (ownerless) gigs, so those appear on the admin's
       // profile alongside any shows they personally own - manage/scan from here.
       user.role === "admin" ? fetchMadGigzShows(supabase) : Promise.resolve([]),
