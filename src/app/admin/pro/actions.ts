@@ -255,3 +255,99 @@ export async function setProAccountActive(
   revalidatePath("/admin/pro");
   return {};
 }
+
+// --- Artist invites ----------------------------------------------------------
+// The artist equivalent of createProAccount: make a PRE-APPROVED artist account
+// so the person skips the evidence/onboarding gate and can post shows straight
+// away, and store the one social-or-streaming link they'd otherwise give on that
+// form (it already renders on the public profile). Lives here beside the promoter
+// invite because they share the account-creation plumbing. No email is sent -
+// the admin copies the returned link and passes it on (option a).
+
+const ARTIST_LINK_COLUMNS = ["instagram", "tiktok", "twitter", "spotify", "youtube"] as const;
+export type ArtistLinkType = (typeof ARTIST_LINK_COLUMNS)[number];
+
+export interface CreateArtistAccountInput {
+  displayName: string;
+  email: string;
+  linkType: ArtistLinkType;
+  linkValue: string;
+}
+export interface CreateArtistAccountResult {
+  error?: string;
+  /** The set-password link for the admin to copy and send. */
+  inviteUrl?: string;
+  existingAccount?: boolean;
+}
+
+export async function createArtistAccount(
+  input: CreateArtistAccountInput
+): Promise<CreateArtistAccountResult> {
+  const currentAdmin = await requireAdmin();
+  const admin = adminClient();
+
+  const displayName = input.displayName.trim();
+  const email = input.email.trim().toLowerCase();
+  const linkValue = input.linkValue.trim();
+
+  if (!displayName) return { error: "Name is required" };
+  if (!/^\S+@\S+\.\S+$/.test(email)) return { error: "Enter a valid email address" };
+  if (!ARTIST_LINK_COLUMNS.includes(input.linkType)) return { error: "Pick a link type" };
+  if (!linkValue) return { error: "Add their social or streaming link" };
+
+  const username = await freeUsername(admin, displayName, email);
+
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    password: crypto.randomUUID(),
+    user_metadata: { username },
+  });
+
+  const existingAccount = !created?.user && alreadyRegistered(createError);
+  if (!created?.user && !existingAccount) {
+    console.error("createArtistAccount createUser failed:", createError);
+    return { error: "Couldn't create that account. Check the email address and try again." };
+  }
+
+  const { data: link, error: linkError } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email,
+  });
+  const userId = created?.user?.id ?? link?.user?.id;
+  if (linkError || !link?.properties?.hashed_token || !userId) {
+    console.error("createArtistAccount generateLink failed:", linkError);
+    return { error: "Account made, but the invite link couldn't be created. Try again." };
+  }
+  const inviteUrl = `${appUrl()}/auth/confirm?token_hash=${link.properties.hashed_token}&type=recovery`;
+
+  // Pre-approved: role=artist + artist_status=approved skips the evidence gate;
+  // evidence_submitted=true stops the profile nagging them to finish onboarding.
+  // artist_name is the public display name; the chosen link goes in its column.
+  const links: Partial<Record<ArtistLinkType, string>> = { [input.linkType]: linkValue };
+  const { error: updateError } = await admin
+    .from("profiles")
+    .update({
+      role: "artist",
+      artist_status: "approved",
+      artist_name: displayName,
+      evidence_submitted: true,
+      ...links,
+    })
+    .eq("id", userId);
+
+  if (updateError) {
+    console.error("createArtistAccount profile update failed:", updateError);
+    return { error: "The login was made but the artist profile wasn't. Check the logs." };
+  }
+
+  await logDecision(admin, currentAdmin.id, {
+    action: "artist_account_created",
+    subjectType: "artist",
+    subjectId: userId,
+    metadata: { link_type: input.linkType, pre_approved: true },
+  });
+
+  revalidatePath("/admin/artists");
+  return { inviteUrl, existingAccount };
+}
