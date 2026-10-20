@@ -42,11 +42,17 @@ function StatCard({ label, value, href }: { label: string; value: string; href?:
 export default async function AdminDashboardPage() {
   await requireAdmin();
   const admin = adminClient();
-  const [stats, openFeedback, openReports, storage] = await Promise.all([
+  const [stats, openFeedback, openReports, storage, artists, fans] = await Promise.all([
     fetchDashboardStats(admin),
     fetchOpenFeedbackCount(admin),
     fetchOpenReportCount(admin),
     fetchStorageUsage(admin),
+    // Community growth: how many artists vs fans, to watch the two sides of the
+    // marketplace grow (the Signups-by-day panel below tracks the rate). head +
+    // count:exact returns just the number, no rows. Promoters/venues are
+    // role="fan" with a pro_accounts row, so they fall under Fans here.
+    admin.from("profiles").select("*", { count: "exact", head: true }).eq("role", "artist"),
+    admin.from("profiles").select("*", { count: "exact", head: true }).eq("role", "fan"),
   ]);
 
   const storagePercent = (storage.totalBytes / STORAGE_QUOTA_BYTES) * 100;
@@ -58,8 +64,10 @@ export default async function AdminDashboardPage() {
         <p className="text-sm text-muted">Overview of MadGigz activity.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-9">
         <StatCard label="Users" value={String(stats.userCount)} href="/admin/users" />
+        <StatCard label="Artists" value={String(artists.count ?? 0)} href="/admin/artists" />
+        <StatCard label="Fans" value={String(fans.count ?? 0)} href="/admin/users" />
         <StatCard label="Events" value={String(stats.eventCount)} href="/admin/events" />
         <StatCard
           label="Tickets sold"
