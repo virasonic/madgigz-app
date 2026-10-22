@@ -114,23 +114,33 @@ function buildForYouFeed(
   );
 
   const asEntry = (post: ContentPost): FeedEntry => ({ post, event: null });
-  // Artist intro reels (#143 → discovery): "meet a new artist" cards, newest
-  // first. Rendered via FeedIntroCard (they have no event). A handful lead the
-  // gigs so a browsing fan meets fresh local artists straight away — a stand-in
-  // for the eventual cold-start ranking (#142).
+  // Artist intro reels (#143 → discovery): "meet a new artist" cards. They have
+  // no event, so they render via FeedIntroCard.
   const introEntries = intros.map(asEntry);
 
-  if (announcements.length === 0) return [...introEntries, ...sorted];
+  // Content order For You surfaces (Vir, 22 Oct 2026): gig-linked REELS (video)
+  // first, then the artist intro videos, then gig-linked PHOTOS last. Anything
+  // that isn't a video (an image, or a rare text-only post) rides with the
+  // photos at the end so nothing is dropped; each half keeps its followed-first
+  // order.
+  const concertReels = sorted.filter((e) => e.post.mediaType === "video");
+  const concertPhotos = sorted.filter((e) => e.post.mediaType !== "video");
+
+  if (announcements.length === 0) {
+    return [...concertReels, ...introEntries, ...concertPhotos];
+  }
 
   const unseen = announcements.filter((post) => !seenAnnouncements.has(post.id));
   const seen = announcements.filter((post) => seenAnnouncements.has(post.id));
 
-  // Nothing is dropped: a few unseen cards lead, then discovery intros, then the
-  // gigs, then any remaining unseen cards, then the ones already read.
+  // Nothing is dropped: a few unseen announcement cards lead, then the gig reels,
+  // the artist intros and the gig photos, then any remaining unseen cards and the
+  // already-read ones.
   return [
     ...unseen.slice(0, TOP_UNSEEN).map(asEntry),
+    ...concertReels,
     ...introEntries,
-    ...sorted,
+    ...concertPhotos,
     ...unseen.slice(TOP_UNSEEN).map(asEntry),
     ...seen.map(asEntry),
   ];
