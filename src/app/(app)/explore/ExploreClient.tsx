@@ -90,12 +90,21 @@ export default function ExploreClient({
           .includes(trimmedQuery)
       );
     }
-    // Artists you follow float to the top, then shows matching your preferences
-    // (#170) float up within the rest. Explore is discovery rather than a
-    // schedule, so unlike This Week it can afford to break date order - and a
-    // stable sort keeps everything else in the date order it arrived in. A fan
-    // with no preferences scores 0 everywhere, so this is a no-op for them.
+    // A featured show (#217) is pinned above everything, then artists you
+    // follow float up, then shows matching your preferences (#170) within the
+    // rest. Explore is discovery rather than a schedule, so unlike This Week it
+    // can afford to break date order - and a stable sort keeps everything else
+    // in the date order it arrived in. A fan with no preferences scores 0
+    // everywhere, so this is a no-op for them.
+    //
+    // Featured sits ABOVE followed deliberately: it is an editorial pick for
+    // everyone, and there is normally at most one, so it costs a follower one
+    // row rather than burying their artists. It is filtered like any other show
+    // - a genre chip that excludes it hides it, rather than pinning something
+    // the fan just filtered out.
     return [...list].sort((a, b) => {
+      const byFeatured = Number(b.featured) - Number(a.featured);
+      if (byFeatured !== 0) return byFeatured;
       const byFollowed = Number(followed.has(b.id)) - Number(followed.has(a.id));
       if (byFollowed !== 0) return byFollowed;
       const scoreA = scoreEvent(preferences, {

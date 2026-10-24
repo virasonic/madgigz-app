@@ -183,6 +183,8 @@ export const en = {
     eventsHeading: "Events",
     noResults: "No events or artists found.",
     noEvents: "No events found.",
+    // #217: the badge on an editorially pinned show.
+    featuredBadge: "Featured",
   },
 
   savedPage: {

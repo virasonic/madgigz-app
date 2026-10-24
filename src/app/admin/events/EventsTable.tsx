@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { cancelEvent, toggleEventActive } from "../actions";
+import { cancelEvent, toggleEventActive, toggleEventFeatured } from "../actions";
 import FilterTabs from "../FilterTabs";
 import { SortHeader, useTableSort, type SortAccessor } from "../table-sort";
 import type { EventItem } from "@/lib/types";
@@ -84,6 +84,28 @@ export default function EventsTable({
     startTransition(async () => {
       await toggleEventActive(eventId, nextActive);
       setPendingId(null);
+    });
+  }
+
+  // #217: featuring pins the show to the top of Explore. Reports its own
+  // failure (the action returns one rather than throwing) because the usual
+  // cause is addendum_062 not having been run yet.
+  function handleToggleFeatured(event: EventItem) {
+    setPendingId(event.id);
+    setResult(null);
+    startTransition(async () => {
+      const outcome = await toggleEventFeatured(event.id, !event.featured);
+      setPendingId(null);
+      if (outcome.error) {
+        setResult({ kind: "error", text: outcome.error });
+        return;
+      }
+      setResult({
+        kind: "ok",
+        text: event.featured
+          ? `"${event.title}" is no longer featured`
+          : `"${event.title}" is now featured on Explore`,
+      });
     });
   }
 
@@ -202,6 +224,11 @@ export default function EventsTable({
               >
                 {e.cancelled ? "Cancelled" : e.active ? "Active" : "Hidden"}
               </span>
+              {e.featured && !e.cancelled && (
+                <span className="ml-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">
+                  Featured
+                </span>
+              )}
             </td>
             <td className="py-2 text-right">
               {!e.cancelled && (
@@ -217,6 +244,14 @@ export default function EventsTable({
                       Edit
                     </Link>
                   )}
+                  <button
+                    onClick={() => handleToggleFeatured(e)}
+                    disabled={isPending && pendingId === e.id}
+                    className="rounded-lg bg-surface-raised px-3 py-1 text-xs font-heading text-foreground hover:bg-muted/20 disabled:opacity-50"
+                    title="Pin this show to the top of Explore"
+                  >
+                    {e.featured ? "Unfeature" : "Feature"}
+                  </button>
                   <button
                     onClick={() => handleToggle(e.id, !e.active)}
                     disabled={isPending && pendingId === e.id}

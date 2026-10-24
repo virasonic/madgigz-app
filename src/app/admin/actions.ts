@@ -394,6 +394,30 @@ export async function toggleEventActive(eventId: string, active: boolean) {
   revalidatePath("/admin/events");
 }
 
+// #217: pin a show to the top of Explore. Editorial, so admin-only - there is
+// deliberately no column grant letting an artist feature their own show.
+// Degrades gracefully while addendum_062 is still unrun (the code ships first,
+// migrations are applied by hand): 42703 is "column does not exist", which is
+// reported rather than thrown so the events table stays usable.
+export async function toggleEventFeatured(
+  eventId: string,
+  featured: boolean
+): Promise<{ error?: string }> {
+  await requireAdmin();
+  const admin = adminClient();
+  const { error } = await admin.from("events").update({ featured }).eq("id", eventId);
+  if (error) {
+    if (error.code === "42703") {
+      return { error: "DB missing addendum_062 (events.featured)" };
+    }
+    console.error("toggleEventFeatured failed:", error);
+    return { error: "Couldn't update the featured flag" };
+  }
+  revalidatePath("/admin/events");
+  revalidatePath("/explore");
+  return {};
+}
+
 export async function createDiscount(data: {
   code: string;
   type: "percent" | "fixed";

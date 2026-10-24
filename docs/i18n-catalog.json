@@ -126,7 +126,8 @@
       "organisersHeading": "Venues & promoters",
       "eventsHeading": "Events",
       "noResults": "No events or artists found.",
-      "noEvents": "No events found."
+      "noEvents": "No events found.",
+      "featuredBadge": "Featured"
     },
     "savedPage": {
       "title": "Tickets",
@@ -376,6 +377,7 @@
       "wereYouThereTitle": "Were you there?",
       "wereYouThereSubtitle": "Past shows you saved — add the ones you went to.",
       "wereYouThereYes": "Yes, I went",
+      "wereYouThereNo": "No",
       "logOut": "Log Out",
       "deleteAccount": "Delete my account",
       "promotions": "Promotions",
@@ -994,7 +996,7 @@
       "headliner": "Headliner",
       "supportAct": "Support act",
       "tag": "Tag",
-      "tagSearchPlaceholder": "Search artists to tag...",
+      "tagSearchPlaceholder": "Search people to tag...",
       "removeFromLineup": "Remove from lineup",
       "taggedOnMadgigz": "Tagged on MadGigz",
       "untag": "Untag",
@@ -1307,7 +1309,8 @@
       "organisersHeading": "Locales y promotores",
       "eventsHeading": "Eventos",
       "noResults": "No se encontraron eventos ni artistas.",
-      "noEvents": "No se encontraron eventos."
+      "noEvents": "No se encontraron eventos.",
+      "featuredBadge": "Destacado"
     },
     "savedPage": {
       "title": "Entradas",
@@ -1557,6 +1560,7 @@
       "wereYouThereTitle": "¿Estuviste allí?",
       "wereYouThereSubtitle": "Bolos que guardaste — añade los que fuiste.",
       "wereYouThereYes": "Sí, fui",
+      "wereYouThereNo": "No",
       "logOut": "Cerrar sesión",
       "deleteAccount": "Eliminar mi cuenta",
       "promotions": "Promociones",
@@ -2175,7 +2179,7 @@
       "headliner": "Cabeza de cartel",
       "supportAct": "Telonero",
       "tag": "Etiquetar",
-      "tagSearchPlaceholder": "Busca artistas para etiquetar...",
+      "tagSearchPlaceholder": "Busca personas para etiquetar...",
       "removeFromLineup": "Quitar del cartel",
       "taggedOnMadgigz": "Etiquetado en MadGigz",
       "untag": "Quitar etiqueta",

@@ -80,6 +80,12 @@ export interface EventItem {
   rating: number;
   active: boolean;
   cancelled: boolean;
+  /**
+   * Editorially pinned to the top of Explore (#217). Admin-only - there is no
+   * column-level update grant, so an artist can't feature their own show.
+   * False on a database where addendum_062 hasn't run yet.
+   */
+  featured: boolean;
   maxPerOrder: number;
   ticketing?: Ticketing;
   /**
@@ -313,6 +319,8 @@ export interface EventRow {
   active?: boolean;
   cancelled?: boolean;
   max_per_order?: number;
+  /** Absent on a database where addendum_062 hasn't run. */
+  featured?: boolean;
 }
 
 export function mapEvent(row: EventRow): EventItem {
@@ -342,6 +350,7 @@ export function mapEvent(row: EventRow): EventItem {
     rating: Number(row.rating),
     active: row.active ?? true,
     cancelled: row.cancelled ?? false,
+    featured: row.featured ?? false,
     maxPerOrder: row.max_per_order ?? 6,
     ticketing:
       row.ticketing_mode === "external"

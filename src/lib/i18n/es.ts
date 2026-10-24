@@ -162,6 +162,7 @@ export const es: Messages = {
     eventsHeading: "Eventos",
     noResults: "No se encontraron eventos ni artistas.",
     noEvents: "No se encontraron eventos.",
+    featuredBadge: "Destacado",
   },
 
   savedPage: {
