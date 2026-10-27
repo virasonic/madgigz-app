@@ -104,14 +104,21 @@ export default async function ProfilePage() {
     (e) => !attendedIds.has(e.id) && !notAttended.has(e.id)
   );
 
+  // The Saved wall used to drop a gig the moment its date passed; now it keeps
+  // the past ones too (Vir, Oct 2026). Hand SavedShowsGrid both halves - it does
+  // the ordering (upcoming soonest-first, then past most-recent-first). The two
+  // lists are already deduped within themselves and never overlap (one is
+  // date >= today, the other date < today). The count tracks what the grid shows.
+  const allSavedEvents = [...savedEvents, ...pastSaved];
+
   return (
     <ProfileClient
       user={user}
-      savedCount={savedEvents.length}
+      savedCount={allSavedEvents.length}
       attendedCount={attendedCount}
       shows={shows}
       taggedShows={taggedShows}
-      savedEvents={savedEvents}
+      savedEvents={allSavedEvents}
       attendedEvents={attendedEvents}
       attendanceCandidates={attendanceCandidates}
       unreadCount={unreadCount}

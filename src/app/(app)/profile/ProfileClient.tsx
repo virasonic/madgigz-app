@@ -185,7 +185,16 @@ function SavedShowsGrid({
 }) {
   const { locale } = useT();
   const dl = dateLocale(locale);
-  const ordered = [...events].sort((a, b) => a.date.localeCompare(b.date));
+  // Upcoming gigs first, closest date at the top; then the past ones the fan
+  // saved, most-recently-gone first (Vir, Oct 2026). date is a plain YYYY-MM-DD
+  // string so the >= compare against today's UTC date is a lexical one.
+  const today = new Date().toISOString().slice(0, 10);
+  const ordered = [...events].sort((a, b) => {
+    const aUpcoming = a.date >= today;
+    const bUpcoming = b.date >= today;
+    if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+    return aUpcoming ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
+  });
   return (
     <div className="mb-8">
       <h2 className="font-heading text-sm uppercase tracking-wide text-muted">{title}</h2>

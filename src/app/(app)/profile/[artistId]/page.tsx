@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   fetchArtistIntro,
   fetchArtistProfile,
+  fetchContentByArtist,
   fetchCurrentUser,
   fetchFollowedArtistIds,
   fetchSavedEventIds,
@@ -23,11 +24,11 @@ import FollowButton from "@/components/artist/FollowButton";
 import FriendButton from "@/components/friends/FriendButton";
 import IntroReel from "@/components/artist/IntroReel";
 import FanProfileView from "./FanProfileView";
-import FanPhotoStrip from "@/components/fan-photos/FanPhotoStrip";
 import { fetchApprovedPhotosForFan, fetchApprovedPhotosForOrganiser } from "@/lib/fan-photos";
 import Avatar from "@/components/ui/Avatar";
 import SocialLinks from "@/components/ui/SocialLinks";
-import ArtistShowsGrid from "./ArtistShowsGrid";
+import { EventItem } from "@/lib/types";
+import ArtistProfileTabs from "./ArtistProfileTabs";
 import BackButton from "@/components/ui/BackButton";
 import { getServerT } from "@/lib/i18n/server";
 
@@ -125,12 +126,25 @@ export default async function PublicArtistProfilePage({
   // promoter/venue's shows what they booked. BOTH also get the shows they were
   // tagged on - promoters can now be tagged on a show (to post about it), and a
   // tagged night belongs on their page too. Owned-shows query differs by type.
-  const [shows, taggedShows] = await Promise.all([
+  const [shows, taggedShows, contentPosts] = await Promise.all([
     artist.proType
       ? fetchShowsByProAccount(supabase, artistId)
       : fetchShowsByArtist(supabase, artistId),
     fetchTaggedShows(supabase, artistId),
+    // Everything they've posted (#115/#195), for the Content tab below.
+    fetchContentByArtist(supabase, artistId),
   ]);
+
+  // The gig posts carry an event_id; ContentReelCard needs the show itself, so
+  // resolve them in one go (active, non-cancelled only - a hidden show's reel
+  // simply drops out). Announcements have no event and need nothing here.
+  const contentEventIds = contentPosts
+    .map((p) => p.eventId)
+    .filter((id): id is string => Boolean(id));
+  const contentEvents = await fetchEventsByIds(supabase, contentEventIds);
+  const contentEventMap: Record<string, EventItem> = Object.fromEntries(
+    contentEvents.map((e) => [e.id, e])
+  );
 
   // Approved fan photos from this organiser's shows (#195): real content from
   // the crowd on the page, kept or hidden by the organiser themselves.
@@ -216,13 +230,18 @@ export default async function PublicArtistProfilePage({
 
       <SocialLinks source={artist} className="mt-4" />
 
-      <FanPhotoStrip photos={fanPhotos} className="mt-6" />
-
-      <ArtistShowsGrid
+      {/* Shows / Content / Fan photos as tabs (#115/#195): the content they've
+          posted and the crowd's photos each get their own tab rather than
+          stacking above the shows. Falls back to just the shows grid when
+          there's nothing else to show. */}
+      <ArtistProfileTabs
         userId={currentUser?.id ?? null}
         upcoming={upcomingShows}
         past={pastShows}
-        initialSavedIds={savedIds}
+        savedIds={savedIds}
+        contentPosts={contentPosts}
+        contentEventMap={contentEventMap}
+        fanPhotos={fanPhotos}
       />
     </div>
   );

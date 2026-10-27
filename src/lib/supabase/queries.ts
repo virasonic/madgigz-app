@@ -427,6 +427,28 @@ export async function fetchContentPosts(supabase: SupabaseClient): Promise<Conte
 }
 
 /**
+ * Everything an organiser has posted - gig reels, photos and announcements - for
+ * the Content tab on their profile (#115/#195), newest first. Excludes the intro
+ * reel (shown separately beside the bio) and moderation-hidden posts. Returns []
+ * on any error so the profile still renders if content_posts isn't reachable
+ * (pre-migration, or a transient read failure) - an empty Content tab, not a
+ * crashed page.
+ */
+export async function fetchContentByArtist(
+  supabase: SupabaseClient,
+  artistId: string
+): Promise<ContentPost[]> {
+  const { data, error } = await supabase
+    .from("content_posts")
+    .select("*, profiles(artist_photo_url)")
+    .eq("artist_id", artistId)
+    .is("hidden_at", null)
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  return ((data as ContentPostRow[]) ?? []).map(mapContentPost).filter((p) => !p.isIntro);
+}
+
+/**
  * The artist's pinned introduction reel (#143), or null if they haven't set one.
  * Returns null — degrading silently — if the column doesn't exist yet
  * (addendum_038 not run) so the profile still renders in the deploy→migration
