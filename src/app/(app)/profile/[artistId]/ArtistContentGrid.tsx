@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import ContentReelCard from "@/components/feed/ContentReelCard";
 import AnnouncementCard from "@/components/feed/AnnouncementCard";
+import FeedIntroCard from "@/components/feed/FeedIntroCard";
 import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { ContentPost, EventItem } from "@/lib/types";
@@ -177,21 +178,28 @@ function ArtistContentViewer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black">
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label={t("common.close")}
-        className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      </button>
+    <div className="fixed inset-0 z-50 flex flex-col bg-black">
+      {/* The close button lives in its own bar with pt-safe, so it clears the
+          notch/status bar - a fixed overlay sits outside the (app) shell that
+          normally provides that inset, which is why a plain top-3 landed
+          under the status bar and wouldn't take a tap (Vir, 27 Oct). The reel
+          track below it then starts under the bar, like the feed does. */}
+      <div className="pt-safe flex shrink-0 justify-end px-3 pb-1">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t("common.close")}
+          className="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="no-scrollbar h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-y-contain"
+        className="no-scrollbar min-h-0 w-full flex-1 snap-y snap-mandatory overflow-y-scroll overscroll-y-contain"
       >
         {posts.map((post, index) => {
           const event = post.eventId ? eventMap[post.eventId] : undefined;
@@ -211,6 +219,15 @@ function ArtistContentViewer({
                     onOpen={() => onOpenEvent(event.id)}
                     liked={savedIds.includes(event.id)}
                     onToggleLike={() => onToggleLike(event.id)}
+                    preload={preload}
+                  />
+                ) : post.isIntro ? (
+                  // The intro reel has no event; it plays through the same card the
+                  // feed's "meet a new artist" slot uses.
+                  <FeedIntroCard
+                    post={post}
+                    muted={muted}
+                    onToggleMute={() => setMuted((v) => !v)}
                     preload={preload}
                   />
                 ) : (

@@ -146,6 +146,11 @@ export default async function PublicArtistProfilePage({
     contentEvents.map((e) => [e.id, e])
   );
 
+  // The intro reel leads the Content tab (Vir, 27 Oct): it's the artist's "this
+  // is me", so it sits on top of the rest of their posts. It has no event and
+  // plays through FeedIntroCard in the viewer.
+  const contentWithIntro = intro ? [intro, ...contentPosts] : contentPosts;
+
   // Approved fan photos from this organiser's shows (#195): real content from
   // the crowd on the page, kept or hidden by the organiser themselves.
   const fanPhotos = await fetchApprovedPhotosForOrganiser(supabase, artistId);
@@ -239,7 +244,7 @@ export default async function PublicArtistProfilePage({
         upcoming={upcomingShows}
         past={pastShows}
         savedIds={savedIds}
-        contentPosts={contentPosts}
+        contentPosts={contentWithIntro}
         contentEventMap={contentEventMap}
         fanPhotos={fanPhotos}
       />
