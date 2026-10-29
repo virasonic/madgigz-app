@@ -22,7 +22,6 @@ import {
 } from "@/lib/friends";
 import FollowButton from "@/components/artist/FollowButton";
 import FriendButton from "@/components/friends/FriendButton";
-import IntroReel from "@/components/artist/IntroReel";
 import FanProfileView from "./FanProfileView";
 import { fetchApprovedPhotosForFan, fetchApprovedPhotosForOrganiser } from "@/lib/fan-photos";
 import Avatar from "@/components/ui/Avatar";
@@ -215,22 +214,10 @@ export default async function PublicArtistProfilePage({
         </div>
       </div>
 
-      {/* Intro reel (#143) sits as a poster-sized thumbnail beside the bio, so
-          it's discoverable without pushing the shows below the fold — tap it to
-          watch full-screen. Falls back to a full-width bio when there's no reel. */}
-      {intro ? (
-        <div className="mt-4 flex gap-4">
-          <div className="w-28 shrink-0">
-            <IntroReel post={intro} />
-          </div>
-          {artist.artistBio && (
-            <p className="flex-1 text-sm leading-relaxed text-foreground/90">{artist.artistBio}</p>
-          )}
-        </div>
-      ) : (
-        artist.artistBio && (
-          <p className="mt-4 text-sm leading-relaxed text-foreground/90">{artist.artistBio}</p>
-        )
+      {/* The intro reel now leads the Content tab (Vir, 27 Oct), so it no longer
+          sits beside the bio here - the bio runs full width. */}
+      {artist.artistBio && (
+        <p className="mt-4 text-sm leading-relaxed text-foreground/90">{artist.artistBio}</p>
       )}
 
       <SocialLinks source={artist} className="mt-4" />

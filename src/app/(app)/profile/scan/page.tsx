@@ -12,9 +12,9 @@ import { canActAsOrganiser } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
 type ScanResult =
-  | { status: "valid"; ticket: Ticket; event: EventItem }
-  | { status: "duplicate"; ticket: Ticket; event: EventItem }
-  | { status: "cancelled"; ticket: Ticket; event: EventItem }
+  | { status: "valid"; ticket: Ticket; event: EventItem; tierName: string | null }
+  | { status: "duplicate"; ticket: Ticket; event: EventItem; tierName: string | null }
+  | { status: "cancelled"; ticket: Ticket; event: EventItem; tierName: string | null }
   | { status: "invalid" };
 
 export default function ScanTicketsPage() {
@@ -25,11 +25,47 @@ export default function ScanTicketsPage() {
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number | null>(null);
   const pausedRef = useRef(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   const [authorized, setAuthorized] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [checkedInJustNow, setCheckedInJustNow] = useState(false);
+
+  // A short beep at each scan so the door gets an audible confirm without
+  // looking at the screen (Vir, 29 Oct): a clean high tone for a good ticket, a
+  // lower buzz for a problem (invalid, already in, refunded). Web Audio, so
+  // there's no sound file to ship and no autoplay <audio> to fight.
+  function getAudio(): AudioContext | null {
+    if (!audioCtxRef.current) {
+      const AC =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AC) return null;
+      audioCtxRef.current = new AC();
+    }
+    return audioCtxRef.current;
+  }
+
+  function beep(kind: "ok" | "error") {
+    const ctx = getAudio();
+    if (!ctx) return;
+    // Mobile webviews start the context suspended until a gesture; resume is a
+    // no-op once it's running. The unlock listener below also primes it.
+    void ctx.resume().catch(() => {});
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    const now = ctx.currentTime;
+    const dur = kind === "ok" ? 0.18 : 0.32;
+    osc.frequency.setValueAtTime(kind === "ok" ? 880 : 200, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.3, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    osc.start(now);
+    osc.stop(now + dur + 0.02);
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -46,6 +82,17 @@ export default function ScanTicketsPage() {
       setAuthorized(true);
     });
   }, [router]);
+
+  // Prime the audio context on the first touch anywhere, so the scan beep isn't
+  // swallowed by the mobile autoplay gate on the very first scan. Harmless on
+  // desktop; the check-in / scan-next taps resume it again anyway.
+  useEffect(() => {
+    function unlock() {
+      void getAudio()?.resume().catch(() => {});
+    }
+    window.addEventListener("pointerdown", unlock, { once: true });
+    return () => window.removeEventListener("pointerdown", unlock);
+  }, []);
 
   useEffect(() => {
     if (!authorized) return;
@@ -119,6 +166,7 @@ export default function ScanTicketsPage() {
       }
 
       if (!ticketRow) {
+        beep("error");
         setResult({ status: "invalid" });
         return;
       }
@@ -131,17 +179,34 @@ export default function ScanTicketsPage() {
         .maybeSingle();
 
       if (!eventRow) {
+        beep("error");
         setResult({ status: "invalid" });
         return;
       }
       const event = mapEvent(eventRow as EventRow);
 
+      // The price tier this seat was bought at (#151), so the door can see at a
+      // glance that e.g. a "+ beer" ticket is owed an extra. Null for a single-
+      // price show, or if the tier row can't be read (degrade quietly).
+      let tierName: string | null = null;
+      if (ticket.tierId) {
+        const { data: tierRow } = await supabase
+          .from("event_tiers")
+          .select("name")
+          .eq("id", ticket.tierId)
+          .maybeSingle();
+        tierName = (tierRow?.name as string | undefined) ?? null;
+      }
+
       if (ticket.refunded) {
-        setResult({ status: "cancelled", ticket, event });
+        beep("error");
+        setResult({ status: "cancelled", ticket, event, tierName });
       } else if (ticket.checkedInAt) {
-        setResult({ status: "duplicate", ticket, event });
+        beep("error");
+        setResult({ status: "duplicate", ticket, event, tierName });
       } else {
-        setResult({ status: "valid", ticket, event });
+        beep("ok");
+        setResult({ status: "valid", ticket, event, tierName });
       }
     }
 
@@ -238,6 +303,11 @@ export default function ScanTicketsPage() {
                     {result.event.venue} · {result.ticket.quantity}{" "}
                     {result.ticket.quantity === 1 ? t("ticket.one") : t("ticket.many")}
                   </p>
+                  {/* The ticket type, called out so the door spots an extra (a
+                      "+ beer" tier, VIP, etc.) without reading the fine print. */}
+                  {result.tierName && (
+                    <p className="font-heading text-lg text-accent">{result.tierName}</p>
+                  )}
                   {result.status === "valid" && !checkedInJustNow && (
                     <Button onClick={handleCheckIn}>{t("scan.checkIn")}</Button>
                   )}
