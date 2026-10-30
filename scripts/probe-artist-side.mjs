@@ -250,6 +250,53 @@ try {
     report("cannot create a show that is house-run", Boolean(error), "insert accepted");
   }
 
+  // #218: door links are a bearer capability for a show, stored as a hash in a
+  // service-role-only table (addendum_063). Minting/revoking goes through server
+  // actions, so NO client role reads or writes the table directly - not even
+  // the show's own artist. Each check reads back through the service role.
+  console.log("\nDoor links (addendum_063) - no client role reaches the table:");
+  {
+    const { error: probeErr } = await admin.from("door_links").select("id").limit(1);
+    if (probeErr) {
+      report("door_links table exists (run addendum_063 first)", false, probeErr.message);
+    } else {
+      const soon = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      const { data: link, error: seedErr } = await admin
+        .from("door_links")
+        .insert({ event_id: eventId, token_hash: "0".repeat(64), label: "probe", expires_at: soon })
+        .select("id")
+        .single();
+      if (seedErr) throw new Error(`door_links seed: ${seedErr.message}`);
+      const readLink = async () => {
+        const { data } = await admin.from("door_links").select("revoked_at, label").eq("id", link.id).maybeSingle();
+        return data;
+      };
+      const countLinks = async () => {
+        const { count } = await admin.from("door_links").select("id", { count: "exact", head: true }).eq("event_id", eventId);
+        return count;
+      };
+      const anon = createClient(URL, ANON, { auth: { persistSession: false } });
+      for (const [who, client] of [
+        ["the show's own artist", artist.client],
+        ["another artist", other.client],
+        ["a fan", fan.client],
+        ["the anon key", anon],
+      ]) {
+        const { data: rows } = await client.from("door_links").select("id, token_hash").eq("event_id", eventId);
+        report(`${who} cannot read the show's door links`, !rows || rows.length === 0, `${rows?.length} rows`);
+        await client
+          .from("door_links")
+          .insert({ event_id: eventId, token_hash: "1".repeat(64), label: "forged", expires_at: soon });
+        report(`${who} cannot mint a link directly`, (await countLinks()) === 1, "a row was inserted");
+        await client.from("door_links").update({ revoked_at: new Date().toISOString() }).eq("id", link.id);
+        report(`${who} cannot revoke a link directly`, (await readLink())?.revoked_at === null, "revoked_at was set");
+        await client.from("door_links").delete().eq("id", link.id);
+        report(`${who} cannot delete a link`, (await readLink()) !== null, "the row was deleted");
+      }
+      await admin.from("door_links").delete().eq("event_id", eventId);
+    }
+  }
+
   await admin.from("tickets").delete().eq("id", ticket.id);
 } catch (err) {
   console.error("aborted:", err.message);

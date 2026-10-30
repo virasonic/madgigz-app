@@ -38,11 +38,13 @@ async function authorise(eventId: string): Promise<{ userId: string; event: Scan
   const admin = createAdminClient();
   const { data } = await admin
     .from("events")
-    .select("id, artist_id, pro_account_id, date, cancelled")
+    .select("id, artist_id, pro_account_id, event_date, cancelled")
     .eq("id", eventId)
     .maybeSingle();
   if (!data) return null;
-  const event = data as ScannableEvent;
+  // The column is event_date; ScannableEvent carries it as `date` like EventItem.
+  const { event_date, ...rest } = data as Omit<ScannableEvent, "date"> & { event_date: string };
+  const event: ScannableEvent = { ...rest, date: event_date };
   if (!(await canScanEvent(admin, user.id, event))) return null;
   return { userId: user.id, event };
 }
