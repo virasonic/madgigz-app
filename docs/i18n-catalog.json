@@ -877,7 +877,8 @@
       "linkExpiredTitle": "This door link has expired",
       "linkExpiredBody": "Ask the organiser for a new link.",
       "doorInvalidTitle": "This door link isn't valid",
-      "doorInvalidBody": "Check you opened the whole link, or ask the organiser for a new one."
+      "doorInvalidBody": "Check you opened the whole link, or ask the organiser for a new one.",
+      "admitted": "of {total} checked in"
     },
     "doorLinks": {
       "title": "Door links",
@@ -2090,7 +2091,8 @@
       "linkExpiredTitle": "Este enlace de puerta ha caducado",
       "linkExpiredBody": "Pide al organizador un enlace nuevo.",
       "doorInvalidTitle": "Este enlace de puerta no es válido",
-      "doorInvalidBody": "Comprueba que has abierto el enlace completo o pide al organizador uno nuevo."
+      "doorInvalidBody": "Comprueba que has abierto el enlace completo o pide al organizador uno nuevo.",
+      "admitted": "de {total} han entrado"
     },
     "doorLinks": {
       "title": "Enlaces de puerta",

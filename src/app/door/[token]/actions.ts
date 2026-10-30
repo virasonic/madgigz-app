@@ -9,6 +9,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { touchDoorLink, verifyDoorToken } from "@/lib/door-links";
 import type { ScanOutcome } from "@/lib/scan-outcome";
+import { countAdmissions, type AdmissionCount, type AdmissionRow } from "@/lib/scan-stats";
 import { mapTicket, type TicketRow } from "@/lib/types";
 
 export async function doorLookup(token: string, code: string): Promise<ScanOutcome> {
@@ -38,6 +39,7 @@ export async function doorLookup(token: string, code: string): Promise<ScanOutco
 
   const base = {
     ticketId: ticket.id,
+    eventId: ticket.eventId,
     quantity: ticket.quantity,
     tierName,
     eventTitle: link.event.title,
@@ -46,6 +48,23 @@ export async function doorLookup(token: string, code: string): Promise<ScanOutco
   if (ticket.refunded) return { status: "cancelled", ...base };
   if (ticket.checkedInAt) return { status: "duplicate", ...base };
   return { status: "valid", ...base };
+}
+
+/**
+ * "N of M checked in" for the link's show. Counts only - no ticket ids, no
+ * buyers - so a leaked link learns how full the room is and nothing else.
+ * Null when the link has died, so the counter quietly disappears.
+ */
+export async function doorStats(token: string): Promise<AdmissionCount | null> {
+  const admin = createAdminClient();
+  const link = await verifyDoorToken(admin, token);
+  if (!link.ok) return null;
+  const { data, error } = await admin
+    .from("tickets")
+    .select("quantity, checked_in_at, refunded")
+    .eq("event_id", link.event.id);
+  if (error || !data) return null;
+  return countAdmissions(data as AdmissionRow[]);
 }
 
 /**

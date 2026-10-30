@@ -988,6 +988,7 @@ export const es: Messages = {
     linkExpiredBody: "Pide al organizador un enlace nuevo.",
     doorInvalidTitle: "Este enlace de puerta no es válido",
     doorInvalidBody: "Comprueba que has abierto el enlace completo o pide al organizador uno nuevo.",
+    admitted: "de {total} han entrado",
   },
   doorLinks: {
     title: "Enlaces de puerta",

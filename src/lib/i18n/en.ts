@@ -1019,6 +1019,7 @@ export const en = {
     linkExpiredBody: "Ask the organiser for a new link.",
     doorInvalidTitle: "This door link isn't valid",
     doorInvalidBody: "Check you opened the whole link, or ask the organiser for a new one.",
+    admitted: "of {total} checked in",
   },
   doorLinks: {
     title: "Door links",

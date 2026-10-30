@@ -10,6 +10,7 @@ import { EventRow, mapEvent, mapTicket, TicketRow } from "@/lib/types";
 import { canActAsOrganiser } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import type { ScanOutcome } from "@/lib/scan-outcome";
+import { countAdmissions, type AdmissionCount, type AdmissionRow } from "@/lib/scan-stats";
 
 // The logged-in scanner: the organiser's own phone, looking tickets up through
 // their own Supabase client. RLS decides which tickets they can read and check
@@ -68,6 +69,7 @@ export default function ScanTicketsPage() {
 
     const base = {
       ticketId: ticket.id,
+      eventId: ticket.eventId,
       quantity: ticket.quantity,
       tierName,
       eventTitle: event.title,
@@ -92,12 +94,27 @@ export default function ScanTicketsPage() {
     return !error && !!data && data.length > 0;
   }, []);
 
+  // "N of M checked in" for the show of the last ticket scanned - this scanner
+  // isn't tied to one show, so it can't know which until the first scan. The
+  // same RLS that lets the organiser read a ticket here decides what is
+  // counted; for a show they can't read it comes back 0 of 0.
+  const stats = useCallback(async (eventId: string): Promise<AdmissionCount | null> => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("tickets")
+      .select("quantity, checked_in_at, refunded")
+      .eq("event_id", eventId);
+    if (error || !data) return null;
+    return countAdmissions(data as AdmissionRow[]);
+  }, []);
+
   if (!authorized) return null;
 
   return (
     <ScannerView
       lookup={lookup}
       checkIn={checkIn}
+      stats={stats}
       header={
         <>
           <h1 className="font-display text-2xl text-foreground">{t("scan.title")}</h1>

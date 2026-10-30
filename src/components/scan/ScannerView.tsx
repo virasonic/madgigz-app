@@ -5,6 +5,11 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Button from "@/components/ui/Button";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import type { ScanOutcome } from "@/lib/scan-outcome";
+import type { AdmissionCount } from "@/lib/scan-stats";
+
+// How often the counter re-reads while the scanner is open, so a second door
+// (or the organiser's own phone) scanning the same show shows up here too.
+const STATS_REFRESH_MS = 60_000;
 
 // The door scanner's UI: camera, QR decode, beep, result card, check-in. One
 // component for both scanners (#218) - the logged-in /profile/scan and the
@@ -15,6 +20,8 @@ export default function ScannerView({
   lookup,
   checkIn,
   header,
+  stats,
+  eventId,
 }: {
   /** Resolves a decoded QR value to what the door should see. */
   lookup: (code: string) => Promise<ScanOutcome>;
@@ -22,6 +29,17 @@ export default function ScannerView({
   checkIn: (ticketId: string) => Promise<boolean>;
   /** Title row: the page name plus whatever sits opposite it (Done, language). */
   header: ReactNode;
+  /**
+   * "N of M checked in" for a show; null hides the counter. Re-read after
+   * every scan and check-in, and on a slow timer. Optional: a scanner with no
+   * way to count simply shows none.
+   */
+  stats?: (eventId: string) => Promise<AdmissionCount | null>;
+  /**
+   * The show this scanner is for, when it is for one (the door link). The
+   * logged-in scanner leaves it out and the counter follows the last scan.
+   */
+  eventId?: string;
 }) {
   const { t } = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -40,6 +58,40 @@ export default function ScannerView({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanOutcome | null>(null);
   const [checkedInJustNow, setCheckedInJustNow] = useState(false);
+
+  // The counter: which show it counts (fixed for a door link, else the show of
+  // the last scanned ticket) and a tick that any scan or check-in bumps to
+  // re-read it. Fetching lives in an effect keyed on both, so the camera loop
+  // never has to know about it.
+  const [countedEventId, setCountedEventId] = useState<string | null>(eventId ?? null);
+  const [statsTick, setStatsTick] = useState(0);
+  const [count, setCount] = useState<AdmissionCount | null>(null);
+  const statsRef = useRef(stats);
+  useEffect(() => {
+    statsRef.current = stats;
+  }, [stats]);
+
+  useEffect(() => {
+    if (!countedEventId || !statsRef.current) return;
+    let cancelled = false;
+    statsRef.current(countedEventId)
+      .then((next) => {
+        if (!cancelled) setCount(next);
+      })
+      .catch(() => {
+        // A dropped connection keeps the last number on screen rather than
+        // blanking it; the next scan re-reads.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [countedEventId, statsTick]);
+
+  useEffect(() => {
+    if (!countedEventId) return;
+    const id = setInterval(() => setStatsTick((n) => n + 1), STATS_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [countedEventId]);
 
   // A short beep at each scan so the door gets an audible confirm without
   // looking at the screen (Vir, 29 Oct): a clean high tone for a good ticket, a
@@ -145,6 +197,8 @@ export default function ScannerView({
       }
       beep(outcome.status === "valid" ? "ok" : "error");
       setResult(outcome);
+      if ("eventId" in outcome) setCountedEventId(outcome.eventId);
+      setStatsTick((n) => n + 1);
     }
 
     startCamera();
@@ -177,11 +231,19 @@ export default function ScannerView({
       return;
     }
     setCheckedInJustNow(true);
+    setStatsTick((n) => n + 1);
   }
 
   return (
     <div className="flex h-full flex-col p-4">
       <div className="mb-4 flex items-center justify-between">{header}</div>
+      {count && (
+        <p className="-mt-2 mb-3 text-sm text-muted">
+          <span className="font-heading text-foreground">{count.checkedIn}</span>
+          {" "}
+          {t("scan.admitted", { total: count.total })}
+        </p>
+      )}
 
       {cameraError ? (
         <div className="rounded-2xl bg-surface p-5 text-sm text-danger">{cameraError}</div>

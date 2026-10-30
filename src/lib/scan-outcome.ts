@@ -10,6 +10,8 @@ export type ScanOutcome =
   | {
       status: "valid" | "duplicate" | "cancelled";
       ticketId: string;
+      /** The show the ticket is for - what the "N of M checked in" counter is scoped to. */
+      eventId: string;
       quantity: number;
       /** The price tier the seat was bought at (#151); null for single-price shows. */
       tierName: string | null;

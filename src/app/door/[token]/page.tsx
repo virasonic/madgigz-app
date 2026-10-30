@@ -37,7 +37,7 @@ export default async function DoorPage({ params }: { params: Promise<{ token: st
   const event = link.event;
   return (
     <main className="mx-auto h-dvh w-full max-w-md">
-      <DoorScanner token={token} eventTitle={event.title} eventVenue={event.venue} eventDate={event.date} />
+      <DoorScanner token={token} eventId={event.id} eventTitle={event.title} eventVenue={event.venue} eventDate={event.date} />
     </main>
   );
 }
