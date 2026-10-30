@@ -10,6 +10,7 @@ import {
 } from "@/lib/supabase/queries";
 import { fetchProEventForEdit, proClient, requirePro } from "@/lib/supabase/pro-queries";
 import ShowVisibility from "./ShowVisibility";
+import DoorLinks from "@/components/organiser/DoorLinks";
 import TierManager, { type TierManagerTier } from "@/components/organiser/TierManager";
 
 export default async function ProEditEventPage({ params }: PageProps<"/pro/events/[eventId]">) {
@@ -80,6 +81,8 @@ export default async function ProEditEventPage({ params }: PageProps<"/pro/event
       ) : (
         <>
           <ShowVisibility eventId={event.id} active={event.active} />
+          {/* Door links (#218): hand the door to someone with no account. */}
+          {!isExternal && <DoorLinks eventId={event.id} />}
           <div className="rounded-2xl bg-surface p-5">
             <EventForm
               mode="pro"

@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import { fetchPendingPhotoCount } from "@/lib/fan-photos";
 import FeeBreakdown from "@/components/artist/FeeBreakdown";
 import ArtistTierEditor, { type ArtistTier } from "@/components/artist/ArtistTierEditor";
+import DoorLinks from "@/components/organiser/DoorLinks";
 import { removeSelfFromShow } from "@/app/(app)/profile/show-actions";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -576,6 +577,13 @@ export default function ManageShowModal({
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Door links (#218): a per-show scan link the organiser can hand to
+                door staff who have no account and no app. Only on a show whose
+                tickets we scan, and only while it can still be run. */}
+            {canManage && show.ticketing?.mode !== "external" && !show.cancelled && (
+              <DoorLinks eventId={show.id} />
             )}
 
             <div>

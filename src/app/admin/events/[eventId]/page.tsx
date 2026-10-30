@@ -4,6 +4,7 @@ import { adminClient, fetchEventDetail, requireAdmin } from "@/lib/supabase/admi
 import { formatEuros } from "@/lib/pricing";
 import RefundButton from "../../billing/RefundButton";
 import TierManager, { type TierManagerTier } from "@/components/organiser/TierManager";
+import DoorLinks from "@/components/organiser/DoorLinks";
 
 function StatCard({
   label,
@@ -150,6 +151,11 @@ export default async function AdminEventDetailPage({
       </div>
 
       {!isExternal && <TierManager eventId={eventId} initialTiers={tiers} />}
+
+      {/* Door links (#218): a per-show scan link for door staff with no account.
+          Same condition as the scan button above - an admin runs the door of an
+          ownerless house show; an artist's show is the artist's to delegate. */}
+      {!event.artistId && !isExternal && !event.cancelled && <DoorLinks eventId={eventId} />}
 
       <div className="rounded-2xl bg-surface p-5">
         <h2 className="mb-4 font-heading text-lg text-foreground">Sales by day</h2>
