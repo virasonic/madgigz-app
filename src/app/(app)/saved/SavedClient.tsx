@@ -87,8 +87,20 @@ export default function SavedClient({
   const [removingTicketId, setRemovingTicketId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | undefined>();
 
+  // Liked events ordered like the profile's saved wall (#141): upcoming first,
+  // soonest at the top, then past ones most-recent-first - a gig you liked that
+  // has already happened sinks below the ones still to come rather than leading
+  // the list by whatever order it was fetched in.
   const savedEvents = useMemo(
-    () => initialEvents.filter((event) => savedIds.includes(event.id)),
+    () =>
+      initialEvents
+        .filter((event) => savedIds.includes(event.id))
+        .sort((a, b) => {
+          const aUpcoming = a.date >= TODAY;
+          const bUpcoming = b.date >= TODAY;
+          if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+          return aUpcoming ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
+        }),
     [initialEvents, savedIds]
   );
 
