@@ -104,6 +104,17 @@ export default function SavedClient({
     [initialEvents, savedIds]
   );
 
+  // Split the sorted list so a divider can sit between the two groups. Both are
+  // already in the right internal order from the sort above.
+  const upcomingSaved = useMemo(
+    () => savedEvents.filter((event) => event.date >= TODAY),
+    [savedEvents]
+  );
+  const pastSaved = useMemo(
+    () => savedEvents.filter((event) => event.date < TODAY),
+    [savedEvents]
+  );
+
   const activeEvent = useMemo(
     () => initialEvents.find((event) => event.id === ticketModal.value) ?? null,
     [initialEvents, ticketModal.value]
@@ -224,6 +235,35 @@ export default function SavedClient({
     setTickets((current) => current.filter((t) => t.id !== ticketId));
   }
 
+  // One liked-event row, shared by the upcoming and past groups so the divider
+  // can sit between them without the card markup being written out twice.
+  const renderLikedEvent = (event: EventItem) => (
+    <div key={event.id} className="flex items-center gap-3 rounded-2xl bg-surface p-3">
+      <button
+        onClick={() => ticketModal.open(event.id)}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+      >
+        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl">
+          <Image src={event.image} alt={event.title} fill className="object-cover" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-heading text-sm text-foreground">{event.title}</p>
+          <p className="truncate text-xs text-muted">
+            {event.venue} · {formatDate(event.date, dl)}
+          </p>
+        </div>
+      </button>
+      <span className="shrink-0 text-xs text-muted">€{event.price}</span>
+      <button
+        onClick={() => handleToggleSaved(event.id)}
+        aria-label={t("savedPage.removeLiked")}
+        className="shrink-0 rounded-full p-1.5 text-muted hover:text-foreground"
+      >
+        <CloseIcon />
+      </button>
+    </div>
+  );
+
   return (
     <div className="p-4 lg:mx-auto lg:max-w-2xl">
       <div className="mb-4 flex items-center gap-2">
@@ -288,35 +328,19 @@ export default function SavedClient({
           <p className="text-sm text-muted">{t("savedPage.emptyEvents")}</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {savedEvents.map((event) => (
-              <div
-                key={event.id}
-                className="flex items-center gap-3 rounded-2xl bg-surface p-3"
-              >
-                <button
-                  onClick={() => ticketModal.open(event.id)}
-                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                >
-                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl">
-                    <Image src={event.image} alt={event.title} fill className="object-cover" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-heading text-sm text-foreground">{event.title}</p>
-                    <p className="truncate text-xs text-muted">
-                      {event.venue} · {formatDate(event.date, dl)}
-                    </p>
-                  </div>
-                </button>
-                <span className="shrink-0 text-xs text-muted">€{event.price}</span>
-                <button
-                  onClick={() => handleToggleSaved(event.id)}
-                  aria-label={t("savedPage.removeLiked")}
-                  className="shrink-0 rounded-full p-1.5 text-muted hover:text-foreground"
-                >
-                  <CloseIcon />
-                </button>
+            {upcomingSaved.map(renderLikedEvent)}
+            {/* Divider only when there's something on both sides of it - a line
+                leading the list (all-past) or trailing it (all-upcoming) would
+                be a rule with nothing to separate. */}
+            {upcomingSaved.length > 0 && pastSaved.length > 0 && (
+              <div className="flex items-center gap-3 pt-1">
+                <span className="font-heading text-xs uppercase tracking-wide text-muted">
+                  {t("savedPage.pastHeading")}
+                </span>
+                <span className="h-px flex-1 bg-muted/20" />
               </div>
-            ))}
+            )}
+            {pastSaved.map(renderLikedEvent)}
           </div>
         )
       ) : ticketRows.length === 0 && attendedRows.length === 0 ? (

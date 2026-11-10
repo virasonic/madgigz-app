@@ -205,6 +205,7 @@ export const en = {
     gigOne: "gig",
     gigMany: "gigs",
     removeLiked: "Remove from liked events",
+    pastHeading: "Past",
     transferPending: "Transfer pending",
     availableOffline: "Open your tickets offline",
   },

@@ -183,6 +183,7 @@ export const es: Messages = {
     gigOne: "bolo",
     gigMany: "bolos",
     removeLiked: "Quitar de eventos guardados",
+    pastHeading: "Pasados",
     transferPending: "Transferencia pendiente",
     availableOffline: "Abre tus entradas sin conexión",
   },
