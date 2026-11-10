@@ -398,6 +398,8 @@ export const es: Messages = {
     editProfile: "Editar perfil",
     editProfilePhoto: "Foto",
     editProfileBioPhoto: "Bio y foto",
+    account: "Cuenta",
+    accountHint: "Correo y contraseña",
     sendFeedback: "Enviar comentarios",
     sendFeedbackHint: "Fallo, ayuda o una idea",
     comingSoon: "Pronto",
@@ -408,6 +410,22 @@ export const es: Messages = {
       "Configurarás tu perfil de artista y lo verificaremos antes de que puedas vender entradas. Tus entradas y los artistas que sigues se quedan igual.",
     switchLegalNotice: "Al continuar aceptas las {organiserTerms}.",
     switching: "Cambiando...",
+  },
+
+  account: {
+    title: "Cuenta",
+    emailHeading: "Correo",
+    emailHint: "Con esto inicias sesión y aquí llegan tus entradas.",
+    changeEmail: "Cambiar correo",
+    newEmailLabel: "Nuevo correo",
+    emailInvalid: "Introduce un correo válido.",
+    emailUnchanged: "Ese ya es tu correo.",
+    emailSent: "Casi listo — toca el enlace que enviamos a {email} para confirmar el cambio.",
+    passwordHeading: "Contraseña",
+    changePassword: "Cambiar contraseña",
+    currentPasswordLabel: "Contraseña actual",
+    currentPasswordWrong: "Esa contraseña no es correcta.",
+    passwordChanged: "Contraseña actualizada.",
   },
 
   preferences: {

@@ -414,6 +414,18 @@ function SettingsSheet({
             </span>
           </Link>
 
+          {/* Credentials (email + password) live on their own page, since they
+              go through Supabase Auth rather than the profiles row that Edit
+              Profile writes. Shown to everyone - a fan needs them as much as an
+              artist does. */}
+          <Link
+            href="/profile/account"
+            className="flex items-center justify-between rounded-2xl bg-background px-4 py-3.5"
+          >
+            <span className="text-sm text-foreground">{t("settings.account")}</span>
+            <span className="text-xs text-muted">{t("settings.accountHint")}</span>
+          </Link>
+
           {/* #170: discovery preferences. Shown to everyone here - artists browse
               and explore shows too, they just reach it from Settings rather than
               the feed's top-right slot (which is their content "+"). */}

@@ -423,6 +423,8 @@ export const en = {
     editProfile: "Edit Profile",
     editProfilePhoto: "Photo",
     editProfileBioPhoto: "Bio & photo",
+    account: "Account",
+    accountHint: "Email & password",
     sendFeedback: "Send feedback",
     sendFeedbackHint: "Bug, help or an idea",
     comingSoon: "Soon",
@@ -435,6 +437,22 @@ export const en = {
     // the moment the account gains that ability.
     switchLegalNotice: "By continuing you accept the {organiserTerms}.",
     switching: "Switching...",
+  },
+
+  account: {
+    title: "Account",
+    emailHeading: "Email",
+    emailHint: "You sign in with this, and it's where ticket receipts go.",
+    changeEmail: "Change email",
+    newEmailLabel: "New email",
+    emailInvalid: "Enter a valid email address.",
+    emailUnchanged: "That's already your email.",
+    emailSent: "Almost done — tap the link we sent to {email} to confirm the change.",
+    passwordHeading: "Password",
+    changePassword: "Change password",
+    currentPasswordLabel: "Current password",
+    currentPasswordWrong: "That password isn't right.",
+    passwordChanged: "Password updated.",
   },
 
   preferences: {
