@@ -70,3 +70,33 @@ export async function unmarkAttended(eventId: string): Promise<{ ok: boolean }> 
     .eq("event_id", eventId);
   return { ok: !error };
 }
+
+// Usage log for the poster-wall image export (#228). Call it once per
+// successful export, after the image has been produced and handed to the share
+// sheet / saved, with the number of posters that were on the wall. Fire and
+// forget: it returns ok:false instead of throwing so a logging failure can
+// never break the export itself - including the pre-migration case where
+// poster_wall_exports (addendum_064) isn't there yet.
+//
+// Owner-scoped: writes only the caller's own row, and RLS enforces the same.
+// Nothing identifying is stored beyond the user id, which the admin export
+// turns into a keyed pseudonym before it leaves the database.
+//
+// Not called from anywhere yet: the export button is still being built. Hook it
+// into that button's success path (see BACKLOG #228 for where).
+/** @knipignore — ready-to-call logging for the poster-wall export (#228); the caller lands with the export button. */
+export async function logPosterWallExport(showCount: number): Promise<{ ok: boolean }> {
+  if (!Number.isInteger(showCount) || showCount < 0 || showCount > 10_000) {
+    return { ok: false };
+  }
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false };
+
+  const { error } = await supabase
+    .from("poster_wall_exports")
+    .insert({ user_id: user.id, show_count: showCount });
+  return { ok: !error };
+}

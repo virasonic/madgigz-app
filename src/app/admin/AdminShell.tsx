@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/admin/moderation", label: "Moderation" },
   { href: "/admin/decisions", label: "Decisions" },
   { href: "/admin/attribution", label: "Attribution" },
+  { href: "/admin/exports", label: "Exports" },
   { href: "/admin/announcements", label: "Announcements" },
 ];
 

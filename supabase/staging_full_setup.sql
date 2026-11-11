@@ -4578,3 +4578,30 @@ revoke all on public.door_links from anon, authenticated;
 
 comment on table public.door_links is
   'Per-show door-staff scan links (#218). Service-role only: token stored hashed, verified in server actions, scoped to event_id.';
+
+-- ============================================================================
+-- addendum_064_poster_wall_exports.sql
+-- ============================================================================
+
+create table if not exists public.poster_wall_exports (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  show_count integer not null check (show_count >= 0),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists poster_wall_exports_created_at_idx
+  on public.poster_wall_exports (created_at);
+
+alter table public.poster_wall_exports enable row level security;
+
+revoke all on public.poster_wall_exports from anon, authenticated;
+grant insert (user_id, show_count) on public.poster_wall_exports to authenticated;
+
+drop policy if exists "Users can log their own poster wall export" on public.poster_wall_exports;
+create policy "Users can log their own poster wall export" on public.poster_wall_exports
+  for insert to authenticated
+  with check (auth.uid() = user_id);
+
+comment on table public.poster_wall_exports is
+  'One row per poster-wall image export (#228). Insert-only for the owner; read by service_role for the pseudonymous analyst CSV.';

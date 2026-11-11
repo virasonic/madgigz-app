@@ -53,7 +53,7 @@ export interface AdminUserRow {
 // profiles table directly) showed 77. Walk every page via `nextPage` so we get
 // them all. `nextPage` is null on the last page, and stays correct even if the
 // server clamps perPage below what we ask for.
-async function listAllAuthUsers(admin: SupabaseClient): Promise<User[]> {
+export async function listAllAuthUsers(admin: SupabaseClient): Promise<User[]> {
   const all: User[] = [];
   let page = 1;
   for (;;) {
