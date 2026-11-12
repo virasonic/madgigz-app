@@ -1,4 +1,5 @@
 import supabaseImageLoader from "@/lib/image-loader";
+import { isNativeApp } from "@/lib/native";
 import { bestLayout, layoutHeight, STORY_HEIGHT, STORY_WIDTH } from "@/lib/poster-wall-image";
 import type { EventItem } from "@/lib/types";
 
@@ -177,15 +178,67 @@ export async function renderPosterWall(events: EventItem[], copy: WallImageCopy)
 
 export type WallShareOutcome = "shared" | "downloaded" | "cancelled" | "unsupported" | "failed";
 
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const result = String(reader.result);
+      resolve(result.slice(result.indexOf(",") + 1));
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+function isUnimplemented(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as { code?: string }).code === "UNIMPLEMENTED";
+}
+
 /**
- * Phones and tablets get the OS share sheet with the image attached (iOS, and
- * Android Chrome); everything else saves it as a download. Same rule as
- * shareEvent in share.ts: a laptop's share sheet is a worse way to get an image
- * into Instagram than a file on disk. Inside a WebView that can do neither (the
- * Android shell today) it reports `unsupported` so the UI can say so instead of
- * silently doing nothing.
+ * Inside the Capacitor shells the WebView can neither open the OS share sheet
+ * with a file attached nor save a download anywhere useful (iOS put it in
+ * Files, Android dropped it). So the image is written to the app's cache and
+ * handed to the native sheet via @capacitor/share, which is where "Instagram",
+ * "Save Image" / "Save to Photos", AirDrop and the rest live. Resolves
+ * `unavailable` on an installed build that predates the plugin, so the caller
+ * can fall back to the web behaviour instead of failing.
+ */
+async function shareViaShell(blob: Blob, filename: string, title: string): Promise<WallShareOutcome | "unavailable"> {
+  try {
+    const [{ Filesystem, Directory }, { Share }] = await Promise.all([
+      import("@capacitor/filesystem"),
+      import("@capacitor/share"),
+    ]);
+    const data = await blobToBase64(blob);
+    const { uri } = await Filesystem.writeFile({ path: filename, data, directory: Directory.Cache });
+    try {
+      await Share.share({ title, files: [uri] });
+      return "shared";
+    } catch (error) {
+      if (isUnimplemented(error)) return "unavailable";
+      // Both shells reject with "Share canceled" when the sheet is dismissed.
+      const message = error instanceof Error ? error.message : String(error);
+      return /cancel/i.test(message) ? "cancelled" : "failed";
+    }
+  } catch (error) {
+    return isUnimplemented(error) ? "unavailable" : "failed";
+  }
+}
+
+/**
+ * The native apps get the OS share sheet through the shell (see shareViaShell).
+ * In a browser, phones and tablets get the same sheet via the Web Share API
+ * with the image attached (iOS Safari, Android Chrome); everything else saves
+ * it as a download. Same rule as shareEvent in share.ts: a laptop's share sheet
+ * is a worse way to get an image into Instagram than a file on disk. A WebView
+ * that can do neither (an Android build without the share plugin) reports
+ * `unsupported` so the UI can say so instead of silently doing nothing.
  */
 export async function sharePosterWall(blob: Blob, filename: string, title: string): Promise<WallShareOutcome> {
+  if (isNativeApp()) {
+    const native = await shareViaShell(blob, filename, title);
+    if (native !== "unavailable") return native;
+  }
   const file = new File([blob], filename, { type: blob.type });
   const nav = typeof navigator === "undefined" ? null : navigator;
   const touch = (nav?.maxTouchPoints ?? 0) > 0;

@@ -48,6 +48,10 @@
 	     in the webview; iOS requires this usage string or the prompt crashes. -->
 	<key>NSCameraUsageDescription</key>
 	<string>MadGigz uses the camera to scan ticket QR codes at the door.</string>
+	<!-- "Save Image" on the share sheet (Share my wall, #228) saves into Photos
+	     from inside the app; without this string iOS kills the app instead. -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>MadGigz saves your poster wall image to your Photos when you ask it to.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
