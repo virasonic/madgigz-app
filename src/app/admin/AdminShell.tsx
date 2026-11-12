@@ -23,7 +23,9 @@ const NAV_ITEMS = [
   { href: "/admin/moderation", label: "Moderation" },
   { href: "/admin/decisions", label: "Decisions" },
   { href: "/admin/attribution", label: "Attribution" },
-  { href: "/admin/exports", label: "Exports" },
+  // Lives outside /admin so the analyst role (#228) can reach it without the
+  // layout's admin-only redirect; it has its own chrome and a link back here.
+  { href: "/exports", label: "Exports" },
   { href: "/admin/announcements", label: "Announcements" },
 ];
 

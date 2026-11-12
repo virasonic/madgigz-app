@@ -1,0 +1,22 @@
+-- #228: an `analyst` role for the part-time analyst.
+--
+-- Today the only way to reach the analytics CSVs is a full admin login, which
+-- also opens users' emails, payouts and refunds. `analyst` is a profile role
+-- that the app lets into exactly one place: /exports (the four pseudonymous
+-- CSVs). Everywhere else - the admin panel, the organiser tools, the artist
+-- toolset - treats it like a fan. Nothing in the database keys on it: no
+-- policy, grant or function mentions 'analyst', so the value is inert until
+-- the app code that recognises it is deployed.
+--
+-- There is no UI to grant it; set it by hand from the SQL editor:
+--   update public.profiles set role = 'analyst' where id = '<uuid>';
+--
+-- Safe to run before or after the code deploy. Before: the value exists and
+-- nobody holds it. After: an analyst profile reads as "neither fan nor admin"
+-- until this runs, so the update above is what actually turns the role on.
+--
+-- Note: `alter type ... add value` must be the ONLY statement in this file.
+-- Postgres refuses to let the same transaction use a value it just added, so
+-- anything that referenced 'analyst' below this line would fail. Keep it bare.
+
+alter type public.user_role add value if not exists 'analyst';

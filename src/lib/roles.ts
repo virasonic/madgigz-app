@@ -53,6 +53,7 @@ export function organiserLabel(user: {
   if (user.proType === "venue") return "Venue";
   if (user.proType === "promoter") return "Promoter";
   if (user.role === "admin") return "Admin";
+  if (user.role === "analyst") return "Analyst";
   if (user.role === "artist") return "Artist";
   return "Fan";
 }

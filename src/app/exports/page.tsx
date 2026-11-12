@@ -1,12 +1,27 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Wordmark } from "@/components/ui/Wordmark";
 import { exportSecret } from "@/lib/analytics-export";
-import { requireAdmin } from "@/lib/supabase/admin-queries";
+import { requireAdminOrAnalyst } from "@/lib/supabase/admin-queries";
 
-// Admin stays English (not wired to the i18n catalog) — see AdminShell.
+// Staff-only, so English like /admin (not wired to the i18n catalog).
 
 // Analyst exports (#228): four CSVs, each filtered by an inclusive date range on
 // the dataset's own timestamp. A plain GET form, no client JS: each button
 // submits to the download route with its dataset name, and the browser saves
 // the file. Nothing on this page reads the data itself.
+//
+// Lives at /exports, OUTSIDE the /admin layout, on purpose: that layout bounces
+// anyone who is not an admin, and the analyst role (addendum_065) must reach
+// this page and nothing else in the panel. So the page carries its own minimal
+// chrome, and the guard is the one place that accepts either role. The admin
+// nav still links here; an admin gets a link back.
+
+export const metadata: Metadata = {
+  title: "Exports — MadGigz",
+  robots: { index: false, follow: false },
+};
 
 const DATASETS: { id: string; label: string; keyedOn: string; columns: string; pseudonymous: boolean }[] = [
   {
@@ -30,7 +45,7 @@ const DATASETS: { id: string; label: string; keyedOn: string; columns: string; p
     label: "Users",
     keyedOn: "signup date; excludes deleted accounts and staff",
     columns:
-      "anonymous_user_id, signup_date, role, pro_type, derived_city (where they buy tickets), platform (not tracked yet), last_sign_in_date, signup_source / medium / campaign",
+      "anonymous_user_id, signup_date, role, pro_type, derived_city (where they buy tickets), platform (ios / android / web of the last app open), last_sign_in_date, last_active_date (last app open, to the day), signup_source / medium / campaign",
     pseudonymous: true,
   },
   {
@@ -46,8 +61,17 @@ function isoDay(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default async function AdminExportsPage() {
-  await requireAdmin();
+export default async function ExportsPage() {
+  // Outside /admin there is no layout to bounce the wrong people, so do it
+  // here: signed out → sign-in and come back; signed in as a fan → the app.
+  // Same destinations the admin layout uses, and the download route stays a
+  // plain 403 for anyone the guard rejects.
+  let role: "admin" | "analyst";
+  try {
+    ({ role } = await requireAdminOrAnalyst());
+  } catch (err) {
+    redirect(err instanceof Error && err.message === "Not signed in" ? "/signin?next=/exports" : "/feed");
+  }
   const secretConfigured = exportSecret() !== null;
 
   const today = new Date();
@@ -55,7 +79,16 @@ export default async function AdminExportsPage() {
   monthAgo.setUTCDate(monthAgo.getUTCDate() - 30);
 
   return (
-    <div className="flex flex-col gap-6">
+    <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-6 px-4 py-6">
+      <header className="flex items-center justify-between gap-4">
+        <Wordmark width={120} />
+        <Link
+          href={role === "admin" ? "/admin" : "/feed"}
+          className="text-sm text-muted hover:text-foreground"
+        >
+          {role === "admin" ? "← Admin panel" : "← Back to the app"}
+        </Link>
+      </header>
       <div>
         <h1 className="font-display text-2xl text-foreground">Exports</h1>
         <p className="text-sm text-muted">
@@ -78,7 +111,7 @@ export default async function AdminExportsPage() {
 
       <form
         method="get"
-        action="/admin/exports/download"
+        action="/exports/download"
         className="flex flex-col gap-5 rounded-2xl bg-surface p-5"
       >
         <div className="flex flex-wrap items-end gap-4">
@@ -127,6 +160,6 @@ export default async function AdminExportsPage() {
           })}
         </ul>
       </form>
-    </div>
+    </main>
   );
 }

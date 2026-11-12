@@ -6,7 +6,7 @@ import {
   parseDateRange,
   toCsv,
 } from "@/lib/analytics-export";
-import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
+import { adminClient, requireAdminOrAnalyst } from "@/lib/supabase/admin-queries";
 import {
   ExportError,
   exportPosterWallExports,
@@ -20,21 +20,22 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /admin/exports/download?dataset=shows|tickets|users|poster_wall_exports
+// GET /exports/download?dataset=shows|tickets|users|poster_wall_exports
 //     &from=YYYY-MM-DD&to=YYYY-MM-DD   (both optional, both inclusive)
 //
-// Admin-only CSV downloads for the analyst (#228). Route handlers don't inherit
-// the /admin layout's redirect, so the role check is explicit here; it throws
-// for a non-admin exactly like every admin page, and we answer 403 rather than
-// letting the error boundary render a page into what the browser expects to be
-// a file. Everything else that can go wrong (bad dates, missing table, missing
-// pseudonym key) comes back as plain text with a status, so the analyst reads
-// the reason instead of getting an empty CSV that looks like "no activity".
+// CSV downloads for admins and the analyst role (#228) - the only route the
+// analyst can use. Route handlers don't inherit any layout, so the role check
+// is explicit here; it throws for anyone else exactly like every admin page,
+// and we answer 403 rather than letting the error boundary render a page into
+// what the browser expects to be a file. Everything else that can go wrong
+// (bad dates, missing table, missing pseudonym key) comes back as plain text
+// with a status, so the analyst reads the reason instead of getting an empty
+// CSV that looks like "no activity".
 export async function GET(req: NextRequest) {
   try {
-    await requireAdmin();
+    await requireAdminOrAnalyst();
   } catch {
-    return new Response("Admin only", { status: 403 });
+    return new Response("Admin or analyst only", { status: 403 });
   }
 
   const params = req.nextUrl.searchParams;

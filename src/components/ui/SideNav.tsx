@@ -107,6 +107,12 @@ export default function SideNav({
     items.push({ href: "/admin", label: "Admin panel", icon: ShieldIcon });
   }
 
+  // The analyst (#228) gets only the exports page - /exports is the one staff
+  // surface that accepts the role, and it is gated server-side regardless.
+  if (role === "analyst") {
+    items.push({ href: "/exports", label: "Exports", icon: ShieldIcon });
+  }
+
   // Promoters and venues get the same shortcut into their own panel. Gated
   // server-side by requirePro regardless, so this is convenience, not control.
   // English on purpose, like the admin row - /pro is English-only by design.

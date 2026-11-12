@@ -237,9 +237,10 @@ export async function exportUsers(
     "signup_campaign",
   ];
   const rows = ((profiles as ProfileRow[]) ?? [])
-    // Tombstones of purged accounts are not users, and admin accounts are
-    // staff — a handful of rows that a signup date alone would identify.
-    .filter((p) => !p.deleted_at && p.role !== "admin")
+    // Tombstones of purged accounts are not users, and admin and analyst
+    // accounts are staff — a handful of rows that a signup date alone would
+    // identify (the analyst would be reading their own row).
+    .filter((p) => !p.deleted_at && p.role !== "admin" && p.role !== "analyst")
     .map((p) => {
       const a = attributionByUser.get(p.id);
       const seen = lastSignIn.get(p.id);

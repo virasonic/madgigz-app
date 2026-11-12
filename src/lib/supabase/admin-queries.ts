@@ -32,6 +32,29 @@ export async function requireAdmin() {
   return user;
 }
 
+// The one looser gate: the analyst (#228) may use the analytics exports and
+// nothing else. Only /exports calls this. Everything under /admin keeps calling
+// requireAdmin() - do not widen that one; add a caller here instead if a second
+// analyst-reachable surface ever appears, so the list of what an analyst can
+// touch stays greppable.
+export async function requireAdminOrAnalyst() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  const role = profile?.role as string | undefined;
+  if (role !== "admin" && role !== "analyst") throw new Error("Not authorized");
+  return { user, role: role as "admin" | "analyst" };
+}
+
 export interface AdminUserRow {
   id: string;
   email: string;

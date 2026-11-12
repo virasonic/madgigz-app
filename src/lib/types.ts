@@ -1,6 +1,8 @@
 import type { ProAccountType } from "@/lib/pro";
 
-export type Role = "fan" | "artist" | "admin";
+// `analyst` (#228, addendum_065) reaches the analytics exports and nothing
+// else; every other gate treats it as a fan.
+export type Role = "fan" | "artist" | "admin" | "analyst";
 export type ArtistStatus = "pending" | "approved" | "rejected";
 
 export interface Ticketing {
