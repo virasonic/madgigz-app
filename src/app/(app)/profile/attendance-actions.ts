@@ -82,9 +82,7 @@ export async function unmarkAttended(eventId: string): Promise<{ ok: boolean }> 
 // Nothing identifying is stored beyond the user id, which the admin export
 // turns into a keyed pseudonym before it leaves the database.
 //
-// Not called from anywhere yet: the export button is still being built. Hook it
-// into that button's success path (see BACKLOG #228 for where).
-/** @knipignore — ready-to-call logging for the poster-wall export (#228); the caller lands with the export button. */
+// Called from PosterWallExportButton once the image has been shared or saved.
 export async function logPosterWallExport(showCount: number): Promise<{ ok: boolean }> {
   if (!Number.isInteger(showCount) || showCount < 0 || showCount > 10_000) {
     return { ok: false };

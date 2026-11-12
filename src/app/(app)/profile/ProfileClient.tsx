@@ -15,6 +15,7 @@ import IntroReel from "@/components/artist/IntroReel";
 import IntroReelModal from "@/components/artist/IntroReelModal";
 import { removeIntroReel } from "./intro-actions";
 import { markAttended, markNotAttended } from "./attendance-actions";
+import PosterWallExportButton from "@/components/profile/PosterWallExportButton";
 import { clearSwitchOnSignOut } from "../account/actions";
 import { createClient } from "@/lib/supabase/client";
 import { clearOfflineTickets } from "@/lib/offline-tickets";
@@ -155,16 +156,24 @@ function FanPosterGrid({
   title,
   subtitle,
   events,
+  action,
 }: {
   title: string;
   subtitle: string;
   events: EventItem[];
+  /** Optional control beside the heading - the story export button (#228). */
+  action?: React.ReactNode;
 }) {
   const ordered = [...events].sort((a, b) => b.date.localeCompare(a.date));
   return (
     <div className="mb-8">
-      <h2 className="font-heading text-sm uppercase tracking-wide text-muted">{title}</h2>
-      <p className="mt-1 text-xs text-muted">{subtitle}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-heading text-sm uppercase tracking-wide text-muted">{title}</h2>
+          <p className="mt-1 text-xs text-muted">{subtitle}</p>
+        </div>
+        {action}
+      </div>
       <PosterCollage events={ordered} />
     </div>
   );
@@ -307,6 +316,7 @@ function AttendedSavedWalls({
           title={t("profile.pastShowsTitle")}
           subtitle={t("profile.pastShowsSubtitle")}
           events={attendedEvents}
+          action={<PosterWallExportButton events={attendedEvents} />}
         />
       )}
     </>

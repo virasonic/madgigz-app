@@ -480,6 +480,17 @@ export const en = {
     // The past-events poster wall (#116) - shows you were scanned in to.
     pastShowsTitle: "Where you've been",
     pastShowsSubtitle: "The shows you turned up to.",
+    // One-tap story image of the attended wall (#228).
+    wallShare: "Share my wall",
+    wallSharing: "Making your wall…",
+    wallShareUnsupported: "Sharing isn't available in this app version yet. Open madgigz.aurasonic.es in your browser to share it.",
+    wallShareFailed: "Couldn't make the image. Check your connection and try again.",
+    wallShareDownloaded: "Saved to your downloads.",
+    wallImageTitle: "Where I've been",
+    wallImageCountOne: "1 gig with MadGigz",
+    wallImageCount: "{count} gigs with MadGigz",
+    wallImageMore: "+{count} more",
+    wallImageFooter: "madgigz.aurasonic.es",
     savedShowsTitle: "Saved shows",
     savedShowsSubtitle: "Upcoming gigs first, then ones you saved that have passed.",
     tabShows: "Shows",
