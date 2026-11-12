@@ -11,6 +11,7 @@ import { CURRENT_LEGAL_UPDATE, shouldSeeLegalUpdate } from "@/lib/legal-updates"
 import IntroReelNudge from "@/components/artist/IntroReelNudge";
 import { fetchArtistIntro } from "@/lib/supabase/queries";
 import { fetchProAccount } from "@/lib/pro";
+import ActivityTouch from "@/components/analytics/ActivityTouch";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -90,6 +91,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // persistent SideNav beside a full-height content column (#105).
     <div className="pt-safe mx-auto flex h-screen w-full max-w-md flex-col bg-background lg:max-w-none lg:flex-row">
       <LandscapeGuard />
+      {/* Signed-in only: a guest has no row to stamp (#228 activity). */}
+      {user && <ActivityTouch userId={user.id} />}
       {showLegalUpdate && <LegalUpdateNotice />}
       {showIntroNudge && <IntroReelNudge legalNoticePending={showLegalUpdate} />}
       <SideNav

@@ -176,9 +176,16 @@ export async function exportUsers(
   type AttributionRow = { user_id: string; source: string | null; medium: string | null; campaign: string | null };
   type TicketRow = { user_id: string; event_id: string };
   type EventRow = { id: string; city: string };
+  type ActivityRow = { user_id: string; platform: string; last_active_at: string };
 
-  const [{ data: profiles, error }, authUsers, { data: attribution }, { data: tickets }, { data: events }] =
-    await Promise.all([
+  const [
+    { data: profiles, error },
+    authUsers,
+    { data: attribution },
+    { data: tickets },
+    { data: events },
+    { data: activity },
+  ] = await Promise.all([
       inRange(
         admin.from("profiles").select("id, role, created_at, deleted_at, pro_type"),
         "created_at",
@@ -189,10 +196,14 @@ export async function exportUsers(
       admin.from("signup_attribution").select("user_id, source, medium, campaign"),
       admin.from("tickets").select("user_id, event_id"),
       admin.from("events").select("id, city"),
+      // service-role only table; missing pre-addendum_066 → platform and
+      // last_active_date simply stay blank.
+      admin.from("user_activity").select("user_id, platform, last_active_at"),
     ]);
   if (error) throw new ExportError(500, `profiles: ${error.message}`);
 
   const lastSignIn = new Map(authUsers.map((u) => [u.id, u.last_sign_in_at ?? null]));
+  const activityByUser = new Map(((activity as ActivityRow[] | null) ?? []).map((r) => [r.user_id, r]));
   const attributionByUser = new Map(
     ((attribution as AttributionRow[] | null) ?? []).map((a) => [a.user_id, a])
   );
@@ -232,6 +243,7 @@ export async function exportUsers(
     "derived_city",
     "platform",
     "last_sign_in_date",
+    "last_active_date",
     "signup_source",
     "signup_medium",
     "signup_campaign",
@@ -244,6 +256,7 @@ export async function exportUsers(
     .map((p) => {
       const a = attributionByUser.get(p.id);
       const seen = lastSignIn.get(p.id);
+      const act = activityByUser.get(p.id);
       return [
         anonymiseUserId(p.id, secret),
         // Day precision only: an exact signup second next to a public profile
@@ -252,14 +265,17 @@ export async function exportUsers(
         p.role,
         p.pro_type ?? null,
         topCity(p.id),
-        // Not tracked yet: the app never records whether a session is the iOS
-        // or Android shell or the web. Column kept so the file's shape is
-        // stable when it lands.
-        null,
+        // The platform of their most recent app open (ios / android / web),
+        // from user_activity (addendum_066). Blank for a user who has not
+        // opened the app since that shipped.
+        act?.platform ?? null,
         // auth.users.last_sign_in_at moves on a fresh login, NOT on day-to-day
         // use of a session that stays logged in, so this under-reports activity
         // and is named for what it is rather than "last active".
         seen ? seen.slice(0, 10) : null,
+        // The real "last active": stamped on every app open (throttled to one
+        // per six hours per device), to the day like the other dates.
+        act ? act.last_active_at.slice(0, 10) : null,
         a?.source ?? null,
         a?.medium ?? null,
         a?.campaign ?? null,

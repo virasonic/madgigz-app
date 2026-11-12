@@ -4629,3 +4629,52 @@ comment on table public.poster_wall_exports is
 -- anything that referenced 'analyst' below this line would fail. Keep it bare.
 
 alter type public.user_role add value if not exists 'analyst';
+
+-- ============================================================================
+-- addendum_066_user_activity.sql
+-- ============================================================================
+
+create table if not exists public.user_activity (
+  user_id uuid primary key references public.profiles (id) on delete cascade,
+  platform text not null check (platform in ('ios', 'android', 'web')),
+  last_active_at timestamptz not null default now()
+);
+
+alter table public.user_activity enable row level security;
+
+-- Supabase's default privileges grant anon/authenticated ALL on a new public
+-- table; take it away. Even if a permissive policy is added by accident later,
+-- there is no table grant for it to act on.
+revoke all on public.user_activity from anon, authenticated;
+
+-- The one door that writes it. Upserts the caller's own row; a second call
+-- within the same day just moves the timestamp (and the platform, if they
+-- switched from the web to the app).
+create or replace function public.touch_user_activity(p_platform text)
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null then
+    return;
+  end if;
+  if p_platform not in ('ios', 'android', 'web') then
+    return;
+  end if;
+
+  insert into public.user_activity (user_id, platform, last_active_at)
+  values (uid, p_platform, now())
+  on conflict (user_id) do update
+    set platform = excluded.platform,
+        last_active_at = excluded.last_active_at;
+end;
+$$;
+
+revoke execute on function public.touch_user_activity(text) from public, anon;
+grant execute on function public.touch_user_activity(text) to authenticated;
+
+comment on table public.user_activity is
+  'One row per user: platform (ios/android/web) and time of their most recent app open (#228). No history. Written only via touch_user_activity(); read by service_role for the pseudonymous analyst CSV.';

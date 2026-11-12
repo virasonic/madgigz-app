@@ -6,6 +6,14 @@ export function isNativeApp(): boolean {
   return Capacitor.isNativePlatform();
 }
 
+export type AppPlatform = "ios" | "android" | "web";
+
+/** Which shell is running: the iOS app, the Android app, or a browser. */
+export function currentPlatform(): AppPlatform {
+  const p = Capacitor.getPlatform();
+  return p === "ios" || p === "android" ? p : "web";
+}
+
 // The custom URL scheme the iOS app registers (Info.plist CFBundleURLTypes). The
 // exact string must ALSO be allow-listed in Supabase -> Auth -> URL Configuration
 // -> Redirect URLs, or the round trip lands nowhere.
