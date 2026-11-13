@@ -25,35 +25,33 @@ export async function GET(
   const { ticketId } = await params;
   const token = req.nextUrl.searchParams.get("t");
 
-  let authorized = Boolean(token && verifyWalletToken(token, ticketId));
+  // Read the ticket with the service role first: the token path has no session
+  // to scope RLS by, and the token is signed over the ticket's CURRENT scan
+  // secret, so it can only be checked once that is known. Nothing from this row
+  // is returned until one of the two authorisations below passes.
+  const admin = adminClient();
+  const { data: ticket } = await admin
+    .from("tickets")
+    .select("id, user_id, qr_secret, quantity, refunded, events(title, venue, event_date, event_time, accent_color)")
+    .eq("id", ticketId)
+    .maybeSingle();
+
+  let authorized = Boolean(
+    token &&
+      ticket &&
+      verifyWalletToken(token, ticketId, (ticket.qr_secret as string | null) ?? ticket.id)
+  );
 
   // Session fallback: works in a same-origin web tab that still carries the cookie.
-  if (!authorized) {
+  if (!authorized && ticket) {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await supabase
-        .from("tickets")
-        .select("id")
-        .eq("id", ticketId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      authorized = Boolean(data);
-    }
+    authorized = Boolean(user && ticket.user_id === user.id);
   }
 
   if (!authorized) return new Response("Unauthorized", { status: 401 });
-
-  // Authorisation is established; read the ticket + event with the service role
-  // (the token path has no session to scope RLS by).
-  const admin = adminClient();
-  const { data: ticket } = await admin
-    .from("tickets")
-    .select("id, qr_secret, quantity, refunded, events(title, venue, event_date, event_time, accent_color)")
-    .eq("id", ticketId)
-    .maybeSingle();
 
   const event = (ticket?.events ?? null) as {
     title: string;

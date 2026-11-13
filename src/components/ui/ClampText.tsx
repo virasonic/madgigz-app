@@ -28,9 +28,7 @@ export default function ClampText({ text, lines = 4, className = "" }: ClampText
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    /* eslint-disable react-hooks/set-state-in-effect -- one-shot post-layout measure */
     setOverflowing(el.scrollHeight > el.clientHeight + 1);
-    /* eslint-enable react-hooks/set-state-in-effect */
   }, [text, lines]);
 
   return (

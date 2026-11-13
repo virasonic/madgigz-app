@@ -82,6 +82,7 @@ export async function doorCheckIn(token: string, ticketId: string): Promise<bool
     .update({ checked_in_at: new Date().toISOString() })
     .eq("id", ticketId)
     .eq("event_id", link.event.id)
+    .eq("refunded", false)
     .is("checked_in_at", null)
     .select("id");
   return !error && !!data && data.length > 0;

@@ -45,6 +45,18 @@ export async function saveIntroReel(input: SaveIntroInput): Promise<SaveIntroRes
 
   if (!input.mediaUrl && !input.streamUid) return { error: "Add a photo or video" };
 
+  // The uid comes from the caller. Refuse one that already backs someone else's
+  // post, so a reel can't be claimed by pointing an intro at it (see
+  // deleteReelStreamVideo, which treats "my post carries it" as ownership).
+  if (input.streamUid) {
+    const { count } = await admin
+      .from("content_posts")
+      .select("id", { count: "exact", head: true })
+      .eq("stream_uid", input.streamUid)
+      .neq("artist_id", user.id);
+    if ((count ?? 0) > 0) return { error: "That video can't be used here" };
+  }
+
   // Replace: one intro per artist (enforced by the unique index), so clear the
   // old one before inserting. A new upload is a deliberate replacement.
   const { error: delError } = await admin

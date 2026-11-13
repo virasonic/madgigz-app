@@ -302,21 +302,29 @@ try {
   // ---- 8. Discounts -------------------------------------------------------
   console.log("\n8. Discounts");
   {
-    const { error } = await A.from("discounts").insert({
-      code: `PROBE${stamp}`,
-      discount_type: "percent",
-      value: 100,
-      active: true,
-    });
-    report("cannot invent a 100% discount code", Boolean(error), "discount inserted");
+    // Column names must be real ones: a typo here errors for the wrong reason
+    // and reports a locked door without ever trying the handle.
+    const code = `PROBE${stamp}`;
+    await A.from("discounts").insert({ code, type: "percent", value: 100, active: true });
+    const { data: stored } = await admin.from("discounts").select("id").eq("code", code);
+    report("cannot invent a 100% discount code", (stored ?? []).length === 0, "discount inserted");
+    if (stored?.length) await admin.from("discounts").delete().eq("code", code);
   }
   {
+    // Seed a live code first - on an empty table "zero rows readable" proves
+    // nothing (addendum_068).
+    const code = `PROBESEED${stamp}`;
+    const { error: seedError } = await admin
+      .from("discounts")
+      .insert({ code, type: "percent", value: 10, active: true });
+    if (seedError) throw new Error(`seed discount: ${seedError.message}`);
     const { data, error } = await A.from("discounts").select("code, value");
     report(
       "cannot enumerate every discount code",
       Boolean(error) || (data ?? []).length === 0,
       `${data?.length} codes readable`
     );
+    await admin.from("discounts").delete().eq("code", code);
   }
 
   // ---- 9. Artist evidence (addendum_015) ---------------------------------
@@ -440,6 +448,32 @@ try {
       p_date_of_birth: "1995-01-01",
     });
     report("cannot re-run after completing", data === "already_complete", `returned ${data}`);
+  }
+
+  // ---- 12. Signup metadata cannot pick a privileged role (addendum_067) ----
+  console.log("\n12. Signup metadata and the role it may ask for");
+  for (const role of ["admin", "analyst"]) {
+    // Same trigger path as a public /auth/v1/signup carrying this metadata.
+    const escalator = await makeUser(`esc${role}`, {
+      username: `esc${role.slice(0, 3)}${stamp}`,
+      role,
+      date_of_birth: "1995-01-01",
+    });
+    cleanup.push(escalator.id);
+    const { data: row } = await admin
+      .from("profiles")
+      .select("role")
+      .eq("id", escalator.id)
+      .single();
+    report(`cannot sign up as ${role}`, row?.role === "fan", `profile role is ${row?.role}`);
+  }
+  {
+    const anon = createClient(URL, ANON, { auth: { persistSession: false } });
+    const { data, error } = await anon.rpc("attended_event", {
+      p_user: victim.id,
+      p_event: victimEvent.id,
+    });
+    report("anon cannot ask who attended a show", Boolean(error), `returned ${data}`);
   }
 
   // ---- Teardown -----------------------------------------------------------

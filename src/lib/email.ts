@@ -296,7 +296,7 @@ export async function sendProInviteEmail(input: {
   const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#12100f;color:#f5efe6;padding:32px;border-radius:16px;max-width:520px;margin:0 auto">
       <h1 style="font-size:20px;margin:0 0 16px">${copy.heading}</h1>
-      <p style="margin:0 0 12px;line-height:1.55">${copy.opening}</p>
+      <p style="margin:0 0 12px;line-height:1.55">${escapeHtml(copy.opening)}</p>
       <p style="margin:0 0 20px;line-height:1.55">${copy.action}</p>
       <p style="margin:0 0 24px">
         <a href="${input.setPasswordUrl}" style="display:inline-block;background:#d76616;color:#12100f;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">

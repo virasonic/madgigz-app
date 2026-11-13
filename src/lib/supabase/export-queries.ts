@@ -148,7 +148,9 @@ export async function exportTickets(admin: SupabaseClient, range: DateRange): Pr
     // Commission ex-VAT and the IVA on it, kept apart (CLAUDE.md: never
     // conflate revenue with VAT owed). Both are the amounts charged at purchase;
     // on a refund the fee was reversed too unless fee_retained is true.
-    euros(t.application_fee_cents),
+    // application_fee_cents is the WHOLE deduction (commission + its IVA), so
+    // the ex-VAT column has to subtract the IVA rather than print it as-is.
+    euros(Number(t.application_fee_cents ?? 0) - Number(t.application_fee_vat_cents ?? 0)),
     euros(t.application_fee_vat_cents),
     t.refunded,
     Boolean(t.fee_retained),

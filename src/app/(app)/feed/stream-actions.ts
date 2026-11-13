@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { deleteStreamVideo } from "@/lib/cloudflare-stream-server";
 
 // Account id is not a secret (it's in every API URL, and useless without the
@@ -147,6 +148,18 @@ export async function deleteReelStreamVideo(streamUid: string): Promise<void> {
     .eq("artist_id", user.id)
     .maybeSingle();
   if (!data) return;
+
+  // "I have a post with this uid" is not proof the video is mine: uids are
+  // public (they're in playback URLs) and a post can be created carrying any
+  // uid. So also require that nobody ELSE's post points at it - otherwise an
+  // organiser could attach a rival's uid to a post of their own and delete the
+  // rival's video from Cloudflare for good.
+  const { count, error: othersError } = await createAdminClient()
+    .from("content_posts")
+    .select("id", { count: "exact", head: true })
+    .eq("stream_uid", streamUid)
+    .neq("artist_id", user.id);
+  if (othersError || (count ?? 0) > 0) return;
 
   await deleteStreamVideo(streamUid);
 }

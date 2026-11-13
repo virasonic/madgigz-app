@@ -13,7 +13,6 @@ import {
   fetchShowsByArtist,
   fetchShowsByProAccount,
   fetchTaggedShows,
-  fetchTickets,
 } from "@/lib/supabase/queries";
 import ProfileClient from "./ProfileClient";
 import { isArtistRole } from "@/lib/roles";
@@ -33,7 +32,6 @@ export default async function ProfilePage() {
 
   const [
     savedEvents,
-    tickets,
     ownShows,
     taggedShows,
     madgigzShows,
@@ -50,7 +48,6 @@ export default async function ProfilePage() {
       // and the count now reflects what the grid shows (upcoming saved), so a
       // tapped "3" never opens onto a different number.
       user.role === "fan" ? fetchSavedEvents(supabase, user.id) : Promise.resolve([]),
-      fetchTickets(supabase, user.id),
       isArtistRole(user.role) ? fetchShowsByArtist(supabase, user.id) : Promise.resolve([]),
       // Promoters/venues can be tagged on shows now too (to post about them), so
       // their own profile fetches tagged shows as well, not just artists'.

@@ -20,6 +20,16 @@ describe("toCsv", () => {
     expect(lines[3]).toBe("");
   });
 
+  it("neutralises cells a spreadsheet would run as a formula", () => {
+    const csv = toCsv(
+      ["a", "b", "c", "d"],
+      [['=HYPERLINK("https://evil")', "+1", "@SUM(A1)", -5], ["-cmd|x", "safe=ok", "", 0]]
+    );
+    const lines = csv.replace(/^\uFEFF/, "").split("\r\n");
+    expect(lines[1]).toBe(`"'=HYPERLINK(""https://evil"")",'+1,'@SUM(A1),-5`);
+    expect(lines[2]).toBe("'-cmd|x,safe=ok,,0");
+  });
+
   it("starts with a UTF-8 BOM so Excel reads accents correctly", () => {
     expect(toCsv(["x"], [["Ñ"]]).charCodeAt(0)).toBe(0xfeff);
   });

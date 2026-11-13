@@ -274,7 +274,20 @@ export async function refundTicket(
     }
   }
 
-  await admin.from("tickets").update({ refunded: true }).eq("id", ticket.id);
+  const { error: markError } = await admin
+    .from("tickets")
+    .update({ refunded: true })
+    .eq("id", ticket.id);
+  if (markError) {
+    // The money has already moved at Stripe; the ticket row has not. Stop here
+    // and say so loudly - carrying on would release the seat and log a refund
+    // for a ticket that still scans as valid and still counts toward payouts.
+    console.error(`Refund sent but ticket ${ticket.id} not marked refunded:`, markError);
+    return {
+      error:
+        "The refund went through at Stripe, but the ticket could not be marked refunded here. Do NOT retry the refund - fix the ticket row (refunded = true) and check the logs.",
+    };
+  }
 
   // Capacity only goes back if the seat was never used. Releasing it for
   // someone who walked in would put a seat that was physically occupied back

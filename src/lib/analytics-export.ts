@@ -14,7 +14,12 @@ export type CsvCell = string | number | boolean | null | undefined;
 export function toCsv(header: string[], rows: CsvCell[][]): string {
   const esc = (value: CsvCell): string => {
     if (value === null || value === undefined) return "";
-    const text = typeof value === "boolean" ? (value ? "true" : "false") : String(value);
+    let text = typeof value === "boolean" ? (value ? "true" : "false") : String(value);
+    // Formula injection: several cells are user-typed (utm_* from any landing
+    // URL, venue, city), and a spreadsheet runs a cell starting with = + - @ as
+    // a formula. A leading apostrophe makes it plain text. Only strings are
+    // touched, so a genuinely negative number stays a number.
+    if (typeof value === "string" && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
     return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
   const lines = [header, ...rows].map((row) => row.map(esc).join(","));

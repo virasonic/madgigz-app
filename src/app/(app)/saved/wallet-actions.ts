@@ -22,12 +22,12 @@ export async function createWalletPassUrl(
   // RLS scopes to the owner; the explicit user_id match is the second lock.
   const { data } = await supabase
     .from("tickets")
-    .select("id, refunded")
+    .select("id, refunded, qr_secret")
     .eq("id", ticketId)
     .eq("user_id", user.id)
     .maybeSingle();
   if (!data || data.refunded) return { error: "notfound" };
 
-  const token = signWalletToken(ticketId);
+  const token = signWalletToken(ticketId, (data.qr_secret as string | null) ?? data.id);
   return { url: `/api/tickets/${ticketId}/pass?t=${encodeURIComponent(token)}` };
 }

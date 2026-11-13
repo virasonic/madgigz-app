@@ -69,6 +69,16 @@ export async function applyEventTiers(
   const existing = new Map((existingRows ?? []).map((r) => [r.id as string, r.sold as number]));
   const keptIds = new Set(tiers.filter((t) => t.id).map((t) => t.id as string));
 
+  // A tier id from the caller must be one of THIS event's tiers. Tier ids are
+  // world-readable and the writes below run as the service role, so without this
+  // an organiser could pass another show's tier id and have it moved onto their
+  // own event, repriced, with its sold count ignored.
+  for (const t of tiers) {
+    if (t.id && !existing.has(t.id)) {
+      return { error: "That ticket type doesn't belong to this show." };
+    }
+  }
+
   // A tier can't shrink below what it has already sold.
   for (const t of tiers) {
     if (t.id) {
@@ -88,7 +98,11 @@ export async function applyEventTiers(
     }
   }
   if (toDelete.length > 0) {
-    const { error } = await admin.from("event_tiers").delete().in("id", toDelete);
+    const { error } = await admin
+      .from("event_tiers")
+      .delete()
+      .in("id", toDelete)
+      .eq("event_id", eventId);
     if (error) return { error: "Couldn't remove a tier." };
   }
 
@@ -103,7 +117,11 @@ export async function applyEventTiers(
       max_per_order: t.maxPerOrder ?? 6,
     };
     if (t.id) {
-      const { error } = await admin.from("event_tiers").update(row).eq("id", t.id);
+      const { error } = await admin
+        .from("event_tiers")
+        .update(row)
+        .eq("id", t.id)
+        .eq("event_id", eventId);
       if (error) return { error: `Couldn't save "${t.name}".` };
     } else {
       const { error } = await admin.from("event_tiers").insert(row);

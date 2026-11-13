@@ -1,5 +1,6 @@
 "use server";
 
+import { movesDateIntoPast } from "@/lib/dates";
 import { revalidatePath } from "next/cache";
 import { proClient, requirePro } from "@/lib/supabase/pro-queries";
 import { resolveVenue, syncEventArtists, syncEventGenres } from "@/lib/show-sync";
@@ -168,7 +169,7 @@ export async function updateProEvent(
   // must not be able to rewrite.
   const { data: existing } = await admin
     .from("events")
-    .select("id, pro_account_id, cancelled, price")
+    .select("id, pro_account_id, cancelled, price, event_date")
     .eq("id", eventId)
     .maybeSingle();
 
@@ -176,6 +177,9 @@ export async function updateProEvent(
     return { error: "That show isn't yours to edit" };
   }
   if (existing.cancelled) return { error: "That show is cancelled and can't be edited" };
+  if (movesDateIntoPast(existing.event_date as string, input.date)) {
+    return { error: "A show can't be moved to a date in the past" };
+  }
 
   const blocked = await payoutBlocked(userId, input);
   if (blocked) return { error: blocked };

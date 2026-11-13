@@ -153,7 +153,7 @@ export async function updateAdminEvent(
 
   const { data: existing } = await admin
     .from("events")
-    .select("id, artist_id, cancelled")
+    .select("id, artist_id, pro_account_id, cancelled")
     .eq("id", eventId)
     .maybeSingle();
 
@@ -164,6 +164,13 @@ export async function updateAdminEvent(
   // feature with different rules, and not this one.
   if (existing.artist_id) {
     return { error: "This show belongs to an artist - they edit it from their own profile" };
+  }
+  // Same for a promoter's or venue's show: artist_id is null there too, but it
+  // is not a house show. Saving it from here would stamp house_run = true, and
+  // later sales would stop paying into the promoter's Connect account while
+  // the payout maths still credited them.
+  if (existing.pro_account_id) {
+    return { error: "This show belongs to a promoter or venue - they edit it from the pro panel" };
   }
 
   const { count: ticketCount } = await admin

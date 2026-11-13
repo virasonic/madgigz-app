@@ -4,7 +4,11 @@
 // app's `sb-*` login — so a cookie-gated endpoint returns 401 there. Instead a
 // server action (running inside the app, where the login exists) verifies
 // ownership and signs a token; the pass URL carries it and self-authorises in any
-// browser. HMAC over ticketId+expiry with a server-only secret.
+// browser. HMAC over ticketId+expiry+the ticket's current scan secret, with a
+// server-only key. Binding the scan secret matters: a transfer keeps the ticket
+// id but rotates qr_secret, so a token the previous owner minted just before the
+// handover stops verifying the moment the new owner claims - otherwise they
+// could fetch a pass carrying the new owner's QR for the rest of the TTL.
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 const TTL_MS = 15 * 60 * 1000; // 15 minutes — plenty to add the pass, short enough to not linger.
@@ -17,13 +21,14 @@ function secret(): string {
 }
 
 // UUIDs contain no ".", exp is digits, sig is base64url — so "." is a safe joiner.
-export function signWalletToken(ticketId: string): string {
+// `scanSecret` never travels in the token - it is only mixed into the signature.
+export function signWalletToken(ticketId: string, scanSecret: string): string {
   const body = `${ticketId}.${Date.now() + TTL_MS}`;
-  const sig = createHmac("sha256", secret()).update(body).digest("base64url");
+  const sig = createHmac("sha256", secret()).update(`${body}.${scanSecret}`).digest("base64url");
   return `${body}.${sig}`;
 }
 
-export function verifyWalletToken(token: string, ticketId: string): boolean {
+export function verifyWalletToken(token: string, ticketId: string, scanSecret: string): boolean {
   const key = secret();
   if (!key) return false;
   const parts = token.split(".");
@@ -32,7 +37,7 @@ export function verifyWalletToken(token: string, ticketId: string): boolean {
   if (tid !== ticketId) return false;
   const exp = Number(expStr);
   if (!Number.isFinite(exp) || Date.now() > exp) return false;
-  const expected = createHmac("sha256", key).update(`${tid}.${expStr}`).digest("base64url");
+  const expected = createHmac("sha256", key).update(`${tid}.${expStr}.${scanSecret}`).digest("base64url");
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);

@@ -249,3 +249,27 @@ export async function purgeDueAccounts(admin: SupabaseClient) {
   }
   return results;
 }
+
+// Called right after a successful sign-in. Coming back is the clearest possible
+// statement that they didn't mean it, so the request is cancelled without
+// asking - and the caller shows a notice saying so, rather than letting it
+// happen silently.
+//
+// Lives here, NOT in a "use server" file: every export of a server-action file
+// is a public POST endpoint, and this takes a bare user id and writes with the
+// service role - as an action, anyone could have cancelled anyone's erasure
+// request. Only call it with an id that came from a verified session.
+export async function cancelDeletionOnSignIn(
+  admin: SupabaseClient,
+  userId: string
+): Promise<boolean> {
+  const { data } = await admin
+    .from("profiles")
+    .update({ deletion_requested_at: null })
+    .eq("id", userId)
+    .is("deleted_at", null)
+    .not("deletion_requested_at", "is", null)
+    .select("id");
+
+  return (data?.length ?? 0) > 0;
+}

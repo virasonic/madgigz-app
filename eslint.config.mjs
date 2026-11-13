@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated output that isn't ours to lint: Claude worktrees carry their
+    // own .next build, and the native shells hold bundled copies of the web
+    // assets. Without these, `npm run check` fails locally on thousands of
+    // errors in compiled chunks while CI (a clean checkout) stays green.
+    ".claude/**",
+    "android/**",
+    "ios/**",
   ]),
 ]);
 

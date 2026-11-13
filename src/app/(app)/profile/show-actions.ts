@@ -1,5 +1,6 @@
 "use server";
 
+import { movesDateIntoPast } from "@/lib/dates";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -108,7 +109,7 @@ export async function updateShow(
   const admin = createAdminClient();
   const { data: event } = await admin
     .from("events")
-    .select("id, artist_id, cancelled")
+    .select("id, artist_id, cancelled, event_date")
     .eq("id", eventId)
     .single();
 
@@ -117,6 +118,9 @@ export async function updateShow(
     return { error: "Not your show" };
   }
   if (event.cancelled) return { error: "This show has been cancelled and can't be edited" };
+  if (movesDateIntoPast(event.event_date as string, edits.date)) {
+    return { error: "A show can't be moved to a date in the past" };
+  }
 
   const venue = await resolveVenue(admin, edits.venueName, edits.venueId);
   if (venue.error) return { error: venue.error };

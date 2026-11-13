@@ -164,7 +164,12 @@ export async function createCheckout(
   }
 
   // Price and discount both come from the database, never the client.
-  const discount = promoCode ? await validateDiscountCode(supabase, promoCode, event.id) : null;
+  // Looked up with the service role: the discounts table must not be readable
+  // from the browser (addendum_068 drops the public select policy), or anyone
+  // could list every live code with the anon key.
+  const discount = promoCode
+    ? await validateDiscountCode(createAdminClient(), promoCode, event.id)
+    : null;
   if (promoCode && !discount) return { error: "That code isn't valid for this event" };
 
   const subtotalEuros = unitPriceEuros * quantity;
@@ -336,7 +341,7 @@ export async function previewPromoCode(
     .single();
   if (!eventRow) return { error: "That event no longer exists" };
 
-  const discount = await validateDiscountCode(supabase, promoCode, eventId);
+  const discount = await validateDiscountCode(createAdminClient(), promoCode, eventId);
   if (!discount) return { error: "That code isn't valid for this event" };
 
   // A tiered show prices off the chosen tier, not events.price.

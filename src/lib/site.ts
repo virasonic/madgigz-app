@@ -42,6 +42,15 @@ export function safeNext(value: string | null | undefined): string | null {
   if (!value) return null;
   if (!value.startsWith("/")) return null;
   if (value.startsWith("//") || value.startsWith("/\\")) return null;
+  // Browsers strip tab/CR/LF while parsing a URL, so "/\t/evil.com" resolves to
+  // "//evil.com". Reject control characters and backslashes anywhere, then let
+  // the URL parser have the final say on whether it stays on this origin.
+  if (/[\u0000-\u001f\\]/.test(value)) return null;
+  try {
+    if (new URL(value, "http://same.origin").origin !== "http://same.origin") return null;
+  } catch {
+    return null;
+  }
   return value;
 }
 

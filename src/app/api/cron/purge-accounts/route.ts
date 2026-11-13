@@ -84,9 +84,22 @@ async function notifyUpcomingEvents(admin: SupabaseClient): Promise<number> {
     ).values(),
   ];
 
-  const { error } = await admin
+  // Skip anyone already reminded. This used to be an upsert on
+  // (recipient_id, event_id), but the only unique index there is PARTIAL
+  // (where type = 'event_upcoming'), and Postgres can't use a partial index as
+  // an ON CONFLICT target unless the statement repeats its predicate - which
+  // PostgREST can't send. So the upsert failed with 42P10 on every run and no
+  // reminder ever went out. The index still backstops a concurrent double run.
+  const { data: already } = await admin
     .from("notifications")
-    .upsert(rows, { onConflict: "recipient_id,event_id", ignoreDuplicates: true });
+    .select("recipient_id, event_id")
+    .eq("type", "event_upcoming")
+    .in("event_id", events.map((e) => e.id as string));
+  const sent = new Set((already ?? []).map((n) => `${n.recipient_id}:${n.event_id}`));
+  const fresh = rows.filter((r) => !sent.has(`${r.recipient_id}:${r.event_id}`));
+  if (fresh.length === 0) return 0;
+
+  const { error } = await admin.from("notifications").insert(fresh);
 
   if (error) {
     // 42P01 = addendum_022 hasn't been run. Not worth failing the whole job -
@@ -94,5 +107,5 @@ async function notifyUpcomingEvents(admin: SupabaseClient): Promise<number> {
     if (error.code !== "42P01") console.error("notifyUpcomingEvents failed:", error);
     return 0;
   }
-  return rows.length;
+  return fresh.length;
 }

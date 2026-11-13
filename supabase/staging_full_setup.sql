@@ -3752,36 +3752,6 @@ update public.profiles
 --    where role = 'artist' and artist_status is distinct from 'approved';
 
 
--- Addendum 058: record when MadGigz KEPT its fee on a refunded ticket (#210).
---
--- Until now every refund was a full one: price back to the fan, transfer reversed,
--- application fee refunded. So /admin/billing and the event stats could drop a
--- refunded ticket from every total, commission and IVA included.
---
--- The Terms now distinguish a VOLUNTARY refund (a fan's request, accepted outside
--- cancellation / substantial change): the fan gets the price less Stripe's
--- processing fee, and MadGigz's commission is NOT refunded. That commission and
--- its IVA are still real - the IVA is still owed to Hacienda - so the reports must
--- keep counting them. This flag is how they tell the two kinds of refund apart.
---
--- Default false = every existing refunded row stays a full refund, which is what
--- each of them was.
---
--- SAFE TO RUN ON A LIVE DB, single phase, additive. tickets has table-level
--- select, so no column grant is needed (only UPDATE is column-scoped, addendum
--- 026, and this column must stay service-role-written - do NOT grant update).
--- The code shipping alongside refuses a voluntary refund until this has run (it
--- checks for the column before moving any money), and reads the column via
--- select("*"), so it tolerates the column being absent.
--- Run on STAGING first, then PROD.
-
-alter table public.tickets
-  add column if not exists fee_retained boolean not null default false;
-
-comment on column public.tickets.fee_retained is
-  'True when the ticket was refunded but MadGigz kept its application fee (voluntary refund, #210). Billing keeps counting the fee and its IVA.';
-
-
 -- ############# addendum_058_ticket_fee_retained.sql #############
 
 -- Addendum 058: record when MadGigz KEPT its fee on a refunded ticket (#210).
@@ -4678,3 +4648,122 @@ grant execute on function public.touch_user_activity(text) to authenticated;
 
 comment on table public.user_activity is
   'One row per user: platform (ios/android/web) and time of their most recent app open (#228). No history. Written only via touch_user_activity(); read by service_role for the pseudonymous analyst CSV.';
+
+
+-- ############# addendum_067_signup_role_and_attendance_lockdown.sql #############
+
+-- Addendum 067: close two holes found in the Nov 2026 security review.
+--
+-- 1. SIGNUP COULD MINT AN ADMIN. handle_new_user() (last defined in
+--    addendum_025) cast raw_user_meta_data->>'role' straight to user_role. That
+--    metadata is whatever the client sends to /auth/v1/signup, and the anon key
+--    ships in the browser - so a signup carrying {"role":"admin"} (or "analyst",
+--    since addendum_065) produced a profile with that role. requireAdmin() and
+--    every "role = 'admin'" policy trust that column. addendum_024 stopped role
+--    changes by UPDATE and addendum_025 capped complete_onboarding at
+--    fan/artist, but the INSERT path was never capped.
+--
+--    Now only 'artist' is honoured from metadata; anything else is a fan. Admin
+--    and analyst are granted by hand (service role), never by signing up.
+--
+-- 2. attended_event(p_user, p_event) WAS A PUBLIC ATTENDANCE ORACLE. It is
+--    security definer (it has to read owner-only tickets/attended_events from
+--    inside the fan_photos insert policy) but trusted p_user and was executable
+--    by anon, so anyone could ask "was this person at this show?" for any
+--    profile id. The policy only ever passes auth.uid(), so the function now
+--    answers for the caller alone and anon can no longer call it.
+--
+-- SAFE TO RUN ON A LIVE DB, single phase: both are create-or-replace with the
+-- same signature, nothing the deployed app does changes. Run on STAGING first,
+-- then PROD.
+--
+-- AFTER RUNNING, AUDIT BOTH DATABASES - this should list only accounts you
+-- recognise:
+--   select id, username, role, created_at from public.profiles
+--    where role in ('admin', 'analyst') order by created_at;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  meta_username text := new.raw_user_meta_data->>'username';
+  meta_role text := new.raw_user_meta_data->>'role';
+  meta_dob date := nullif(new.raw_user_meta_data->>'date_of_birth', '')::date;
+  -- The email/password form always sends a username. An OAuth provider never
+  -- does, and that absence is the only reliable signal we have here.
+  is_oauth boolean := meta_username is null;
+  -- Client-controlled, so an allow-list rather than a cast: 'artist' is the
+  -- only role a signup may ask for, and it lands in the review queue below.
+  final_role user_role := case when meta_role = 'artist' then 'artist'::user_role
+                               else 'fan'::user_role end;
+begin
+  insert into public.profiles (
+    id, username, role, date_of_birth, artist_status, onboarding_complete
+  )
+  values (
+    new.id,
+    coalesce(meta_username, public.placeholder_username(new.email)),
+    final_role,
+    meta_dob,
+    case when final_role = 'artist' then 'pending'::artist_status else null end,
+    not is_oauth
+  );
+  return new;
+end;
+$$;
+
+create or replace function public.attended_event(p_user uuid, p_event uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select p_user = auth.uid()
+     and exists (select 1 from public.events e where e.id = p_event and e.event_date < current_date)
+     and (
+       exists (
+         select 1 from public.tickets t
+         where t.user_id = p_user and t.event_id = p_event
+           and t.checked_in_at is not null and t.hidden_at is null
+       )
+       or exists (
+         select 1 from public.attended_events a
+         where a.user_id = p_user and a.event_id = p_event
+       )
+     );
+$$;
+
+revoke execute on function public.attended_event(uuid, uuid) from public, anon;
+grant execute on function public.attended_event(uuid, uuid) to authenticated;
+
+
+-- ############# addendum_068_discounts_not_public.sql #############
+
+-- Addendum 068: promo codes are no longer readable from the browser.
+--
+-- schema.sql gave discounts the policy "Active discounts are viewable by
+-- everyone" (using (active = true)) and it was never replaced. With the anon key
+-- that is GET /rest/v1/discounts?select=code,value,... - every live code,
+-- including 100%-off and comp codes, plus the admin's profile id in created_by.
+-- The same "row policy on a table with something private in it" mistake as the
+-- two before it (see CLAUDE.md, "RLS is row-level").
+--
+-- Nothing in the browser needs the table: a code is only ever checked by a
+-- server action, which now looks it up with the service role
+-- (validateDiscountCode callers in src/app/(app)/checkout-actions.ts).
+--
+-- THIS IS THE REVOKING HALF OF A TWO-PHASE CHANGE. Run it only AFTER the code
+-- that reads discounts via the service role is deployed - against older code it
+-- makes every promo code read as "not valid". There is no additive SQL phase;
+-- phase one is the deploy itself. STAGING first, then PROD.
+--
+-- Verify from outside afterwards (should print [] or a permission error):
+--   curl -s "$URL/rest/v1/discounts?select=code" -H "apikey: $ANON_KEY"
+
+-- The name is the one schema.sql created; no addendum has renamed it.
+drop policy if exists "Active discounts are viewable by everyone" on public.discounts;
+
+revoke all on public.discounts from anon, authenticated;

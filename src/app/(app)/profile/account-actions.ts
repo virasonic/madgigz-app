@@ -97,20 +97,3 @@ export async function cancelAccountDeletion(): Promise<{ error?: string }> {
   revalidatePath("/profile");
   return {};
 }
-
-// Called right after a successful sign-in. Coming back is the clearest possible
-// statement that they didn't mean it, so the request is cancelled without
-// asking - and the caller shows a notice saying so, rather than letting it
-// happen silently.
-export async function cancelDeletionOnSignIn(userId: string): Promise<boolean> {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("profiles")
-    .update({ deletion_requested_at: null })
-    .eq("id", userId)
-    .is("deleted_at", null)
-    .not("deletion_requested_at", "is", null)
-    .select("id");
-
-  return (data?.length ?? 0) > 0;
-}

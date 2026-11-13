@@ -1,8 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { cancelDeletionOnSignIn } from "@/lib/account-deletion";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { cancelDeletionOnSignIn } from "@/app/(app)/profile/account-actions";
 import { safeNext } from "@/lib/site";
 
 // One sign-in path for both an email and a username (#91). It must be a server
@@ -10,6 +10,10 @@ import { safeNext } from "@/lib/site";
 // its email has to happen where the email never reaches the client. The
 // browser sends what the person typed and their password, and gets back only a
 // destination or an error - never the address behind a username.
+// One message for "no such username", "no such email" and "wrong password", so
+// the reply can't be used to tell which of them it was.
+const WRONG_CREDENTIALS = "Incorrect email, username or password";
+
 export async function signInWithIdentifier(input: {
   identifier: string;
   password: string;
@@ -33,7 +37,7 @@ export async function signInWithIdentifier(input: {
     }
     // No such username. Deliberately the same message as a wrong password, so
     // this can't be used to test which usernames exist.
-    if (!data) return { error: "Incorrect username or password" };
+    if (!data) return { error: WRONG_CREDENTIALS };
     email = data as string;
   }
 
@@ -44,11 +48,11 @@ export async function signInWithIdentifier(input: {
   });
 
   if (error || !data.user) {
-    return { error: "Incorrect email or password" };
+    return { error: WRONG_CREDENTIALS };
   }
 
   // Coming back cancels a pending deletion, same as the old client flow.
-  const restored = await cancelDeletionOnSignIn(data.user.id);
+  const restored = await cancelDeletionOnSignIn(createAdminClient(), data.user.id);
   if (restored) {
     return { destination: "/profile?restored=1" };
   }

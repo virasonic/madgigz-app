@@ -46,6 +46,19 @@ const nextConfig: NextConfig = {
   // an update ships immediately instead of clients pinning an old worker.
   async headers() {
     return [
+      // Baseline hardening for every response. frame-ancestors stops any other
+      // site putting the app (checkout, /admin) in an invisible iframe and
+      // tricking a signed-in user into clicking through it; the native shells
+      // load the site as a top-level page, not a frame, so they're unaffected.
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
       {
         source: "/sw.js",
         headers: [
