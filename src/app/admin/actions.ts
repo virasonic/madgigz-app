@@ -7,6 +7,7 @@ import { logDecision } from "@/lib/decision-ledger";
 import { sendArtistStatusEmail } from "@/lib/email";
 import { stripe } from "@/lib/stripe";
 import { fetchOrganiserSettlement } from "@/lib/payouts";
+import { markTicketRefunded } from "@/lib/stripe-refund-sync";
 import { removeEventMedia } from "@/lib/supabase/storage";
 import { deleteStreamVideo } from "@/lib/cloudflare-stream-server";
 import { ArtistStatus } from "@/lib/types";
@@ -129,20 +130,10 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
 
     // Free tickets took no money, so there's nothing to send back.
     if (!ticket.stripe_payment_intent_id) {
-      await admin.from("tickets").update({ refunded: true }).eq("id", ticket.id);
-      // A tiered ticket (#151) gives its seat back to the tier (which also
-      // decrements the event aggregate); a single-price ticket to the event.
-      if (ticket.tier_id) {
-        await admin.rpc("release_tier_capacity", {
-          p_tier_id: ticket.tier_id,
-          p_quantity: ticket.quantity,
-        });
-      } else {
-        await admin.rpc("release_event_capacity", {
-          p_event_id: eventId,
-          p_quantity: ticket.quantity,
-        });
-      }
+      // Flips the row and gives the seat back (tier or event, #151) - but only
+      // if this call did the flip. The charge.refunded webhook races us and may
+      // have marked it already; releasing again would free a seat twice.
+      await markTicketRefunded(admin, { ...ticket, event_id: eventId });
       refunded += 1;
       continue;
     }
@@ -167,24 +158,17 @@ export async function cancelEvent(eventId: string): Promise<CancelEventResult> {
           ...(ticket.stripe_account_id
             ? { reverse_transfer: true, refund_application_fee: true }
             : {}),
+          // Names the row for the charge.refunded webhook, which otherwise has
+          // only an amount to go on and would have to guess the seat.
+          metadata: { ticket_id: ticket.id, kind: "full" },
         },
         { idempotencyKey: `refund_${ticket.id}` }
       );
 
-      await admin.from("tickets").update({ refunded: true }).eq("id", ticket.id);
-      // A tiered ticket (#151) gives its seat back to the tier (which also
-      // decrements the event aggregate); a single-price ticket to the event.
-      if (ticket.tier_id) {
-        await admin.rpc("release_tier_capacity", {
-          p_tier_id: ticket.tier_id,
-          p_quantity: ticket.quantity,
-        });
-      } else {
-        await admin.rpc("release_event_capacity", {
-          p_event_id: eventId,
-          p_quantity: ticket.quantity,
-        });
-      }
+      // Flips the row and gives the seat back (tier or event, #151) - but only
+      // if this call did the flip. The charge.refunded webhook races us and may
+      // have marked it already; releasing again would free a seat twice.
+      await markTicketRefunded(admin, { ...ticket, event_id: eventId });
       refunded += 1;
     } catch (error) {
       failed += 1;
@@ -263,6 +247,9 @@ export async function refundTicket(
           ...(ticket.stripe_account_id
             ? { reverse_transfer: true, refund_application_fee: true }
             : {}),
+          // Names the row for the charge.refunded webhook, which otherwise has
+          // only an amount to go on and would have to guess the seat.
+          metadata: { ticket_id: ticket.id, kind: "full" },
         },
         { idempotencyKey: `refund_${ticket.id}` }
       );
@@ -274,36 +261,20 @@ export async function refundTicket(
     }
   }
 
-  const { error: markError } = await admin
-    .from("tickets")
-    .update({ refunded: true })
-    .eq("id", ticket.id);
-  if (markError) {
+  try {
+    // Flips the row and releases the seat (unless it was used at the door) -
+    // only if this call did the flip. The charge.refunded webhook races us and
+    // may have marked it first, in which case it released the seat too.
+    await markTicketRefunded(admin, ticket);
+  } catch (markError) {
     // The money has already moved at Stripe; the ticket row has not. Stop here
-    // and say so loudly - carrying on would release the seat and log a refund
-    // for a ticket that still scans as valid and still counts toward payouts.
+    // and say so loudly - a ticket that still scans as valid and still counts
+    // toward payouts must not be logged as refunded.
     console.error(`Refund sent but ticket ${ticket.id} not marked refunded:`, markError);
     return {
       error:
         "The refund went through at Stripe, but the ticket could not be marked refunded here. Do NOT retry the refund - fix the ticket row (refunded = true) and check the logs.",
     };
-  }
-
-  // Capacity only goes back if the seat was never used. Releasing it for
-  // someone who walked in would put a seat that was physically occupied back
-  // on sale.
-  if (!ticket.checked_in_at) {
-    if (ticket.tier_id) {
-      await admin.rpc("release_tier_capacity", {
-        p_tier_id: ticket.tier_id,
-        p_quantity: ticket.quantity,
-      });
-    } else {
-      await admin.rpc("release_event_capacity", {
-        p_event_id: ticket.event_id,
-        p_quantity: ticket.quantity,
-      });
-    }
   }
 
   revalidatePath("/admin/billing");

@@ -322,3 +322,22 @@ export async function sendProInviteEmail(input: {
     return { sent: false };
   }
 }
+
+// Tells the team that money moved at Stripe in a way the app couldn't fully
+// account for on its own - a dispute, or a dashboard refund that fits no ticket
+// (#229). Best-effort like the alerts above: the webhook has already recorded
+// what it could, and a Resend outage must not make Stripe retry the event.
+export async function sendOpsAlert(input: { subject: string; lines: string[] }) {
+  if (!resend) return;
+
+  try {
+    await resend.emails.send({
+      from: FROM_ADDRESS,
+      to: SUPPORT_INBOX,
+      subject: `MadGigz payments: ${input.subject}`,
+      text: input.lines.join("\n"),
+    });
+  } catch (error) {
+    console.error("Failed to send ops alert:", error);
+  }
+}

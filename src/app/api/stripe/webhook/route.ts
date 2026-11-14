@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { payoutsReady, stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fulfilCheckoutSession } from "@/lib/fulfilment";
+import { syncChargeRefund, syncDispute } from "@/lib/stripe-refund-sync";
 
 // Signature verification needs the raw body, so this must never be statically
 // optimised or run on the edge runtime.
@@ -98,6 +99,23 @@ export async function POST(request: NextRequest) {
           .from("profiles")
           .update({ stripe_payouts_ready: payoutsReady(account) })
           .eq("stripe_account_id", account.id);
+        break;
+      }
+
+      // Money went back to the fan - from /admin, or straight from the Stripe
+      // dashboard, which the app otherwise never hears about (#229).
+      case "charge.refunded": {
+        await syncChargeRefund(event.data.object);
+        break;
+      }
+
+      case "charge.dispute.created": {
+        await syncDispute(event.data.object, "created");
+        break;
+      }
+
+      case "charge.dispute.closed": {
+        await syncDispute(event.data.object, "closed");
         break;
       }
     }
