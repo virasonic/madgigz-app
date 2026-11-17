@@ -1,5 +1,22 @@
 import { NextResponse } from "next/server";
 import { FEE_PERCENT, MIN_FEE_CENTS, VAT_PERCENT } from "@/lib/pricing";
+import { createClient } from "@/lib/supabase/server";
+
+// Whether the browser asking is signed in as an admin. Never throws: a health
+// check that 500s because Supabase is down would hide the very thing it reports.
+async function viewerIsAdmin(): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return false;
+    const { data } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    return data?.role === "admin";
+  } catch {
+    return false;
+  }
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +28,12 @@ export const dynamic = "force-dynamic";
 //
 // Reports only booleans and non-secret pricing config. Never echo a key value
 // here: this endpoint is public.
+//
+// Anyone gets the verdict (ok, commit, hosts, Stripe mode). WHICH variable is
+// missing or malformed is only shown to a signed-in admin (#229): it tells an
+// outsider nothing they need, and tells an attacker which integration is
+// misconfigured right now. Open it in a browser where you're logged in as admin
+// to see the full breakdown.
 export async function GET() {
   // Presence alone isn't enough: pasting a whsec_ into STRIPE_SECRET_KEY reads
   // as "set" but fails at the first Stripe call, which is how it was actually
@@ -84,8 +107,8 @@ export async function GET() {
         ? "test"
         : "unknown",
     pricing: { feePercent: FEE_PERCENT, vatPercent: VAT_PERCENT, minFeeCents: MIN_FEE_CENTS },
-    config,
-    missing,
-    malformed,
+    ...((await viewerIsAdmin())
+      ? { config, missing, malformed }
+      : { detail: "Sign in as an admin to see which variables are missing or malformed." }),
   });
 }

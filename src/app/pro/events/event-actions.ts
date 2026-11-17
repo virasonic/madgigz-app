@@ -258,12 +258,31 @@ export async function setProEventActive(
 
   const { data: existing } = await admin
     .from("events")
-    .select("id, pro_account_id")
+    .select("id, pro_account_id, cancelled")
     .eq("id", eventId)
     .maybeSingle();
 
   if (!existing || existing.pro_account_id !== account.id) {
     return { error: "That show isn't yours" };
+  }
+
+  // This action writes with the service role, which the database trigger
+  // (addendum_069) trusts - so the same rule has to be applied here: a show
+  // that was cancelled (tickets refunded) or taken down by MadGigz stays down.
+  if (active) {
+    if (existing.cancelled) {
+      return { error: "This show was cancelled and can't be re-listed" };
+    }
+    // Read separately so a database without the column yet (hand-run SQL)
+    // degrades to "not hidden" instead of breaking the toggle.
+    const { data: lock } = await admin
+      .from("events")
+      .select("admin_hidden")
+      .eq("id", eventId)
+      .maybeSingle();
+    if ((lock as { admin_hidden?: boolean } | null)?.admin_hidden) {
+      return { error: "MadGigz has hidden this show - get in touch to re-list it" };
+    }
   }
 
   const { error } = await admin.from("events").update({ active }).eq("id", eventId);

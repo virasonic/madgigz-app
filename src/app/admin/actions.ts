@@ -374,7 +374,17 @@ export async function promoteToAdmin(userId: string) {
 export async function toggleEventActive(eventId: string, active: boolean) {
   await requireAdmin();
   const admin = adminClient();
-  await admin.from("events").update({ active }).eq("id", eventId);
+  // admin_hidden (addendum_069) records that MadGigz, not the organiser, took
+  // the show down, so the organiser can't simply flip it back. Unhiding clears
+  // it. The column arrives by hand-run SQL: 42703 / PGRST204 mean it isn't there
+  // yet, so fall back to the plain toggle rather than failing the action.
+  const { error } = await admin
+    .from("events")
+    .update({ active, admin_hidden: !active })
+    .eq("id", eventId);
+  if (error && (error.code === "42703" || error.code === "PGRST204")) {
+    await admin.from("events").update({ active }).eq("id", eventId);
+  }
   revalidatePath("/admin/events");
 }
 

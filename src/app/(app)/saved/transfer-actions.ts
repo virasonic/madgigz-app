@@ -60,6 +60,23 @@ function transferableError(ticket: TicketGuard): string | null {
   return null;
 }
 
+// The mirror of the check in refund-request-actions: a ticket waiting on a
+// refund decision can't also be handed on, or the buyer could be repaid for a
+// ticket someone else then uses. A missing table (addendum_056 unrun) errors
+// and reads as "nothing pending", which is correct.
+async function hasPendingRefundRequest(
+  admin: ReturnType<typeof createAdminClient>,
+  ticketId: string
+): Promise<boolean> {
+  const { data } = await admin
+    .from("refund_requests")
+    .select("id")
+    .eq("ticket_id", ticketId)
+    .eq("status", "pending")
+    .limit(1);
+  return Boolean(data && data.length > 0);
+}
+
 export type CreateTransferResult = { token: string; path: string } | { error: string };
 
 // Sender taps "Transfer" on a ticket they hold → gets a claim link to share.
@@ -79,6 +96,9 @@ export async function createTransfer(ticketId: string): Promise<CreateTransferRe
 
   const blocked = transferableError(ticket);
   if (blocked) return { error: blocked };
+  if (await hasPendingRefundRequest(admin, ticketId)) {
+    return { error: "You've asked for a refund on this ticket. Cancel the request first." };
+  }
 
   // Reuse an existing live link (one active transfer at a time).
   const { data: existing, error: existingError } = await admin
@@ -168,6 +188,10 @@ export async function claimTransfer(token: string): Promise<ClaimTransferResult>
   if (!ticket) return { error: "This transfer link is no longer valid." };
   const blocked = transferableError(ticket);
   if (blocked) return { error: blocked };
+  // Covers links made before the two were exclusive.
+  if (await hasPendingRefundRequest(admin, ticket.id)) {
+    return { error: "This ticket is waiting on a refund request and can't be claimed right now." };
+  }
 
   // Claim the transfer row first (the lock). Zero rows back → already claimed.
   const { data: claimed, error: claimError } = await admin

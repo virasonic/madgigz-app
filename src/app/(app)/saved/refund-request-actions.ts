@@ -74,6 +74,20 @@ export async function requestRefund(
   const blocked = requestableError(ticket);
   if (blocked) return { error: blocked };
 
+  // A ticket with a live claim link is on its way to someone else. Refunding
+  // it too would send the money back to the buyer while the new holder walks in
+  // (or sell the ticket and get the price back). One or the other. A missing
+  // table (addendum_037 unrun) errors and reads as "no link", which is correct.
+  const { data: transfer } = await admin
+    .from("ticket_transfers")
+    .select("id")
+    .eq("ticket_id", ticketId)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (transfer) {
+    return { error: "This ticket has a transfer link out. Cancel the transfer first." };
+  }
+
   const cleanReason = reason.trim().slice(0, REASON_MAX) || null;
   const { error } = await admin.from("refund_requests").insert({
     ticket_id: ticketId,

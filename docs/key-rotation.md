@@ -127,7 +127,7 @@ session** — everyone is signed out. It is not zero-downtime like the others.
   lets you keep the old key working for up to 24h — a built-in phase 1.
 - Update `STRIPE_SECRET_KEY` (and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` if you
   rolled it too) in Vercel, redeploy.
-- **Verify:** `/api/health` shows `STRIPE_SECRET_KEY: ok`, then as an artist open
+- **Verify:** `/api/health` (opened while signed in as an admin — the per-variable list is hidden otherwise) shows `STRIPE_SECRET_KEY: ok`, then as an artist open
   **Connect payouts** (the call that first surfaced a bad key historically), and
   as a fan run one test-mode purchase end-to-end.
 - **Revoke:** expire the old key in the Stripe roll dialog.

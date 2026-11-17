@@ -214,7 +214,7 @@ can sell. `stripe_payouts_ready` flips automatically via the `account.updated`
 webhook.
 
 **8. Verify:** `/api/health` → `stripeMode: "live"`, `ok: true`, both webhook
-secrets `ok`. Then buy **one real low-value ticket** end-to-end (checkout →
+secrets `ok` (the per-variable list only shows when you're signed in as an admin). Then buy **one real low-value ticket** end-to-end (checkout →
 webhook fulfils → ticket + QR appears → the charge shows on the artist's
 connected account minus the fee), and run **one real refund** from admin.
 
