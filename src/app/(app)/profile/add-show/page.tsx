@@ -27,7 +27,7 @@ import {
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { parseEuros } from "@/lib/pricing";
 import { AppUser, Genre, PublicArtistProfile, Venue } from "@/lib/types";
-import { finaliseNewShow } from "../show-actions";
+import { createHouseShow, finaliseNewShow } from "../show-actions";
 import { canActAsArtist } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
@@ -72,6 +72,11 @@ export default function AddShowPage() {
   // the poster — re-add on restore).
   const [tierRows, setTierRows] = useState<TierRow[]>([emptyTierRow()]);
   const [externalUrl, setExternalUrl] = useState("");
+  // Admin only (#214): make this a MadGigz house show - no owner, no commission,
+  // the money stays in the MadGigz account. Off by default and not kept in the
+  // draft, so an admin adding their own gig as an artist pays commission like
+  // anyone else unless they deliberately flip it. The server re-checks the role.
+  const [houseShow, setHouseShow] = useState(false);
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -205,6 +210,7 @@ export default function AddShowPage() {
     if (cleanedLineup.length === 0) nextErrors.lineup = t("addShow.errLineup");
 
     const internal = ticketingMode === "internal";
+    const house = internal && houseShow && user?.role === "admin";
     const priceNum = parseEuros(price);
     let minTierPrice = 0;
 
@@ -236,7 +242,9 @@ export default function AddShowPage() {
         // Types may each be available up to the room cap (they share it) — no
         // "sum ≤ capacity" check; the shared total is enforced at checkout.
         minTierPrice = Math.min(...filled.map((r) => parseEuros(r.price)));
-        if (minTierPrice > 0 && !user?.stripePayoutsReady) {
+        // A house show pays into the MadGigz account, so it needs no payout
+        // account of the admin's own.
+        if (!house && minTierPrice > 0 && !user?.stripePayoutsReady) {
           nextErrors.tiers = t("addShow.errPayout");
         }
       }
@@ -263,7 +271,28 @@ export default function AddShowPage() {
       ? await uploadEventMedia(supabase, posterFile, "posters")
       : `https://picsum.photos/seed/show-${Date.now()}/800/1200`;
 
-    const { data: created, error } = await supabase
+    const houseResult = house
+      ? await createHouseShow({
+          title: name,
+          // The headliner, not the admin: the show isn't theirs.
+          artistName: cleanedLineup[0],
+          venueName: venue.name,
+          date,
+          time,
+          price: minTierPrice,
+          capacity: capacityNum,
+          accentColor,
+          imageUrl,
+          description,
+          lineup: cleanedLineup,
+        })
+      : null;
+
+    const { data: created, error } = houseResult
+      ? "id" in houseResult
+        ? { data: { id: houseResult.id }, error: null }
+        : { data: null, error: { message: houseResult.error } }
+      : await supabase
       .from("events")
       .insert({
       artist_id: user.id,
@@ -431,7 +460,12 @@ export default function AddShowPage() {
           // show is one type. Each carries its price, availability and per-order
           // cap; the cheapest sets the "from" price on cards.
           <div className="rounded-2xl border border-muted/15 p-3">
-            <TierRowsEditor rows={tierRows} onChange={setTierRows} />
+            {/* No "You keep" line on a house show: there is no commission. */}
+            <TierRowsEditor
+              rows={tierRows}
+              onChange={setTierRows}
+              showNet={!(houseShow && user.role === "admin")}
+            />
             {errors.tiers && <p className="mt-2 text-sm text-danger">{errors.tiers}</p>}
           </div>
         )}
@@ -483,7 +517,12 @@ export default function AddShowPage() {
             entries={lineup}
             onChange={setLineup}
             artists={artists}
-            excludeProfileId={user.id}
+            // A house show has no owner, so the admin can be tagged on it.
+            excludeProfileId={
+              houseShow && user.role === "admin" && ticketingMode === "internal"
+                ? undefined
+                : user.id
+            }
           />
           <p className="text-xs text-muted">{t("addShow.lineupHint")}</p>
           {errors.lineup && <p className="text-sm text-danger">{errors.lineup}</p>}
@@ -527,7 +566,23 @@ export default function AddShowPage() {
               {t("addShow.externalLink")}
             </button>
           </div>
-          {!payoutsReady && ticketingMode === "internal" && (
+          {user.role === "admin" && ticketingMode === "internal" && (
+            <label className="flex items-start gap-3 rounded-2xl bg-surface p-4">
+              <input
+                type="checkbox"
+                checked={houseShow}
+                onChange={(e) => setHouseShow(e.target.checked)}
+                className="mt-1 h-4 w-4 accent-primary"
+              />
+              <span className="text-sm text-foreground">
+                {t("organiserForm.houseShow")}
+                <span className="mt-1 block text-xs text-muted">
+                  {t("organiserForm.houseShowHint")}
+                </span>
+              </span>
+            </label>
+          )}
+          {!payoutsReady && ticketingMode === "internal" && !houseShow && (
             <p className="text-xs text-muted">{t("addShow.freeNote")}</p>
           )}
           {ticketingMode === "external" && (

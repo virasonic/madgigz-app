@@ -162,6 +162,102 @@ export async function updateShow(
   return { error: null };
 }
 
+export interface HouseShowInput {
+  title: string;
+  artistName: string;
+  venueName: string;
+  date: string;
+  time: string;
+  price: number;
+  capacity: number;
+  accentColor: string;
+  imageUrl: string | null;
+  description: string;
+  lineup: string[];
+}
+
+// An admin creating a MadGigz house show from the app's Add Show form (#214).
+// The form's normal path is a browser insert with artist_id = the caller, which
+// makes an ordinary artist gig: commission taken, money to the caller's own
+// Connect account. A house show is the opposite - no owner, no commission, the
+// money stays with MadGigz - and no RLS policy lets a browser insert an
+// ownerless row, so it is written here. The admin check is made on the server:
+// the toggle in the form is only what asks for it. Same row createAdminEvent
+// writes from /admin; finaliseNewShow then attaches venue, genres, tags, tiers.
+export async function createHouseShow(
+  input: HouseShowInput
+): Promise<{ id: string } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profile?.role !== "admin") return { error: "Only MadGigz can create a house show" };
+
+  const title = input.title.trim();
+  const description = input.description.trim();
+  const lineup = input.lineup.map((act) => act.trim()).filter(Boolean);
+  if (!title) return { error: "Give the show a name" };
+  if (!input.venueName.trim()) return { error: "Choose a venue" };
+  if (!description) return { error: "Description can't be empty" };
+  if (lineup.length === 0) return { error: "Add at least one artist to the lineup" };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { error: "Enter a valid date" };
+  if (!/^\d{2}:\d{2}(:\d{2})?$/.test(input.time)) return { error: "Enter a valid time" };
+  if (!Number.isFinite(input.price) || input.price < 0) return { error: "Enter a valid price" };
+  if (!Number.isInteger(input.capacity) || input.capacity < 1) {
+    return { error: "Enter a valid capacity" };
+  }
+
+  const { data: created, error } = await admin
+    .from("events")
+    .insert({
+      artist_id: null,
+      house_run: true,
+      title,
+      artist_name: input.artistName.trim() || lineup[0],
+      venue: input.venueName.trim(),
+      city: "Madrid",
+      event_date: input.date,
+      event_time: input.time,
+      price: input.price,
+      currency: "EUR",
+      accent_color: input.accentColor,
+      category: "Live Music",
+      image_url: input.imageUrl,
+      capacity: input.capacity,
+      max_per_order: 6,
+      description,
+      lineup,
+      doors: input.time,
+      age_restriction: "18+",
+      rating: 0,
+      ticketing_mode: "internal",
+      ticketing_url: null,
+      active: true,
+      cancelled: false,
+    })
+    .select("id")
+    .single();
+
+  if (error || !created) {
+    // 42703 / PGRST204 = events.house_run missing, i.e. addendum_020 not run.
+    if (error?.code === "42703" || error?.code === "PGRST204") {
+      console.error("events.house_run missing - run addendum_020:", error);
+      return { error: "The database is missing addendum_020 - run it, then try again" };
+    }
+    console.error("createHouseShow insert failed:", error);
+    return { error: "Couldn't create the show" };
+  }
+  return { id: created.id as string };
+}
+
 // Runs right after a show is created, to attach everything the browser isn't
 // allowed to write directly: the venue link (deduped, creating an unverified
 // row when it's new), the genres, and the artist tags - tags being what let
@@ -192,7 +288,11 @@ export async function finaliseNewShow(
     .single();
 
   if (!event) return { error: "Show not found" };
-  if (event.artist_id !== user.id) return { error: "Not your show" };
+  // The owner - or an admin finishing a house show they just created (#214),
+  // which has no owner by design.
+  if (!(await canManageEvent(admin, user.id, event.artist_id))) {
+    return { error: "Not your show" };
+  }
 
   const venue = await resolveVenue(admin, input.venueName, input.venueId);
   if (venue.error) return { error: venue.error };
@@ -209,7 +309,14 @@ export async function finaliseNewShow(
   const genreError = await syncEventGenres(admin, eventId, input.genreIds);
   if (genreError) return { error: genreError };
 
-  const tagError = await syncEventArtists(admin, eventId, user.id, input.taggedArtistIds);
+  // The show's owner is left out of its own tags. A house show has none, so
+  // everyone tagged - the admin included - is a genuine tag.
+  const tagError = await syncEventArtists(
+    admin,
+    eventId,
+    event.artist_id,
+    input.taggedArtistIds
+  );
   if (tagError) return { error: tagError };
 
   if (input.tiers && input.tiers.length > 0) {
