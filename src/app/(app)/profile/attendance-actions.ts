@@ -98,3 +98,26 @@ export async function logPosterWallExport(showCount: number): Promise<{ ok: bool
     .insert({ user_id: user.id, show_count: showCount });
   return { ok: !error };
 }
+
+// The caller's OWN fan photos, for mixing into the poster-wall export (#228
+// enrich). Media URLs only, newest first, capped — it's the fan's own wall so
+// any status is included (a photo awaiting artist approval is still their
+// memory). Owner-scoped and RLS-backed. Soft-fails to [] so a missing table
+// (42P01) or a grant gap (42501) degrades to a posters-only export rather than
+// breaking the share.
+export async function getMyFanPhotos(): Promise<string[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("fan_photos")
+    .select("media_url")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(40);
+  if (error || !data) return [];
+  return data.map((r) => r.media_url as string).filter(Boolean);
+}

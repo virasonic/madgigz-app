@@ -454,6 +454,7 @@ export const es: Messages = {
     pastShowsTitle: "Dónde has estado",
     pastShowsSubtitle: "Los conciertos a los que fuiste.",
     wallShare: "Compartir mi muro",
+    wallPhotosToggle: "Mis fotos",
     wallSharing: "Preparando tu muro…",
     wallShareUnsupported: "Compartir aún no está disponible en esta versión de la app. Abre madgigz.aurasonic.es en tu navegador para compartirlo.",
     wallShareFailed: "No se pudo crear la imagen. Revisa tu conexión y vuelve a intentarlo.",

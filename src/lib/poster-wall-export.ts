@@ -61,11 +61,32 @@ async function ensureFont(font: string) {
   }
 }
 
+// Weave the fan's own photos in among the posters (#228 enrich) so the wall
+// mixes both rather than trailing off into a block of photos: roughly one photo
+// every `step` posters. Either list empty → the other is returned untouched.
+function interleave(posters: HTMLImageElement[], photos: HTMLImageElement[]): HTMLImageElement[] {
+  if (photos.length === 0) return posters;
+  if (posters.length === 0) return photos;
+  const out: HTMLImageElement[] = [];
+  const step = Math.max(1, Math.round(posters.length / (photos.length + 1)));
+  let pi = 0;
+  let fi = 0;
+  while (pi < posters.length || fi < photos.length) {
+    for (let k = 0; k < step && pi < posters.length; k++) out.push(posters[pi++]);
+    if (fi < photos.length) out.push(photos[fi++]);
+  }
+  return out;
+}
+
 /**
  * Renders the wall to a 1080x1920 JPEG. `events` newest first, as the profile
  * shows them. Resolves null if no poster could be loaded at all.
  */
-export async function renderPosterWall(events: EventItem[], copy: WallImageCopy): Promise<Blob | null> {
+export async function renderPosterWall(
+  events: EventItem[],
+  copy: WallImageCopy,
+  options?: { photos?: string[] }
+): Promise<Blob | null> {
   const display = cssVar("--font-galdern-extrabold", "sans-serif");
   const sans = cssVar("--font-dm-sans", "sans-serif");
   const colours = {
@@ -76,15 +97,18 @@ export async function renderPosterWall(events: EventItem[], copy: WallImageCopy)
     primary: cssVar("--primary", "#d76616"),
   };
 
-  const [wordmark, ...posters] = await Promise.all([
+  const photoUrls = options?.photos ?? [];
+  const [wordmark, posterImgs, photoImgs] = await Promise.all([
     loadImage(WORDMARK_SRC),
-    ...events.map((e) => (e.image ? loadImage(e.image) : Promise.resolve(null))),
+    Promise.all(events.map((e) => (e.image ? loadImage(e.image) : Promise.resolve(null)))),
+    Promise.all(photoUrls.map((src) => loadImage(src))),
   ]);
   await Promise.all([ensureFont(`800 72px ${display}`), ensureFont(`500 36px ${sans}`)]);
 
-  const loaded = posters
-    .map((img, i) => ({ img, event: events[i] }))
-    .filter((p): p is { img: HTMLImageElement; event: EventItem } => p.img !== null);
+  const loadedPosters = posterImgs.filter((img): img is HTMLImageElement => img !== null);
+  const loadedPhotos = photoImgs.filter((img): img is HTMLImageElement => img !== null);
+  // Posters carry the wall; the fan's photos are woven in when present.
+  const loaded = interleave(loadedPosters, loadedPhotos);
   if (loaded.length === 0) return null;
 
   const canvas = document.createElement("canvas");
@@ -123,7 +147,7 @@ export async function renderPosterWall(events: EventItem[], copy: WallImageCopy)
   const footerTop = STORY_HEIGHT - PAD - 40;
   const area = { width: STORY_WIDTH - 2 * PAD, height: footerTop - 40 - y, gap: GAP };
   const layout = bestLayout(
-    loaded.map((p) => p.img.naturalWidth / p.img.naturalHeight),
+    loaded.map((img) => img.naturalWidth / img.naturalHeight),
     area
   );
   // A sparse wall sits in the middle of the area rather than hugging the title.
@@ -131,7 +155,7 @@ export async function renderPosterWall(events: EventItem[], copy: WallImageCopy)
   const offsetY = y + Math.max(0, (area.height - used) / 2);
 
   for (const tile of layout.tiles) {
-    const { img } = loaded[tile.index];
+    const img = loaded[tile.index];
     const x = PAD + tile.x;
     const ty = offsetY + tile.y;
     ctx.save();

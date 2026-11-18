@@ -482,6 +482,7 @@ export const en = {
     pastShowsSubtitle: "The shows you turned up to.",
     // One-tap story image of the attended wall (#228).
     wallShare: "Share my wall",
+    wallPhotosToggle: "My photos",
     wallSharing: "Making your wall…",
     wallShareUnsupported: "Sharing isn't available in this app version yet. Open madgigz.aurasonic.es in your browser to share it.",
     wallShareFailed: "Couldn't make the image. Check your connection and try again.",
