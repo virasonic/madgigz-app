@@ -467,7 +467,7 @@ export const es: Messages = {
     savedShowsSubtitle: "Primero los próximos, luego los que ya pasaron.",
     tabShows: "Bolos",
     tabContent: "Contenido",
-    tabFanPhotos: "Fotos de fans",
+    tabFanPhotos: "Recuerdos",
     contentEmpty: "Aún no hay publicaciones.",
     openContent: "Abrir publicación",
     wereYouThereTitle: "¿Estuviste allí?",
@@ -1125,7 +1125,7 @@ export const es: Messages = {
   },
 
   fanPhotos: {
-    title: "Fotos de fans",
+    title: "Recuerdos",
     yours: "Tus fotos · {count} de {limit}",
     fromTheNight: "De esa noche",
     addMore: "{left} más",

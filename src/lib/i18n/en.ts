@@ -495,7 +495,7 @@ export const en = {
     savedShowsSubtitle: "Upcoming gigs first, then ones you saved that have passed.",
     tabShows: "Shows",
     tabContent: "Content",
-    tabFanPhotos: "Fan photos",
+    tabFanPhotos: "Memories",
     contentEmpty: "No posts yet.",
     openContent: "Open post",
     wereYouThereTitle: "Were you there?",
@@ -1157,7 +1157,7 @@ export const en = {
   },
 
   fanPhotos: {
-    title: "Fan photos",
+    title: "Memories",
     yours: "Your photos · {count} of {limit}",
     fromTheNight: "From the night",
     addMore: "{left} left",
