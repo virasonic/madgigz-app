@@ -10,6 +10,32 @@ const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID ?? "52cbbb4cf23e3aa44e0cfe9
 
 export type StreamUpload = { uploadURL: string; uid: string };
 
+// Each mint reserves up to 10 minutes of video on the Cloudflare bill, and any
+// signed-in account can ask for one, so they are rationed per account (#229).
+// Generous for a real poster: a failed upload that is retried costs one each.
+const MAX_UPLOADS_PER_DAY = 10;
+const DAY_SECONDS = 24 * 60 * 60;
+
+// True when the account may start another upload (and logs it). The function
+// arrives by hand-run SQL (addendum_070); until then, or if it fails, the answer
+// is yes - a broken limiter must not stop artists posting.
+async function claimUploadSlot(userId: string): Promise<boolean> {
+  const { data, error } = await createAdminClient().rpc("claim_stream_upload", {
+    p_user_id: userId,
+    p_max: MAX_UPLOADS_PER_DAY,
+    p_window_seconds: DAY_SECONDS,
+  });
+  if (error) {
+    if (error.code !== "42883" && error.code !== "PGRST202") {
+      console.error("claim_stream_upload failed:", error);
+    }
+    return true;
+  }
+  return data !== false;
+}
+
+const QUOTA_ERROR = "You've reached today's video upload limit. Try again tomorrow.";
+
 /**
  * Mints a one-time Cloudflare Stream direct-upload URL (#138). The browser then
  * PUTs the video straight to Cloudflare — the file never touches our server, and
@@ -36,6 +62,7 @@ export async function createStreamDirectUpload(): Promise<
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in" };
+  if (!(await claimUploadSlot(user.id))) return { error: QUOTA_ERROR };
 
   try {
     const res = await fetch(
@@ -93,6 +120,7 @@ export async function createStreamTusUpload(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in" };
+  if (!(await claimUploadSlot(user.id))) return { error: QUOTA_ERROR };
 
   // TUS metadata is comma-separated `key base64(value)` pairs. maxDurationSeconds
   // keeps the reel-length cap (600s) the basic path already enforces.

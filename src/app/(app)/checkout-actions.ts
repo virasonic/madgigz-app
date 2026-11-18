@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe";
+import {
+  HOLD_TTL_SECONDS,
+  attachSessionToHold,
+  makeRoomForHold,
+  openHold,
+  releaseHold,
+} from "@/lib/checkout-holds";
 import { applyDiscount, validateDiscountCode } from "@/lib/supabase/queries";
 import { breakdownFor, formatEuros, toCents } from "@/lib/pricing";
 import { EventRow, EventTierRow, mapEvent, mapEventTier, tierIsAvailable } from "@/lib/types";
@@ -176,6 +183,11 @@ export async function createCheckout(
   const totalEuros = applyDiscount(subtotalEuros, discount);
   const totalCents = toCents(totalEuros);
 
+  // A paid checkout holds seats until it is paid or expires. End this fan's
+  // earlier unpaid checkout for the same show first, so coming back to checkout
+  // doesn't hold the seats twice (#229).
+  if (totalCents > 0) await makeRoomForHold(admin, user.id, event.id);
+
   // Claim capacity before taking money, atomically - two fans racing for the
   // last seat can't both win. A tiered show reserves against the chosen tier
   // (which also bumps events.sold); a single-price show against the event.
@@ -188,7 +200,19 @@ export async function createCheckout(
   }
   if (!reserved) return { error: "Not enough tickets left" };
 
+  // Set once the reservation is recorded as a hold (addendum_070). From then
+  // on the hold is the only way the seats go back, so they can't go back twice.
+  let holdId: string | null = null;
+
   async function release() {
+    if (holdId) {
+      try {
+        await releaseHold(admin, holdId);
+      } catch (error) {
+        console.error("Checkout: couldn't release hold", error);
+      }
+      return;
+    }
     if (selectedTierId) {
       await admin.rpc("release_tier_capacity", { p_tier_id: selectedTierId, p_quantity: quantity });
     } else {
@@ -242,6 +266,22 @@ export async function createCheckout(
     return { error: "This organiser can't accept payments yet" };
   }
 
+  // Record the hold. "full" means this account already has the maximum number
+  // of unpaid checkouts open and none of them could be ended above.
+  const hold = await openHold(admin, {
+    userId: user.id,
+    eventId: event.id,
+    tierId: selectedTierId,
+    quantity,
+  });
+  if (hold.status === "full") {
+    await release();
+    return {
+      error: "You have too many checkouts open. Finish one, or try again in a few minutes.",
+    };
+  }
+  if (hold.status === "open") holdId = hold.holdId;
+
   // Stripe collects the whole fee (commission + IVA) as one application fee;
   // the VAT portion is carried in metadata so it can be recorded separately on
   // the ticket for tax reporting. A house show is charged no fee at all.
@@ -266,7 +306,7 @@ export async function createCheckout(
       mode: "payment",
       payment_method_types: bizumEnabled ? ["card", "bizum"] : ["card"],
       // Abandoned checkouts release their held seats when this expires.
-      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+      expires_at: Math.floor(Date.now() / 1000) + HOLD_TTL_SECONDS,
       success_url: `${appUrl}/checkout/complete?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/feed?checkout=cancelled`,
       customer_email: user.email,
@@ -308,6 +348,8 @@ export async function createCheckout(
         application_fee_vat_cents: String(feeVatCents),
         stripe_account_id: houseRun ? "" : payee!.stripe_account_id,
         tier_id: selectedTierId ?? "",
+        // Lets the webhook release (or clear) exactly this hold, once.
+        hold_id: holdId ?? "",
       },
     });
 
@@ -315,6 +357,7 @@ export async function createCheckout(
       await release();
       return { error: "Could not start checkout" };
     }
+    if (holdId) await attachSessionToHold(admin, holdId, session.id);
     return { url: session.url };
   } catch (error) {
     await release();

@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { toEuros } from "@/lib/pricing";
+import { settleHold } from "@/lib/checkout-holds";
 
 // Turning a paid Checkout Session into a ticket. Deliberately shared between
 // the webhook and the success-page reconciliation: the browser often gets back
@@ -38,6 +39,9 @@ export async function fulfilCheckoutSession(session: Stripe.Checkout.Session) {
   });
 
   if (error) throw error;
+
+  // The held seats are a ticket now, so the hold goes without releasing them.
+  if (meta.hold_id) await settleHold(admin, meta.hold_id);
 
   // null ticketId means this session was already fulfilled - still a success
   // from the caller's point of view (a webhook retry must not 500, or Stripe

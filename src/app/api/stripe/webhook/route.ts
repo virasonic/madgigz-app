@@ -4,6 +4,7 @@ import { payoutsReady, stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fulfilCheckoutSession } from "@/lib/fulfilment";
 import { syncChargeRefund, syncDispute } from "@/lib/stripe-refund-sync";
+import { releaseHold } from "@/lib/checkout-holds";
 
 // Signature verification needs the raw body, so this must never be statically
 // optimised or run on the edge runtime.
@@ -16,6 +17,14 @@ async function releaseCapacity(session: Stripe.Checkout.Session) {
   if (!eventId || !quantity) return;
 
   const admin = createAdminClient();
+  // A checkout made since addendum_070 names its hold. Releasing through it is
+  // idempotent: a duplicate delivery, or the app having already ended this
+  // checkout itself, finds no hold and gives nothing back a second time.
+  const holdId = session.metadata?.hold_id;
+  if (holdId) {
+    await releaseHold(admin, holdId);
+    return;
+  }
   // A tiered checkout held its seats against the tier (#151), so give them back
   // there — the tier release also decrements the event aggregate.
   const tierId = session.metadata?.tier_id;
