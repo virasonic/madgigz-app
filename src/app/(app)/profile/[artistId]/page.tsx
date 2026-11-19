@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -30,6 +31,34 @@ import { EventItem } from "@/lib/types";
 import ArtistProfileTabs from "./ArtistProfileTabs";
 import BackButton from "@/components/ui/BackButton";
 import { getServerT } from "@/lib/i18n/server";
+
+// #172: a shared profile link gets a real title/description (and the branded
+// og:image/twitter:image from opengraph-image.tsx) instead of previewing as the
+// bare domain. The card copy stays in the viewer's locale here; the image itself
+// is English-only, like the event card.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ artistId: string }>;
+}): Promise<Metadata> {
+  const { artistId: handle } = await params;
+  const supabase = await createClient();
+  const resolved = await resolveProfileHandle(supabase, handle);
+  if (!resolved) return {};
+  const [artist, { t }] = await Promise.all([
+    fetchArtistProfile(supabase, resolved.id),
+    getServerT(),
+  ]);
+  const name = artist?.artistName ?? resolved.username;
+  const title = `${name} · MadGigz`;
+  const description = artist?.artistBio?.trim() || t("profile.shareProfileDesc", { name });
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: "profile" },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 export default async function PublicArtistProfilePage({
   params,

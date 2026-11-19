@@ -539,6 +539,7 @@ export const en = {
     // The badge on a PUBLIC profile page. Promoters and venues get a page too
     // (#88), so the label has to say which kind of organiser this is.
     publicRoleArtist: "Artist",
+    shareProfileDesc: "See {name}'s gigs on MadGigz.",
     publicRolePromoter: "Promoter",
     publicRoleVenue: "Venue",
     byArtist: "by {artist}",

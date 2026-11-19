@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
 import { fetchEventById } from "@/lib/supabase/queries";
-import { GALDERN_MEDIUM_B64, GALDERN_BOLD_B64, WORDMARK_DATA_URI } from "./og-assets";
+import { GALDERN_MEDIUM_B64, GALDERN_BOLD_B64, WORDMARK_DATA_URI } from "@/lib/og-assets";
 
 // A per-event social preview card (#172). The stored poster can be a multi-MB
 // A3 print JPG that WhatsApp/X skip, so instead of pointing og:image straight at
