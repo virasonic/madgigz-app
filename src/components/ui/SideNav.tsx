@@ -86,7 +86,9 @@ export default function SideNav({
     { href: "/feed?panel=announcements", label: t("feed.announcements"), icon: MegaphoneIcon },
     { href: "/explore", label: t("nav.explore"), icon: ExploreIcon },
     { href: "/saved", label: t("nav.tickets"), icon: TicketIcon },
-    { href: "/recuerdos", label: t("nav.recuerdos"), icon: RecuerdosIcon },
+    // #230 is a fan-account reformat only: fans get the Recuerdos row; artists
+    // and everyone else keep the rail exactly as it was (Friends only).
+    ...(role === "fan" ? [{ href: "/recuerdos", label: t("nav.recuerdos"), icon: RecuerdosIcon }] : []),
     { href: "/friends", label: t("nav.friends"), icon: FriendsIcon },
     { href: "/notifications", label: t("notifications.title"), icon: BellIcon, badge: liveUnread },
     { href: "/profile", label: t("nav.profile"), icon: isArtistRole(role) ? NoteIcon : PersonIcon },

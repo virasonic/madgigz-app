@@ -8,7 +8,7 @@ import { isArtistRole } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useLiveUnreadCount } from "@/lib/realtime";
 import { FEED_TO_TOP_EVENT } from "@/lib/ui-events";
-import { ExploreIcon, FeedIcon, NoteIcon, PersonIcon, RecuerdosIcon, TicketIcon } from "@/components/ui/nav-icons";
+import { ExploreIcon, FeedIcon, FriendsIcon, NoteIcon, PersonIcon, RecuerdosIcon, TicketIcon } from "@/components/ui/nav-icons";
 
 interface NavItem {
   href: string;
@@ -53,7 +53,11 @@ export default function BottomNav({
     { href: "/feed", label: t("nav.feed"), icon: FeedIcon },
     { href: "/explore", label: t("nav.explore"), icon: ExploreIcon },
     { href: "/saved", label: t("nav.tickets"), icon: TicketIcon },
-    { href: "/recuerdos", label: t("nav.recuerdos"), icon: RecuerdosIcon },
+    // #230 is a fan-account reformat only: a fan gets the new Recuerdos tab here,
+    // while artists/pros/admins keep the Friends tab exactly as before.
+    role === "fan"
+      ? { href: "/recuerdos", label: t("nav.recuerdos"), icon: RecuerdosIcon }
+      : { href: "/friends", label: t("nav.friends"), icon: FriendsIcon },
     {
       href: "/profile",
       label: t("nav.profile"),
@@ -76,7 +80,11 @@ export default function BottomNav({
         // are personal - send them to sign in (with next, so they land back on
         // the tab they wanted) rather than to a page that just bounces them.
         const requiresAccount =
-          isGuest && (item.href === "/saved" || item.href === "/recuerdos" || item.href === "/profile");
+          isGuest &&
+          (item.href === "/saved" ||
+            item.href === "/recuerdos" ||
+            item.href === "/friends" ||
+            item.href === "/profile");
         const href = requiresAccount
           ? `/signin?next=${encodeURIComponent(item.href)}`
           : item.href;
