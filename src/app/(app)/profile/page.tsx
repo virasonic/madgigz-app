@@ -7,7 +7,6 @@ import {
   fetchAttendedEvents,
   fetchCurrentUser,
   fetchMadGigzShows,
-  fetchNotAttendedEventIds,
   fetchPastSavedEvents,
   fetchSavedEvents,
   fetchShowsByArtist,
@@ -38,7 +37,6 @@ export default async function ProfilePage() {
     proShows,
     attendedEvents,
     pastSaved,
-    notAttendedIds,
     unreadCount,
     intro,
     fiscalProvided,
@@ -66,11 +64,6 @@ export default async function ProfilePage() {
       user.role === "fan" ? fetchAttendedEvents(supabase, user.id) : Promise.resolve([]),
       // Past saved shows -> candidates for the "Were you there?" prompt.
       user.role === "fan" ? fetchPastSavedEvents(supabase, user.id) : Promise.resolve([]),
-      // Shows the fan already answered "No, I didn't go" to, so the prompt below
-      // can exclude them and stop re-asking (#116).
-      user.role === "fan"
-        ? fetchNotAttendedEventIds(supabase, user.id)
-        : Promise.resolve<string[]>([]),
       fetchUnreadCount(supabase, user.id),
       isArtistRole(user.role) ? fetchArtistIntro(supabase, user.id) : Promise.resolve(null),
       // Fiscal details (#97) are an organiser concern; fans never see the card.
@@ -92,15 +85,6 @@ export default async function ProfilePage() {
   // stat tracks the wall (attendedEvents is already that union, deduped).
   const attendedCount = attendedEvents.length;
 
-  // "Were you there?" candidates: past shows the fan saved that aren't already on
-  // the wall (scanned or manually marked). Those are exactly the ones worth
-  // asking about.
-  const attendedIds = new Set(attendedEvents.map((e) => e.id));
-  const notAttended = new Set(notAttendedIds);
-  const attendanceCandidates = pastSaved.filter(
-    (e) => !attendedIds.has(e.id) && !notAttended.has(e.id)
-  );
-
   // The Saved wall used to drop a gig the moment its date passed; now it keeps
   // the past ones too (Vir, Oct 2026). Hand SavedShowsGrid both halves - it does
   // the ordering (upcoming soonest-first, then past most-recent-first). The two
@@ -115,9 +99,6 @@ export default async function ProfilePage() {
       attendedCount={attendedCount}
       shows={shows}
       taggedShows={taggedShows}
-      savedEvents={allSavedEvents}
-      attendedEvents={attendedEvents}
-      attendanceCandidates={attendanceCandidates}
       unreadCount={unreadCount}
       initialIntro={intro}
       fiscalProvided={fiscalProvided}

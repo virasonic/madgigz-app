@@ -74,7 +74,7 @@ function CollageItem({
   );
 }
 
-export function PosterCollage({ events }: { events: EventItem[] }) {
+function PosterCollage({ events }: { events: EventItem[] }) {
   // Measure the grid's own width so a tile's pixel height can be derived from
   // its aspect ratio. ResizeObserver (not a layout effect) keeps the setState
   // out of the effect body; a sensible default avoids a first-paint collapse.

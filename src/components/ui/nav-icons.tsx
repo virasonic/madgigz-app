@@ -159,6 +159,20 @@ export function FriendsIcon(active: boolean) {
   );
 }
 
+// Recuerdos (#230): a poster-wall collage of varied tiles — the attended wall /
+// memories tab. Deliberately uneven, so it reads as a wall of posters rather
+// than the uniform Explore grid.
+export function RecuerdosIcon(active: boolean) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <rect x="3.5" y="3.5" width="7.5" height="10" rx="1.5" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+      <rect x="13" y="3.5" width="7.5" height="6" rx="1.5" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+      <rect x="13" y="11.5" width="7.5" height="9" rx="1.5" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+      <rect x="3.5" y="15.5" width="7.5" height="5" rx="1.5" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} />
+    </svg>
+  );
+}
+
 // Notifications. The bell lives on the Profile tab dot on mobile, but the
 // desktop sidebar gives it its own row, so it needs its own icon.
 export function BellIcon(active: boolean) {

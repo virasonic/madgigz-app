@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Avatar from "@/components/ui/Avatar";
 import SocialLinks from "@/components/ui/SocialLinks";
 import { buildSocialLinks } from "@/lib/socials";
@@ -14,9 +14,6 @@ import FiscalIdentityCard from "@/components/artist/FiscalIdentityCard";
 import IntroReel from "@/components/artist/IntroReel";
 import IntroReelModal from "@/components/artist/IntroReelModal";
 import { removeIntroReel } from "./intro-actions";
-import { markAttended, markNotAttended } from "./attendance-actions";
-import PosterWallExportButton from "@/components/profile/PosterWallExportButton";
-import { FanPosterGrid } from "@/components/profile/FanPosterWall";
 import { clearSwitchOnSignOut } from "../account/actions";
 import { createClient } from "@/lib/supabase/client";
 import { clearOfflineTickets } from "@/lib/offline-tickets";
@@ -46,150 +43,6 @@ function formatDate(iso: string, dl: string) {
   });
 }
 
-
-// The Saved wall is deliberately NOT the collage (Vir 1 Oct): it's upcoming
-// shows the fan wants to navigate to, so it stays a normal, scannable 2-col grid
-// of EventCards with the title + date on each (the same tile as Explore), soonest
-// first. The visual poster collage is only for the Attended "memories" wall.
-function SavedShowsGrid({
-  title,
-  subtitle,
-  events,
-}: {
-  title: string;
-  subtitle: string;
-  events: EventItem[];
-}) {
-  const { locale } = useT();
-  const dl = dateLocale(locale);
-  // Upcoming gigs first, closest date at the top; then the past ones the fan
-  // saved, most-recently-gone first (Vir, Oct 2026). date is a plain YYYY-MM-DD
-  // string so the >= compare against today's UTC date is a lexical one.
-  const today = new Date().toISOString().slice(0, 10);
-  const ordered = [...events].sort((a, b) => {
-    const aUpcoming = a.date >= today;
-    const bUpcoming = b.date >= today;
-    if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
-    return aUpcoming ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
-  });
-  return (
-    <div className="mb-8">
-      <h2 className="font-heading text-sm uppercase tracking-wide text-muted">{title}</h2>
-      <p className="mt-1 text-xs text-muted">{subtitle}</p>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        {ordered.map((event) => (
-          // Same tile as Explore (poster + title + date), but a Link straight to
-          // the event, and guarded against an empty image so a posterless saved
-          // show can't crash next/image.
-          <Link
-            key={event.id}
-            href={`/e/${event.id}`}
-            className="relative block aspect-[3/4] w-full overflow-hidden rounded-2xl bg-surface"
-          >
-            {event.image ? (
-              <Image src={event.image} alt={event.title} fill sizes="200px" className="object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center p-3 text-center">
-                <span className="line-clamp-3 font-heading text-sm text-muted">{event.title}</span>
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
-            <div className="absolute inset-x-0 bottom-0 p-3">
-              <p className="line-clamp-1 font-display text-sm text-foreground">{event.title}</p>
-              <p className="text-xs text-muted">{formatDate(event.date, dl)}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// The Attended / Saved walls and the two stat tiles that toggle between them.
-// Isolated so it can drive the active wall from the URL (?wall=attended|saved)
-// via useSearchParams - which needs a Suspense boundary. Keeping the wall in the
-// URL means the browser back button returns to the SAME wall after a poster's
-// event page is visited (#201, Vir 1 Oct); without it, coming back reset to the
-// default wall.
-function AttendedSavedWalls({
-  attendedCount,
-  savedCount,
-  attendedEvents,
-  savedEvents,
-}: {
-  attendedCount: number;
-  savedCount: number;
-  attendedEvents: EventItem[];
-  savedEvents: EventItem[];
-}) {
-  const { t } = useT();
-  const searchParams = useSearchParams();
-  const param = searchParams.get("wall");
-  // Default to the upcoming "Saved" wall (#199), falling back to Attended when
-  // there's nothing upcoming. A ?wall pointing at an empty wall falls back too.
-  let wall: "attended" | "saved" =
-    param === "attended" || param === "saved" ? param : savedEvents.length > 0 ? "saved" : "attended";
-  if (wall === "saved" && savedEvents.length === 0 && attendedEvents.length > 0) wall = "attended";
-  if (wall === "attended" && attendedEvents.length === 0 && savedEvents.length > 0) wall = "saved";
-
-  function show(next: "attended" | "saved") {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("wall", next);
-    // replaceState (not push) so toggling doesn't stack history; Next patches it
-    // back into useSearchParams so the switch is shallow (no server re-run, no
-    // scroll jump), yet the URL still carries the wall for the back button.
-    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
-  }
-
-  return (
-    <>
-      {/* The two stats double as a toggle (#180): tap Attended to see the
-          memories wall (#116), tap Saved to see upcoming saved shows. The
-          active one is ringed; a stat with nothing behind it isn't tappable
-          (no empty shelf). */}
-      <div className="mb-8 grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          disabled={attendedEvents.length === 0}
-          onClick={() => show("attended")}
-          className={`rounded-2xl bg-surface p-4 text-center transition enabled:hover:bg-surface/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-            wall === "attended" && attendedEvents.length > 0 ? "ring-2 ring-primary" : ""
-          }`}
-        >
-          <p className="font-display text-3xl text-foreground">{attendedCount}</p>
-          <p className="text-sm text-muted">{t("profile.attended")}</p>
-        </button>
-        <button
-          type="button"
-          disabled={savedEvents.length === 0}
-          onClick={() => show("saved")}
-          className={`rounded-2xl bg-surface p-4 text-center transition enabled:hover:bg-surface/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-            wall === "saved" && savedEvents.length > 0 ? "ring-2 ring-primary" : ""
-          }`}
-        >
-          <p className="font-display text-3xl text-foreground">{savedCount}</p>
-          <p className="text-sm text-muted">{t("profile.saved")}</p>
-        </button>
-      </div>
-
-      {wall === "saved" && savedEvents.length > 0 && (
-        <SavedShowsGrid
-          title={t("profile.savedShowsTitle")}
-          subtitle={t("profile.savedShowsSubtitle")}
-          events={savedEvents}
-        />
-      )}
-      {wall === "attended" && attendedEvents.length > 0 && (
-        <FanPosterGrid
-          title={t("profile.pastShowsTitle")}
-          subtitle={t("profile.pastShowsSubtitle")}
-          events={attendedEvents}
-          action={<PosterWallExportButton events={attendedEvents} />}
-        />
-      )}
-    </>
-  );
-}
 
 // Stripe's onboarding return_url points back at /profile?payout=return (and
 // ?payout=refresh if the artist bails partway) - now that PayoutCard lives
@@ -503,11 +356,6 @@ interface ProfileClientProps {
   attendedCount: number;
   shows: EventItem[];
   taggedShows: EventItem[];
-  /** Upcoming shows the fan has saved (#180), for the tappable Saved grid. */
-  savedEvents: EventItem[];
-  attendedEvents: EventItem[];
-  /** Past saved shows not yet on the wall - the "Were you there?" prompt (#116). */
-  attendanceCandidates: EventItem[];
   unreadCount: number;
   /** The artist's pinned intro reel (#143), or null. Null for fans. */
   initialIntro: ContentPost | null;
@@ -530,49 +378,18 @@ export default function ProfileClient({
   attendedCount,
   shows,
   taggedShows,
-  savedEvents,
-  attendedEvents,
-  attendanceCandidates,
   unreadCount,
   initialIntro,
   fiscalProvided,
   proType,
   canSwitchAccounts,
 }: ProfileClientProps) {
-  const { t, locale } = useT();
-  const dl = dateLocale(locale);
+  const { t } = useT();
   const router = useRouter();
-  // #116 manual attendance: the "Were you there?" prompt list. Marking one drops
-  // it from here and (via refresh) moves it onto the wall above.
-  const [candidates, setCandidates] = useState<EventItem[]>(attendanceCandidates);
-  const [markingId, setMarkingId] = useState<string | null>(null);
-
-  async function handleWent(eventId: string) {
-    setMarkingId(eventId);
-    const { ok } = await markAttended(eventId);
-    setMarkingId(null);
-    if (!ok) return;
-    // Drop it from the prompt and refresh so the wall above picks it up.
-    setCandidates((list) => list.filter((e) => e.id !== eventId));
-    router.refresh();
-  }
-
-  // "No, I didn't go": record it (so it stops re-asking) and drop it from the
-  // prompt. Nothing moves to the wall, so no refresh needed.
-  async function handleDidntGo(eventId: string) {
-    setMarkingId(eventId);
-    const { ok } = await markNotAttended(eventId);
-    setMarkingId(null);
-    if (!ok) return;
-    setCandidates((list) => list.filter((e) => e.id !== eventId));
-  }
   const [activeShow, setActiveShow] = useState<EventItem | null>(null);
   // Kept separate from activeShow so the modal knows which one it is looking at:
   // the artist's own show is managed, a show they are only tagged on is not.
   const [activeTaggedShow, setActiveTaggedShow] = useState<EventItem | null>(null);
-  // #180/#199/#201: the Attended/Saved toggle and its two walls live in
-  // AttendedSavedWalls, which keeps the active wall in ?wall so the back button
-  // restores it. Default (upcoming "Saved" first) is decided there.
   // #102: the settings sheet lives in ?settings=1 so the back button closes it
   // instead of leaving the profile. The Stripe payout round-trip (below) and the
   // gear button both open it through this.
@@ -731,77 +548,32 @@ export default function ProfileClient({
               <p className="mt-1 text-sm text-muted">{t("profile.underReviewBody")}</p>
             </div>
           )}
-          {/* Active wall lives in the URL so the back button restores it - see
-              AttendedSavedWalls. Suspense because it reads useSearchParams. */}
-          <Suspense>
-            <AttendedSavedWalls
-              attendedCount={attendedCount}
-              savedCount={savedCount}
-              attendedEvents={attendedEvents}
-              savedEvents={savedEvents}
-            />
-          </Suspense>
-
-          {/* #116 manual attendance: past shows the fan saved but wasn't scanned
-              in to (e.g. tickets bought outside the app). "Yes, I went" adds one
-              to the wall above. Only appears when there's something to ask about. */}
-          {candidates.length > 0 && (
-            <div className="mb-8">
-              <h2 className="font-heading text-sm uppercase tracking-wide text-muted">
-                {t("profile.wereYouThereTitle")}
-              </h2>
-              <p className="mt-1 text-xs text-muted">{t("profile.wereYouThereSubtitle")}</p>
-              <div className="mt-3 flex flex-col gap-2">
-                {candidates.map((event) => (
-                  <div
-                    key={event.id}
-                    className="flex items-center gap-3 rounded-2xl bg-surface p-2.5"
-                  >
-                    <Link
-                      href={`/e/${event.id}`}
-                      className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-background"
-                    >
-                      {event.image ? (
-                        <Image
-                          src={event.image}
-                          alt={event.title}
-                          fill
-                          sizes="56px"
-                          className="object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center p-1 text-center font-heading text-[10px] text-muted">
-                          {event.title}
-                        </span>
-                      )}
-                    </Link>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-foreground">{event.title}</p>
-                      <p className="truncate text-xs text-muted">{formatDate(event.date, dl)}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleDidntGo(event.id)}
-                        disabled={markingId === event.id}
-                        className="rounded-full border border-muted/30 px-3 py-1.5 text-xs font-heading text-muted transition-colors hover:text-foreground disabled:opacity-50"
-                      >
-                        {t("profile.wereYouThereNo")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleWent(event.id)}
-                        disabled={markingId === event.id}
-                        className="rounded-full bg-primary px-3 py-1.5 text-xs font-heading text-foreground disabled:opacity-50"
-                      >
-                        {markingId === event.id ? t("common.saving") : t("profile.wereYouThereYes")}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* #230: the attended wall + export moved to the Recuerdos tab,
+              and saved shows live in the Tickets tab. The two counters stay as
+              links to those tabs; Friends (off the bottom nav now) gets a row. */}
+          <div className="mb-8 grid grid-cols-2 gap-3">
+            <Link
+              href="/recuerdos"
+              className="rounded-2xl bg-surface p-4 text-center transition hover:bg-surface/70"
+            >
+              <p className="font-display text-3xl text-foreground">{attendedCount}</p>
+              <p className="text-sm text-muted">{t("profile.attended")}</p>
+            </Link>
+            <Link
+              href="/saved"
+              className="rounded-2xl bg-surface p-4 text-center transition hover:bg-surface/70"
+            >
+              <p className="font-display text-3xl text-foreground">{savedCount}</p>
+              <p className="text-sm text-muted">{t("profile.saved")}</p>
+            </Link>
+          </div>
+          <Link
+            href="/friends"
+            className="mb-8 flex items-center justify-between rounded-2xl bg-surface px-4 py-3.5"
+          >
+            <span className="text-sm text-foreground">{t("nav.friends")}</span>
+            <span aria-hidden="true" className="text-muted">→</span>
+          </Link>
         </>
       ) : !isPro && user.artistStatus !== "approved" ? (
         <div className="mb-8 rounded-2xl bg-surface p-5 text-center">
