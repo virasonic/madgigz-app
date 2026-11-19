@@ -58,6 +58,7 @@ export const en = {
     explore: "Explore",
     tickets: "Tickets",
     friends: "Friends",
+    recuerdos: "Memories",
     profile: "Profile",
   },
 
@@ -480,6 +481,7 @@ export const en = {
     // The past-events poster wall (#116) - shows you were scanned in to.
     pastShowsTitle: "Where you've been",
     pastShowsSubtitle: "The shows you turned up to.",
+    recuerdosEmpty: "Mark the gigs you've been to and they'll show up here.",
     // One-tap story image of the attended wall (#228).
     wallShare: "Share my wall",
     wallPhotosToggle: "My photos",

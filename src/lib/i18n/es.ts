@@ -55,6 +55,7 @@ export const es: Messages = {
     explore: "Explorar",
     tickets: "Entradas",
     friends: "Amigos",
+    recuerdos: "Recuerdos",
     profile: "Perfil",
   },
 
@@ -453,6 +454,7 @@ export const es: Messages = {
     // El muro de carteles de eventos pasados (#116).
     pastShowsTitle: "Dónde has estado",
     pastShowsSubtitle: "Los conciertos a los que fuiste.",
+    recuerdosEmpty: "Marca los conciertos a los que has ido y aparecerán aquí.",
     wallShare: "Compartir mi muro",
     wallPhotosToggle: "Mis fotos",
     wallSharing: "Preparando tu muro…",
