@@ -99,25 +99,32 @@ export async function logPosterWallExport(showCount: number): Promise<{ ok: bool
   return { ok: !error };
 }
 
-// The caller's OWN fan photos, for mixing into the poster-wall export (#228
-// enrich). Media URLs only, newest first, capped — it's the fan's own wall so
-// any status is included (a photo awaiting artist approval is still their
-// memory). Owner-scoped and RLS-backed. Soft-fails to [] so a missing table
-// (42P01) or a grant gap (42501) degrades to a posters-only export rather than
-// breaking the share.
-export async function getMyFanPhotos(): Promise<string[]> {
+// The caller's OWN fan photos, grouped by the event they were taken at, for the
+// poster-wall exports (#228). The Wall interleaves them all; the Timeline and
+// One Night formats key them to each night. Newest first, capped — it's the
+// fan's own wall so any status is included (a photo awaiting artist approval is
+// still their memory). Owner-scoped and RLS-backed. Soft-fails to {} so a
+// missing table (42P01) or a grant gap (42501) degrades to a posters-only
+// export rather than breaking the share.
+export async function getMyFanPhotosByEvent(): Promise<Record<string, string[]>> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  if (!user) return {};
 
   const { data, error } = await supabase
     .from("fan_photos")
-    .select("media_url")
+    .select("media_url, event_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
-    .limit(40);
-  if (error || !data) return [];
-  return data.map((r) => r.media_url as string).filter(Boolean);
+    .limit(120);
+  if (error || !data) return {};
+
+  const byEvent: Record<string, string[]> = {};
+  for (const row of data as { media_url: string | null; event_id: string | null }[]) {
+    if (!row.media_url || !row.event_id) continue;
+    (byEvent[row.event_id] ??= []).push(row.media_url);
+  }
+  return byEvent;
 }

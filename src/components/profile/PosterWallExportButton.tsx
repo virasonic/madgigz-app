@@ -1,32 +1,48 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { getMyFanPhotos, logPosterWallExport } from "@/app/(app)/profile/attendance-actions";
+import { getMyFanPhotosByEvent, logPosterWallExport } from "@/app/(app)/profile/attendance-actions";
 import { useT } from "@/lib/i18n/LocaleProvider";
-import { renderPosterWall, savePosterWall, sharePosterWall } from "@/lib/poster-wall-export";
+import {
+  renderNightStory,
+  renderPosterWall,
+  renderTimelineStory,
+  savePosterWall,
+  sharePosterWall,
+  type StoryCopy,
+  type WallFormat,
+} from "@/lib/poster-wall-export";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 import type { EventItem } from "@/lib/types";
 
-// "Share my wall" (#228): tapping opens a sheet - a live preview of the story
-// image, a toggle for what to weave in, and then the choice of handing it to the
-// share sheet (stories) or saving it. It used to render and share/download in a
-// single tap, which on a laptop just dropped a file in Downloads with no preview
-// and no choice (Vir, 20 Nov) - the designed flow is a sheet, matching the
-// approved mockup.
+// "Share my wall" (#228): tapping opens a sheet - a live preview of the real
+// exported image, a format picker (the three "slide" designs), and the choice
+// of handing it to the share sheet or saving it. It used to render and
+// share/download in a single tap, which on a laptop just dropped a file in
+// Downloads with no preview and no choice (Vir, 20 Nov).
 //
-// The preview is the REAL exported image, re-rendered when the toggle flips, so
-// what you see is exactly what leaves. The usage log is written only once the
-// image has actually gone - a dismissed share, or a device that can't, is not an
-// export.
+// Three formats, all 9:16, matching the approved mockup:
+//   wall     - the poster collage (toggle to weave your own photos in)
+//   timeline - the latest month's gigs as a timeline
+//   night    - the most recent night spotlit with its own photos
+// The preview is the REAL exported image, re-rendered when anything changes, so
+// what you see is exactly what leaves.
 
-type Note = "unsupported" | "failed" | "downloaded" | null;
+type Note = "unsupported" | "failed" | null;
 const FILENAME = "madgigz-wall.jpg";
 
+const FORMATS: { key: WallFormat; labelKey: string }[] = [
+  { key: "wall", labelKey: "profile.wallFormatWall" },
+  { key: "timeline", labelKey: "profile.wallFormatTimeline" },
+  { key: "night", labelKey: "profile.wallFormatNight" },
+];
+
 export default function PosterWallExportButton({ events }: { events: EventItem[] }) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [open, setOpen] = useState(false);
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photosByEvent, setPhotosByEvent] = useState<Record<string, string[]>>({});
+  const [format, setFormat] = useState<WallFormat>("wall");
   const [includePhotos, setIncludePhotos] = useState(true);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -35,13 +51,30 @@ export default function PosterWallExportButton({ events }: { events: EventItem[]
   const { handleProps, sheetStyle } = useDragToDismiss(() => setOpen(false));
 
   const count = events.length;
+  const allPhotos = useMemo(() => Object.values(photosByEvent).flat(), [photosByEvent]);
 
-  // Load the fan's own photos lazily so the toggle only shows when there's
-  // something to include. The action soft-fails to [] (missing table / grant).
+  // Newest first, as the profile shows them, and reused by every format.
+  const ordered = useMemo(() => [...events].sort((a, b) => b.date.localeCompare(a.date)), [events]);
+
+  // Dates render en-GB in both locales by design; month names are prose, so
+  // they follow the viewer's locale.
+  const formatDate = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    return (d: string) => fmt.format(new Date(`${d}T00:00:00`)).toUpperCase();
+  }, []);
+  const monthName = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(locale === "es" ? "es-ES" : "en-GB", { month: "long" });
+    return (d: string) => {
+      const m = fmt.format(new Date(`${d}T00:00:00`));
+      return m.charAt(0).toUpperCase() + m.slice(1);
+    };
+  }, [locale]);
+
+  // Load the fan's own photos (grouped by night) lazily. Soft-fails to {}.
   useEffect(() => {
     let alive = true;
-    getMyFanPhotos().then((urls) => {
-      if (alive) setPhotos(urls);
+    getMyFanPhotosByEvent().then((map) => {
+      if (alive) setPhotosByEvent(map);
     });
     return () => {
       alive = false;
@@ -49,24 +82,61 @@ export default function PosterWallExportButton({ events }: { events: EventItem[]
   }, []);
 
   // Render (or re-render) the preview whenever the sheet is open and the inputs
-  // change. previewUrl === null while open means "rendering" - the toggle
-  // handler clears it so the spinner comes back during a re-render.
+  // change. previewUrl === null while open means "rendering".
   useEffect(() => {
     if (!open) return;
     let active = true;
     const run = async () => {
+      const footer = t("profile.wallImageFooter");
       let out: Blob | null = null;
       try {
-        out = await renderPosterWall(
-          [...events].sort((a, b) => b.date.localeCompare(a.date)),
-          {
+        if (format === "timeline") {
+          const latest = ordered[0]?.date.slice(0, 7);
+          const monthEvents = latest ? ordered.filter((e) => e.date.slice(0, 7) === latest) : [];
+          const copy: StoryCopy = {
+            title: t("profile.wallTimelineTitle"),
+            subtitle: t("profile.wallTimelineSub", {
+              month: latest ? monthName(`${latest}-01`) : "",
+              count: monthEvents.length,
+            }),
+            footer,
+          };
+          const rows = monthEvents.map((e) => ({
+            posterUrl: e.image,
+            dateLabel: formatDate(e.date),
+            title: e.title,
+            venue: e.venue ?? "",
+            photoUrl: photosByEvent[e.id]?.[0] ?? null,
+          }));
+          out = await renderTimelineStory(copy, rows);
+        } else if (format === "night") {
+          const night = ordered.find((e) => (photosByEvent[e.id]?.length ?? 0) > 0) ?? ordered.find((e) => e.image) ?? ordered[0];
+          if (night) {
+            const copy: StoryCopy = {
+              title: t("profile.wallNightTitle"),
+              subtitle: t("profile.wallNightSub"),
+              footer,
+            };
+            out = await renderNightStory(
+              copy,
+              {
+                posterUrl: night.image,
+                eyebrow: t("profile.wallNightEyebrow"),
+                title: night.title,
+                dateVenue: `${formatDate(night.date)} · ${night.venue ?? ""}`,
+              },
+              photosByEvent[night.id] ?? [],
+              t("profile.wallNightPhotos")
+            );
+          }
+        } else {
+          const copy: StoryCopy = {
             title: t("profile.wallImageTitle"),
             subtitle: count === 1 ? t("profile.wallImageCountOne") : t("profile.wallImageCount", { count }),
-            footer: t("profile.wallImageFooter"),
-            more: (n) => t("profile.wallImageMore", { count: n }),
-          },
-          { photos: includePhotos ? photos : [] }
-        );
+            footer,
+          };
+          out = await renderPosterWall(ordered, copy, { photos: includePhotos ? allPhotos : [] });
+        }
       } catch {
         out = null;
       }
@@ -87,7 +157,7 @@ export default function PosterWallExportButton({ events }: { events: EventItem[]
     return () => {
       active = false;
     };
-  }, [open, includePhotos, photos, events, count, t]);
+  }, [open, format, includePhotos, photosByEvent, allPhotos, ordered, count, formatDate, monthName, t]);
 
   // Revoke the last preview URL when the component goes away.
   useEffect(
@@ -97,17 +167,27 @@ export default function PosterWallExportButton({ events }: { events: EventItem[]
     []
   );
 
-  function openSheet() {
-    setNote(null);
+  function clearPreview() {
     setBlob(null);
     setPreviewUrl(null);
+  }
+
+  function openSheet() {
+    setNote(null);
+    clearPreview();
     setOpen(true);
+  }
+
+  function pickFormat(next: WallFormat) {
+    if (next === format) return;
+    setNote(null);
+    setFormat(next);
+    clearPreview();
   }
 
   function togglePhotos(next: boolean) {
     setIncludePhotos(next);
-    setBlob(null);
-    setPreviewUrl(null); // show the spinner while it re-renders
+    clearPreview();
   }
 
   function finish(outcome: Awaited<ReturnType<typeof sharePosterWall>>) {
@@ -171,6 +251,23 @@ export default function PosterWallExportButton({ events }: { events: EventItem[]
               <h2 className="font-display text-xl text-foreground">{t("profile.wallShare")}</h2>
               <p className="mt-1 text-sm text-muted">{t("profile.wallSheetSub")}</p>
 
+              {/* Format picker - the three slide designs. */}
+              <div className="mt-4 flex gap-1.5 rounded-full bg-background p-1">
+                {FORMATS.map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => pickFormat(f.key)}
+                    aria-pressed={format === f.key}
+                    className={`flex-1 rounded-full px-3 py-2 text-xs font-heading transition-colors ${
+                      format === f.key ? "bg-primary text-foreground" : "text-muted hover:text-foreground"
+                    }`}
+                  >
+                    {t(f.labelKey)}
+                  </button>
+                ))}
+              </div>
+
               {/* The real exported image, so the preview can't drift from it. */}
               <div className="mt-4 flex justify-center">
                 <div className="relative aspect-[9/16] w-[62%] max-w-[230px] overflow-hidden rounded-2xl border border-muted/20 bg-background">
@@ -189,7 +286,7 @@ export default function PosterWallExportButton({ events }: { events: EventItem[]
                 </div>
               </div>
 
-              {photos.length > 0 && (
+              {format === "wall" && allPhotos.length > 0 && (
                 <div className="mt-4 flex justify-center">
                   <button
                     type="button"
