@@ -30,6 +30,7 @@ import type { EventItem } from "@/lib/types";
 // what you see is exactly what leaves.
 
 type Note = "unsupported" | "failed" | null;
+type WallContent = "posters" | "both" | "photos";
 const FILENAME = "madgigz-wall.jpg";
 
 const FORMATS: { key: WallFormat; labelKey: string }[] = [
@@ -38,12 +39,21 @@ const FORMATS: { key: WallFormat; labelKey: string }[] = [
   { key: "night", labelKey: "profile.wallFormatNight" },
 ];
 
+// The Wall can draw just posters, posters woven with the fan's photos, or just
+// the photos (Vir, 20 Nov). The lib needs no change: pass no posters, or no
+// photos, for the two ends.
+const WALL_CONTENTS: { key: WallContent; labelKey: string }[] = [
+  { key: "posters", labelKey: "profile.wallContentPosters" },
+  { key: "both", labelKey: "profile.wallContentBoth" },
+  { key: "photos", labelKey: "profile.wallContentPhotos" },
+];
+
 export default function PosterWallExportButton({ events }: { events: EventItem[] }) {
   const { t, locale } = useT();
   const [open, setOpen] = useState(false);
   const [photosByEvent, setPhotosByEvent] = useState<Record<string, string[]>>({});
   const [format, setFormat] = useState<WallFormat>("wall");
-  const [includePhotos, setIncludePhotos] = useState(true);
+  const [wallContent, setWallContent] = useState<WallContent>("both");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [note, setNote] = useState<Note>(null);
@@ -135,7 +145,9 @@ export default function PosterWallExportButton({ events }: { events: EventItem[]
             subtitle: count === 1 ? t("profile.wallImageCountOne") : t("profile.wallImageCount", { count }),
             footer,
           };
-          out = await renderPosterWall(ordered, copy, { photos: includePhotos ? allPhotos : [] });
+          const posterArg = wallContent === "photos" ? [] : ordered;
+          const photoArg = wallContent === "posters" ? [] : allPhotos;
+          out = await renderPosterWall(posterArg, copy, { photos: photoArg });
         }
       } catch {
         out = null;
@@ -157,7 +169,7 @@ export default function PosterWallExportButton({ events }: { events: EventItem[]
     return () => {
       active = false;
     };
-  }, [open, format, includePhotos, photosByEvent, allPhotos, ordered, count, formatDate, monthName, t]);
+  }, [open, format, wallContent, photosByEvent, allPhotos, ordered, count, formatDate, monthName, t]);
 
   // Revoke the last preview URL when the component goes away.
   useEffect(
@@ -185,8 +197,9 @@ export default function PosterWallExportButton({ events }: { events: EventItem[]
     clearPreview();
   }
 
-  function togglePhotos(next: boolean) {
-    setIncludePhotos(next);
+  function pickWallContent(next: WallContent) {
+    if (next === wallContent) return;
+    setWallContent(next);
     clearPreview();
   }
 
@@ -286,29 +299,23 @@ export default function PosterWallExportButton({ events }: { events: EventItem[]
                 </div>
               </div>
 
+              {/* What the Wall is made of: posters, both, or just your photos.
+                  Only when the fan actually has photos to choose. */}
               {format === "wall" && allPhotos.length > 0 && (
-                <div className="mt-4 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => togglePhotos(!includePhotos)}
-                    aria-pressed={includePhotos}
-                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-heading transition-colors ${
-                      includePhotos ? "bg-primary text-foreground" : "bg-background text-muted"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-4 w-4 items-center justify-center rounded-full border ${
-                        includePhotos ? "border-foreground/70" : "border-muted/50"
+                <div className="mt-4 flex gap-1.5 rounded-full bg-background p-1">
+                  {WALL_CONTENTS.map((c) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      onClick={() => pickWallContent(c.key)}
+                      aria-pressed={wallContent === c.key}
+                      className={`flex-1 rounded-full px-3 py-2 text-xs font-heading transition-colors ${
+                        wallContent === c.key ? "bg-primary text-foreground" : "text-muted hover:text-foreground"
                       }`}
                     >
-                      {includePhotos && (
-                        <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" aria-hidden="true">
-                          <path d="M5 12l5 5 9-9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </span>
-                    {t("profile.wallPhotosToggle")}
-                  </button>
+                      {t(c.labelKey)}
+                    </button>
+                  ))}
                 </div>
               )}
 
