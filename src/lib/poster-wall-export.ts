@@ -258,6 +258,33 @@ async function shareViaShell(blob: Blob, filename: string, title: string): Promi
  * that can do neither (an Android build without the share plugin) reports
  * `unsupported` so the UI can say so instead of silently doing nothing.
  */
+/**
+ * The explicit "Save image" action from the share sheet (#228). On the web it's
+ * a plain download. Inside the native shell there's nowhere a raw download lands
+ * usefully, so it routes through the OS share sheet (which carries "Save to
+ * Photos") - same path as sharePosterWall. A native WebView that can do neither
+ * reports `unsupported` so the UI can say so.
+ */
+export async function savePosterWall(blob: Blob, filename: string, title: string): Promise<WallShareOutcome> {
+  if (isNativeApp()) return sharePosterWall(blob, filename, title);
+  const nav = typeof navigator === "undefined" ? null : navigator;
+  try {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    if (/\bwv\b|; wv\)/.test(nav?.userAgent ?? "")) {
+      URL.revokeObjectURL(url);
+      return "unsupported";
+    }
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    return "downloaded";
+  } catch {
+    return "failed";
+  }
+}
+
 export async function sharePosterWall(blob: Blob, filename: string, title: string): Promise<WallShareOutcome> {
   if (isNativeApp()) {
     const native = await shareViaShell(blob, filename, title);
