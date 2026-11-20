@@ -433,8 +433,11 @@ export default function ProfileClient({
   const ticketsSold = useMemo(() => shows.reduce((sum, show) => sum + show.sold, 0), [shows]);
   // Active shows split into upcoming vs past (#141) so an artist's own list stops
   // showing gigs that already happened under the same heading as what's coming up.
+  // A scheduled show (#204) is hidden from fans but not "hidden" to its owner:
+  // it belongs under Upcoming with its Scheduled badge, not in the collapsed
+  // hidden list - that list is for shows the artist took down themselves.
   const upcomingShows = useMemo(
-    () => shows.filter((show) => show.active && show.date >= TODAY),
+    () => shows.filter((show) => (show.active || isScheduled(show)) && show.date >= TODAY),
     [shows]
   );
   const pastShows = useMemo(
@@ -448,7 +451,10 @@ export default function ProfileClient({
     () => taggedShows.filter((show) => show.active && show.date >= TODAY),
     [taggedShows]
   );
-  const hiddenShows = useMemo(() => shows.filter((show) => !show.active), [shows]);
+  const hiddenShows = useMemo(
+    () => shows.filter((show) => !show.active && !isScheduled(show)),
+    [shows]
+  );
 
   async function handleLogOut() {
     const supabase = createClient();
