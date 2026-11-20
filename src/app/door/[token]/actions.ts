@@ -11,6 +11,8 @@ import { touchDoorLink, verifyDoorToken } from "@/lib/door-links";
 import type { ScanOutcome } from "@/lib/scan-outcome";
 import { countAdmissions, type AdmissionCount, type AdmissionRow } from "@/lib/scan-stats";
 import { mapTicket, type TicketRow } from "@/lib/types";
+import { fetchGuestList } from "@/lib/supabase/queries";
+import type { GuestEntry } from "@/lib/guest-list";
 
 export async function doorLookup(token: string, code: string): Promise<ScanOutcome> {
   const admin = createAdminClient();
@@ -86,4 +88,18 @@ export async function doorCheckIn(token: string, ticketId: string): Promise<bool
     .is("checked_in_at", null)
     .select("id");
   return !error && !!data && data.length > 0;
+}
+
+/**
+ * The guest list for the link's show, for finding someone and checking them in
+ * by hand when their QR can't be scanned. The link is a bearer capability for
+ * the door of this one show, and the door needs names to do its job - so the
+ * list carries usernames, seats and tiers, and nothing about money or the
+ * buyer beyond that (see GuestEntry). Null when the link has died.
+ */
+export async function doorGuests(token: string): Promise<GuestEntry[] | null> {
+  const admin = createAdminClient();
+  const link = await verifyDoorToken(admin, token);
+  if (!link.ok) return null;
+  return fetchGuestList(admin, link.event.id);
 }

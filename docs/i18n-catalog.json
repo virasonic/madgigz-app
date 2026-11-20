@@ -941,7 +941,18 @@
       "linkExpiredBody": "Ask the organiser for a new link.",
       "doorInvalidTitle": "This door link isn't valid",
       "doorInvalidBody": "Check you opened the whole link, or ask the organiser for a new one.",
-      "admitted": "of {total} checked in"
+      "admitted": "of {total} checked in",
+      "guestList": "Guest list",
+      "guestPickShow": "Which show?",
+      "guestNoShows": "No shows to check people into.",
+      "guestSearch": "Search by username",
+      "guestLoading": "Loading…",
+      "guestEmpty": "No tickets sold yet.",
+      "guestNoMatch": "Nobody matching “{query}”.",
+      "guestSeat": "Seat {seat}",
+      "guestCheckIn": "Check in",
+      "guestInAt": "In · {time}",
+      "guestFailed": "Couldn't check in - already in, or the link has expired."
     },
     "doorLinks": {
       "title": "Door links",
@@ -2233,7 +2244,18 @@
       "linkExpiredBody": "Pide al organizador un enlace nuevo.",
       "doorInvalidTitle": "Este enlace de puerta no es válido",
       "doorInvalidBody": "Comprueba que has abierto el enlace completo o pide al organizador uno nuevo.",
-      "admitted": "de {total} han entrado"
+      "admitted": "de {total} han entrado",
+      "guestList": "Lista de asistentes",
+      "guestPickShow": "¿Qué concierto?",
+      "guestNoShows": "No hay conciertos en los que dar entrada.",
+      "guestSearch": "Buscar por nombre de usuario",
+      "guestLoading": "Cargando…",
+      "guestEmpty": "Aún no se ha vendido ninguna entrada.",
+      "guestNoMatch": "Nadie coincide con “{query}”.",
+      "guestSeat": "Asiento {seat}",
+      "guestCheckIn": "Dar entrada",
+      "guestInAt": "Dentro · {time}",
+      "guestFailed": "No se pudo dar entrada: ya está dentro o el enlace ha caducado."
     },
     "doorLinks": {
       "title": "Enlaces de puerta",

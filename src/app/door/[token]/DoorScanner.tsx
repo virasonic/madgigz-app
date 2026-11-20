@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import ScannerView from "@/components/scan/ScannerView";
 import LanguageToggle from "@/components/ui/LanguageToggle";
-import { doorCheckIn, doorLookup, doorStats } from "./actions";
+import { doorCheckIn, doorGuests, doorLookup, doorStats } from "./actions";
 
 // The door link's half of the scanner (#218): the same ScannerView as
 // /profile/scan, resolving codes through the token-scoped server actions
@@ -26,6 +26,9 @@ export default function DoorScanner({
   // The link is already scoped to one show, so the event id the view passes
   // back is the same one - the token decides, not the argument.
   const stats = useCallback(() => doorStats(token), [token]);
+  // The guest list for a manual check-in (#233); a dead link reads as empty,
+  // and the check-in itself is refused by the token check either way.
+  const guests = useCallback(async () => (await doorGuests(token)) ?? [], [token]);
 
   // Dates render en-GB in both locales, by design (see i18n notes).
   const dateLabel = new Date(eventDate).toLocaleDateString("en-GB", {
@@ -40,6 +43,7 @@ export default function DoorScanner({
       checkIn={checkIn}
       stats={stats}
       eventId={eventId}
+      guests={guests}
       header={
         <>
           <div className="min-w-0">

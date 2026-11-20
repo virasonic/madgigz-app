@@ -2,7 +2,9 @@
 
 import jsQR from "jsqr";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import GuestList from "@/components/scan/GuestList";
 import Button from "@/components/ui/Button";
+import type { GuestEntry, ScanEventOption } from "@/lib/guest-list";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import type { ScanOutcome } from "@/lib/scan-outcome";
 import type { AdmissionCount } from "@/lib/scan-stats";
@@ -22,6 +24,8 @@ export default function ScannerView({
   header,
   stats,
   eventId,
+  guests,
+  events,
 }: {
   /** Resolves a decoded QR value to what the door should see. */
   lookup: (code: string) => Promise<ScanOutcome>;
@@ -40,6 +44,17 @@ export default function ScannerView({
    * logged-in scanner leaves it out and the counter follows the last scan.
    */
   eventId?: string;
+  /**
+   * The guest list for a show, for looking someone up and checking them in by
+   * hand (#233). Optional: without it there is no list button.
+   */
+  guests?: (eventId: string) => Promise<GuestEntry[]>;
+  /**
+   * The shows this scanner could be for, when it isn't pinned to one and
+   * hasn't scanned anything yet (the logged-in scanner): the list asks which
+   * show to open. The door link never needs it.
+   */
+  events?: () => Promise<ScanEventOption[]>;
 }) {
   const { t } = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -63,7 +78,9 @@ export default function ScannerView({
   // the last scanned ticket) and a tick that any scan or check-in bumps to
   // re-read it. Fetching lives in an effect keyed on both, so the camera loop
   // never has to know about it.
-  const [countedEventId, setCountedEventId] = useState<string | null>(eventId ?? null);
+  const [countedEventId, setCountedEventId] = useState<string | null>(
+    eventId ?? null
+  );
   const [statsTick, setStatsTick] = useState(0);
   const [count, setCount] = useState<AdmissionCount | null>(null);
   const statsRef = useRef(stats);
@@ -71,10 +88,80 @@ export default function ScannerView({
     statsRef.current = stats;
   }, [stats]);
 
+  // The guest list panel. It sits over the camera and pauses decoding while
+  // open (a QR drifting into frame mustn't flip the screen under the door's
+  // thumb). Rows are re-read each time it opens and after every check-in made
+  // elsewhere, via the same tick the counter uses.
+  const [listOpen, setListOpen] = useState(false);
+  const [guestRows, setGuestRows] = useState<GuestEntry[] | null>(null);
+  const [eventOptions, setEventOptions] = useState<ScanEventOption[] | null>(
+    null
+  );
+  const guestsRef = useRef(guests);
+  const eventsRef = useRef(events);
+  useEffect(() => {
+    guestsRef.current = guests;
+    eventsRef.current = events;
+  }, [guests, events]);
+
+  useEffect(() => {
+    if (!listOpen || !countedEventId || !guestsRef.current) return;
+    let cancelled = false;
+    guestsRef
+      .current(countedEventId)
+      .then((rows) => {
+        if (!cancelled) setGuestRows(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setGuestRows([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [listOpen, countedEventId, statsTick]);
+
+  useEffect(() => {
+    if (!listOpen || countedEventId || !eventsRef.current) return;
+    let cancelled = false;
+    eventsRef
+      .current()
+      .then((rows) => {
+        if (!cancelled) setEventOptions(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setEventOptions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [listOpen, countedEventId]);
+
+  function openList() {
+    // The camera keeps running underneath (so the stream never has to be
+    // re-acquired) but decoding stops. The result overlay, if up, stays
+    // behind the list and comes back when it closes.
+    pausedRef.current = true;
+    setListOpen(true);
+  }
+
+  function closeList() {
+    setListOpen(false);
+    setGuestRows(null);
+    setEventOptions(null);
+    if (!result) pausedRef.current = false;
+  }
+
+  async function checkInFromList(ticketId: string): Promise<boolean> {
+    const ok = await checkIn(ticketId);
+    if (ok) setStatsTick((n) => n + 1);
+    return ok;
+  }
+
   useEffect(() => {
     if (!countedEventId || !statsRef.current) return;
     let cancelled = false;
-    statsRef.current(countedEventId)
+    statsRef
+      .current(countedEventId)
       .then((next) => {
         if (!cancelled) setCount(next);
       })
@@ -101,7 +188,8 @@ export default function ScannerView({
     if (!audioCtxRef.current) {
       const AC =
         window.AudioContext ??
-        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
       if (!AC) return null;
       audioCtxRef.current = new AC();
     }
@@ -133,7 +221,9 @@ export default function ScannerView({
   // desktop; the check-in / scan-next taps resume it again anyway.
   useEffect(() => {
     function unlock() {
-      void getAudio()?.resume().catch(() => {});
+      void getAudio()
+        ?.resume()
+        .catch(() => {});
     }
     window.addEventListener("pointerdown", unlock, { once: true });
     return () => window.removeEventListener("pointerdown", unlock);
@@ -237,83 +327,141 @@ export default function ScannerView({
   return (
     <div className="flex h-full flex-col p-4">
       <div className="mb-4 flex items-center justify-between">{header}</div>
-      {count && (
-        <p className="-mt-2 mb-3 text-sm text-muted">
-          <span className="font-heading text-foreground">{count.checkedIn}</span>
-          {" "}
-          {t("scan.admitted", { total: count.total })}
-        </p>
-      )}
-
-      {cameraError ? (
-        <div className="rounded-2xl bg-surface p-5 text-sm text-danger">{cameraError}</div>
-      ) : (
-        <div className="relative flex-1 overflow-hidden rounded-3xl bg-black">
-          <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
-          <canvas ref={canvasRef} className="hidden" />
-
-          {!result && (
-            <div className="pointer-events-none absolute inset-8 rounded-3xl border-2 border-foreground/60" />
-          )}
-
-          {result && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80 p-6 text-center">
-              {result.status === "invalid" ? (
-                <>
-                  <p className="font-display text-2xl text-danger">{t("scan.invalidTitle")}</p>
-                  <p className="text-sm text-muted">{t("scan.invalidBody")}</p>
-                </>
-              ) : result.status === "wrongShow" ? (
-                <>
-                  <p className="font-display text-2xl text-danger">{t("scan.wrongShowTitle")}</p>
-                  <p className="text-sm text-muted">{t("scan.wrongShowBody")}</p>
-                </>
-              ) : result.status === "linkExpired" ? (
-                <>
-                  <p className="font-display text-2xl text-danger">{t("scan.linkExpiredTitle")}</p>
-                  <p className="text-sm text-muted">{t("scan.linkExpiredBody")}</p>
-                </>
-              ) : result.status === "cancelled" ? (
-                <>
-                  <p className="font-display text-2xl text-danger">{t("scan.refundedTitle")}</p>
-                  <p className="text-sm text-muted">{t("scan.refundedBody")}</p>
-                  <p className="text-foreground">{result.eventTitle}</p>
-                </>
-              ) : (
-                <>
-                  <p
-                    className={`font-display text-2xl ${
-                      result.status === "duplicate" ? "text-danger" : "text-foreground"
-                    }`}
-                  >
-                    {result.status === "duplicate"
-                      ? t("scan.alreadyCheckedIn")
-                      : checkedInJustNow
-                        ? t("scan.checkedIn")
-                        : t("scan.validTicket")}
-                  </p>
-                  <p className="text-foreground">{result.eventTitle}</p>
-                  <p className="text-sm text-muted">
-                    {result.eventVenue} · {result.quantity}{" "}
-                    {result.quantity === 1 ? t("ticket.one") : t("ticket.many")}
-                  </p>
-                  {/* The ticket type, called out so the door spots an extra (a
-                      "+ beer" tier, VIP, etc.) without reading the fine print. */}
-                  {result.tierName && (
-                    <p className="font-heading text-lg text-accent">{result.tierName}</p>
-                  )}
-                  {result.status === "valid" && !checkedInJustNow && (
-                    <Button onClick={handleCheckIn}>{t("scan.checkIn")}</Button>
-                  )}
-                </>
-              )}
-              <Button variant="ghost" onClick={handleScanNext}>
-                {t("scan.scanNext")}
-              </Button>
-            </div>
+      {(count || guests) && (
+        <div className="-mt-2 mb-3 flex items-center justify-between gap-3">
+          <p className="text-sm text-muted">
+            {count && (
+              <>
+                <span className="font-heading text-foreground">
+                  {count.checkedIn}
+                </span>{" "}
+                {t("scan.admitted", { total: count.total })}
+              </>
+            )}
+          </p>
+          {guests && (
+            <button
+              type="button"
+              onClick={openList}
+              className="font-heading text-sm text-accent"
+            >
+              {t("scan.guestList")}
+            </button>
           )}
         </div>
       )}
+
+      {/* The list panel lives inside this box either way: with the camera
+          refused, the guest list is the only way left to check anyone in. */}
+      <div
+        className={`relative flex-1 overflow-hidden rounded-3xl ${
+          cameraError ? "" : "bg-black"
+        }`}
+      >
+        {cameraError ? (
+          <div className="rounded-2xl bg-surface p-5 text-sm text-danger">
+            {cameraError}
+          </div>
+        ) : (
+          <>
+            <video
+              ref={videoRef}
+              className="h-full w-full object-cover"
+              playsInline
+              muted
+            />
+            <canvas ref={canvasRef} className="hidden" />
+          </>
+        )}
+
+        {!result && !cameraError && (
+          <div className="pointer-events-none absolute inset-8 rounded-3xl border-2 border-foreground/60" />
+        )}
+
+        {result && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80 p-6 text-center">
+            {result.status === "invalid" ? (
+              <>
+                <p className="font-display text-2xl text-danger">
+                  {t("scan.invalidTitle")}
+                </p>
+                <p className="text-sm text-muted">{t("scan.invalidBody")}</p>
+              </>
+            ) : result.status === "wrongShow" ? (
+              <>
+                <p className="font-display text-2xl text-danger">
+                  {t("scan.wrongShowTitle")}
+                </p>
+                <p className="text-sm text-muted">{t("scan.wrongShowBody")}</p>
+              </>
+            ) : result.status === "linkExpired" ? (
+              <>
+                <p className="font-display text-2xl text-danger">
+                  {t("scan.linkExpiredTitle")}
+                </p>
+                <p className="text-sm text-muted">
+                  {t("scan.linkExpiredBody")}
+                </p>
+              </>
+            ) : result.status === "cancelled" ? (
+              <>
+                <p className="font-display text-2xl text-danger">
+                  {t("scan.refundedTitle")}
+                </p>
+                <p className="text-sm text-muted">{t("scan.refundedBody")}</p>
+                <p className="text-foreground">{result.eventTitle}</p>
+              </>
+            ) : (
+              <>
+                <p
+                  className={`font-display text-2xl ${
+                    result.status === "duplicate"
+                      ? "text-danger"
+                      : "text-foreground"
+                  }`}
+                >
+                  {result.status === "duplicate"
+                    ? t("scan.alreadyCheckedIn")
+                    : checkedInJustNow
+                    ? t("scan.checkedIn")
+                    : t("scan.validTicket")}
+                </p>
+                <p className="text-foreground">{result.eventTitle}</p>
+                <p className="text-sm text-muted">
+                  {result.eventVenue} · {result.quantity}{" "}
+                  {result.quantity === 1 ? t("ticket.one") : t("ticket.many")}
+                </p>
+                {/* The ticket type, called out so the door spots an extra (a
+                      "+ beer" tier, VIP, etc.) without reading the fine print. */}
+                {result.tierName && (
+                  <p className="font-heading text-lg text-accent">
+                    {result.tierName}
+                  </p>
+                )}
+                {result.status === "valid" && !checkedInJustNow && (
+                  <Button onClick={handleCheckIn}>{t("scan.checkIn")}</Button>
+                )}
+              </>
+            )}
+            <Button variant="ghost" onClick={handleScanNext}>
+              {t("scan.scanNext")}
+            </Button>
+          </div>
+        )}
+
+        {listOpen && (
+          <GuestList
+            guests={guestRows}
+            events={countedEventId ? undefined : eventOptions}
+            onPickEvent={(id) => {
+              setCountedEventId(id);
+              setStatsTick((n) => n + 1);
+            }}
+            onCheckIn={checkInFromList}
+            onClose={closeList}
+          />
+        )}
+      </div>
     </div>
   );
 }

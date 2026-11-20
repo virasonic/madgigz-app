@@ -5,9 +5,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ScannerView from "@/components/scan/ScannerView";
 import { createClient } from "@/lib/supabase/client";
-import { fetchCurrentUser } from "@/lib/supabase/queries";
-import { EventRow, mapEvent, mapTicket, TicketRow } from "@/lib/types";
-import { canActAsOrganiser } from "@/lib/roles";
+import {
+  fetchCurrentUser,
+  fetchGuestList,
+  fetchMadGigzShows,
+  fetchShowsByArtist,
+  fetchShowsByProAccount,
+} from "@/lib/supabase/queries";
+import { type AppUser, EventRow, mapEvent, mapTicket, TicketRow } from "@/lib/types";
+import { canActAsOrganiser, isArtistRole } from "@/lib/roles";
+import { todayInMadrid } from "@/lib/dates";
+import type { ScanEventOption } from "@/lib/guest-list";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import type { ScanOutcome } from "@/lib/scan-outcome";
 import { countAdmissions, type AdmissionCount, type AdmissionRow } from "@/lib/scan-stats";
@@ -19,7 +27,7 @@ import { countAdmissions, type AdmissionCount, type AdmissionRow } from "@/lib/s
 export default function ScanTicketsPage() {
   const { t } = useT();
   const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
+  const [user, setUser] = useState<AppUser | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -33,7 +41,7 @@ export default function ScanTicketsPage() {
         router.replace("/profile");
         return;
       }
-      setAuthorized(true);
+      setUser(user);
     });
   }, [router]);
 
@@ -109,13 +117,40 @@ export default function ScanTicketsPage() {
     return countAdmissions(data as AdmissionRow[]);
   }, []);
 
-  if (!authorized) return null;
+  // The guest list (#233): the same tickets RLS lets this organiser read, by
+  // username, for a manual check-in when a QR won't scan or a phone is dead.
+  const guests = useCallback((eventId: string) => fetchGuestList(createClient(), eventId), []);
+
+  // Before the first scan the scanner has no show, so the list asks which:
+  // the same shows the profile lists for this role, minus cancelled ones and
+  // anything before yesterday (a door is open tonight, not last month).
+  const events = useCallback(async (): Promise<ScanEventOption[]> => {
+    if (!user) return [];
+    const supabase = createClient();
+    const shows = isArtistRole(user.role)
+      ? await fetchShowsByArtist(supabase, user.id)
+      : user.role === "admin"
+        ? await fetchMadGigzShows(supabase)
+        : user.proType
+          ? await fetchShowsByProAccount(supabase, user.id)
+          : [];
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const floor = todayInMadrid(yesterday);
+    return shows
+      .filter((s) => !s.cancelled && s.date.slice(0, 10) >= floor)
+      .map((s) => ({ id: s.id, title: s.title, venue: s.venue, date: s.date.slice(0, 10) }));
+  }, [user]);
+
+  if (!user) return null;
 
   return (
     <ScannerView
       lookup={lookup}
       checkIn={checkIn}
       stats={stats}
+      guests={guests}
+      events={events}
       header={
         <>
           <h1 className="font-display text-2xl text-foreground">{t("scan.title")}</h1>

@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ARTIST_CAPABLE_ROLES } from "@/lib/roles";
 import { fetchProAccount, type ProAccountType } from "@/lib/pro";
 import type { TaggedArtist } from "@/lib/lineup-links";
+import type { GuestEntry } from "@/lib/guest-list";
 import {
   EMPTY_PREFERENCES,
   type CapacityBucket,
@@ -664,6 +665,57 @@ export async function fetchShowBuyers(
     purchasedAt: t.purchased_at,
     checkedInAt: t.checked_in_at,
     refunded: t.refunded,
+  }));
+}
+
+/**
+ * The door's guest list for a show: every live (unrefunded) ticket with the
+ * buyer's username, seat and tier, for finding someone and checking them in by
+ * hand. Works with whichever client it is handed: the organiser's own (RLS
+ * decides which shows' tickets they can read - exactly the set they can scan)
+ * or the service-role client behind a door link. Usernames are a public
+ * profile column; nothing about money is read.
+ */
+export async function fetchGuestList(
+  supabase: SupabaseClient,
+  eventId: string
+): Promise<GuestEntry[]> {
+  const { data, error } = await supabase
+    .from("tickets")
+    .select("id, user_id, quantity, seat, tier_id, checked_in_at, refunded")
+    .eq("event_id", eventId)
+    .eq("refunded", false);
+  if (error || !data) return [];
+  const rows = data as {
+    id: string;
+    user_id: string;
+    quantity: number;
+    seat: number | null;
+    tier_id: string | null;
+    checked_in_at: string | null;
+  }[];
+  if (rows.length === 0) return [];
+
+  const userIds = [...new Set(rows.map((r) => r.user_id))];
+  const tierIds = [...new Set(rows.map((r) => r.tier_id).filter((id): id is string => !!id))];
+  const [{ data: profiles }, { data: tiers }] = await Promise.all([
+    supabase.from("profiles").select("id, username").in("id", userIds),
+    tierIds.length > 0
+      ? supabase.from("event_tiers").select("id, name").in("id", tierIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
+  const usernameById = new Map((profiles ?? []).map((p) => [p.id as string, p.username as string]));
+  const tierById = new Map((tiers ?? []).map((t) => [t.id as string, t.name as string]));
+
+  return rows.map((r) => ({
+    ticketId: r.id,
+    // A buyer whose profile is gone (account deleted) still holds a seat; the
+    // row stays so the count is honest, with a dash where the name was.
+    username: usernameById.get(r.user_id) ?? "-",
+    quantity: r.quantity,
+    seat: r.seat ?? null,
+    tierName: r.tier_id ? (tierById.get(r.tier_id) ?? null) : null,
+    checkedInAt: r.checked_in_at,
   }));
 }
 
