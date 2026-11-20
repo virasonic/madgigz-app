@@ -173,22 +173,9 @@ export async function renderPosterWall(
     ctx.restore();
   }
 
-  if (layout.overflow > 0) {
-    const label = copy.more(layout.overflow);
-    ctx.font = `800 34px ${display}`;
-    const tw = ctx.measureText(label).width;
-    const bw = tw + 56;
-    const bh = 64;
-    const bx = STORY_WIDTH - PAD - bw;
-    const by = offsetY + Math.min(used, area.height) - bh - 16;
-    ctx.fillStyle = colours.primary;
-    roundedRect(ctx, bx, by, bw, bh, bh / 2);
-    ctx.fill();
-    ctx.fillStyle = colours.foreground;
-    ctx.textBaseline = "middle";
-    ctx.fillText(label, bx + 28, by + bh / 2 + 2);
-    ctx.textBaseline = "alphabetic";
-  }
+  // No "+N more" badge: the subtitle already states the real count, and Vir
+  // (20 Nov) found the orange pill noisy on the exported image. Posters that
+  // don't fit the wall simply don't show.
 
   // Footer.
   ctx.fillStyle = colours.muted;
