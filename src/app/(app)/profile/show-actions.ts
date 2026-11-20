@@ -4,7 +4,14 @@ import { movesDateIntoPast } from "@/lib/dates";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { resolveVenue, syncEventArtists, syncEventGenres } from "@/lib/show-sync";
+import {
+  isScheduleColumnMissing,
+  publishAtError,
+  resolveVenue,
+  scheduleInsertColumns,
+  syncEventArtists,
+  syncEventGenres,
+} from "@/lib/show-sync";
 import { applyEventTiers, type TierInput } from "@/lib/tiers-apply";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -174,6 +181,8 @@ export interface HouseShowInput {
   imageUrl: string | null;
   description: string;
   lineup: string[];
+  /** Scheduled publishing (#204): the instant to go live, or null for now. */
+  publishAt?: string | null;
 }
 
 // An admin creating a MadGigz house show from the app's Add Show form (#214).
@@ -214,6 +223,8 @@ export async function createHouseShow(
   if (!Number.isInteger(input.capacity) || input.capacity < 1) {
     return { error: "Enter a valid capacity" };
   }
+  const scheduleProblem = publishAtError(input.publishAt, { date: input.date, time: input.time });
+  if (scheduleProblem) return { error: scheduleProblem };
 
   const { data: created, error } = await admin
     .from("events")
@@ -242,11 +253,16 @@ export async function createHouseShow(
       ticketing_url: null,
       active: true,
       cancelled: false,
+      ...scheduleInsertColumns(input.publishAt),
     })
     .select("id")
     .single();
 
   if (error || !created) {
+    if (isScheduleColumnMissing(input.publishAt, error)) {
+      console.error("events.publish_at missing - run addendum_071:", error);
+      return { error: "Scheduling needs addendum_071 run on the database - run it, or publish now" };
+    }
     // 42703 / PGRST204 = events.house_run missing, i.e. addendum_020 not run.
     if (error?.code === "42703" || error?.code === "PGRST204") {
       console.error("events.house_run missing - run addendum_020:", error);

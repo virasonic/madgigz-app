@@ -7,6 +7,9 @@ import GenrePicker from "@/components/artist/GenrePicker";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
 import ExtraTagPicker from "@/components/artist/ExtraTagPicker";
 import DateInput from "@/components/ui/DateInput";
+import PublishPicker, { type PublishMode } from "@/components/organiser/PublishPicker";
+import { checkPublishAt, formatPublishAt, isoToMadridFields, madridToIso } from "@/lib/schedule";
+import { dateLocale } from "@/lib/dates";
 import { createAdminEvent, updateAdminEvent } from "@/app/admin/events/event-actions";
 import { createProEvent, updateProEvent } from "@/app/pro/events/event-actions";
 import { setEventTiers } from "@/app/admin/events/tier-actions";
@@ -104,10 +107,19 @@ export default function EventForm({
   // rule itself.
   lockedVenue?: { id: string; name: string } | null;
 }) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  // Scheduled publishing (#204). Offered on create, and on edit only while the
+  // show is still waiting to go live - once it's public there is nothing to
+  // schedule. Seeded from the pending time so an unchanged save keeps it.
+  const schedulable = !existing || existing.publishAt !== null;
+  const pendingFields = existing?.publishAt ? isoToMadridFields(existing.publishAt) : null;
+  const [publishMode, setPublishMode] = useState<PublishMode>(pendingFields ? "later" : "now");
+  const [publishDate, setPublishDate] = useState(pendingFields?.date ?? "");
+  const [publishTime, setPublishTime] = useState(pendingFields?.time ?? "20:00");
 
   const [title, setTitle] = useState(existing?.title ?? "");
   const [artistName, setArtistName] = useState(existing?.artist ?? "");
@@ -202,6 +214,33 @@ export default function EventForm({
       }
     }
 
+    // undefined = leave scheduling alone (editing a live show); null = live
+    // now / publish now; a string = the Madrid instant to go live at. Checked
+    // here with the same rule the server applies, so the message is in the
+    // organiser's language rather than the action's English.
+    let publishAt: string | null | undefined;
+    if (schedulable) {
+      if (publishMode === "later") {
+        const iso = madridToIso(publishDate, publishTime);
+        const problem = iso ? checkPublishAt(iso, { date, time }) : "invalid";
+        if (problem) {
+          setError(
+            t(
+              problem === "past"
+                ? "organiserForm.publishErrPast"
+                : problem === "afterShow"
+                  ? "organiserForm.publishErrAfterShow"
+                  : "organiserForm.publishErrInvalid"
+            )
+          );
+          return;
+        }
+        publishAt = iso;
+      } else {
+        publishAt = null;
+      }
+    }
+
     startTransition(async () => {
       let imageUrl = "";
       if (posterFile) {
@@ -242,6 +281,7 @@ export default function EventForm({
         ageRestriction,
         ticketingMode: ticketing,
         ticketingUrl,
+        publishAt,
       };
 
       const { create, update, setTiers, listPath } = MODES[mode];
@@ -277,6 +317,14 @@ export default function EventForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {error && (
         <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">{error}</p>
+      )}
+
+      {existing?.publishAt && (
+        <p className="rounded-xl bg-accent/10 px-4 py-3 text-sm text-foreground">
+          {t("organiserForm.scheduledNotice", {
+            when: formatPublishAt(existing.publishAt, dateLocale(locale)),
+          })}
+        </p>
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -475,6 +523,29 @@ export default function EventForm({
           onChange={(e) => setDescription(e.target.value)}
         />
       </Field>
+
+      {schedulable && (
+        <div className="rounded-2xl bg-background p-4">
+          <PublishPicker
+            mode={publishMode}
+            onModeChange={setPublishMode}
+            date={publishDate}
+            time={publishTime}
+            onDateChange={setPublishDate}
+            onTimeChange={setPublishTime}
+            inputClassName={`${inputClass} bg-surface`}
+            labels={{
+              heading: t("organiserForm.publish"),
+              now: t("organiserForm.publishNow"),
+              nowHint: t("organiserForm.publishNowHint"),
+              later: t("organiserForm.publishLater"),
+              laterHint: t("organiserForm.publishLaterHint"),
+              date: t("organiserForm.publishDate"),
+              time: t("organiserForm.publishTime"),
+            }}
+          />
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field label={t(existing ? "organiserForm.replacePoster" : "organiserForm.poster")}>

@@ -3,7 +3,15 @@
 import { movesDateIntoPast } from "@/lib/dates";
 import { revalidatePath } from "next/cache";
 import { proClient, requirePro } from "@/lib/supabase/pro-queries";
-import { resolveVenue, syncEventArtists, syncEventGenres } from "@/lib/show-sync";
+import {
+  applyScheduleEdit,
+  isScheduleColumnMissing,
+  publishAtError,
+  resolveVenue,
+  scheduleInsertColumns,
+  syncEventArtists,
+  syncEventGenres,
+} from "@/lib/show-sync";
 import { isProNotReady } from "@/lib/pro";
 import type { AdminEventInput } from "@/app/admin/events/event-actions";
 
@@ -26,6 +34,9 @@ function validate(input: ProEventInput): string | null {
     return "Max per order must be at least 1";
   }
   if (!HEX.test(input.accentColor)) return "Pick an accent colour";
+
+  const scheduleProblem = publishAtError(input.publishAt, { date: input.date, time: input.time });
+  if (scheduleProblem) return scheduleProblem;
 
   if (input.ticketingMode === "external") {
     // Validated rather than trusted: this URL is opened in a fan's browser.
@@ -127,11 +138,17 @@ export async function createProEvent(
       house_run: false,
       active: true,
       cancelled: false,
+      // A scheduled show starts hidden and carries its go-live time (#204).
+      ...scheduleInsertColumns(input.publishAt),
     })
     .select("id")
     .single();
 
   if (error || !created) {
+    if (isScheduleColumnMissing(input.publishAt, error)) {
+      console.error("events.publish_at missing - run addendum_071:", error);
+      return { error: "Scheduling needs addendum_071 run on the database - run it, or publish now" };
+    }
     // events.pro_account_id missing, i.e. addendum_051 hasn't been run here.
     if (isProNotReady(error)) {
       console.error("events.pro_account_id missing - run addendum_051:", error);
@@ -232,6 +249,9 @@ export async function updateProEvent(
     console.error("updateProEvent failed:", error);
     return { error: "Couldn't save the changes" };
   }
+
+  const scheduleError = await applyScheduleEdit(admin, eventId, input.publishAt);
+  if (scheduleError) return { error: scheduleError };
 
   const genreError = await syncEventGenres(admin, eventId, input.genreIds);
   const tagError = await syncEventArtists(admin, eventId, null, input.taggedArtistIds);

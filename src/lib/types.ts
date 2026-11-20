@@ -88,6 +88,12 @@ export interface EventItem {
    * False on a database where addendum_062 hasn't run yet.
    */
   featured: boolean;
+  /**
+   * When a scheduled show goes live (#204), ISO. Non-null means it is still
+   * pending and hidden; the database clears it the moment the show publishes.
+   * Null on a database where addendum_071 hasn't run.
+   */
+  publishAt: string | null;
   maxPerOrder: number;
   ticketing?: Ticketing;
   /**
@@ -323,6 +329,8 @@ export interface EventRow {
   max_per_order?: number;
   /** Absent on a database where addendum_062 hasn't run. */
   featured?: boolean;
+  /** Absent on a database where addendum_071 hasn't run. */
+  publish_at?: string | null;
 }
 
 export function mapEvent(row: EventRow): EventItem {
@@ -353,6 +361,7 @@ export function mapEvent(row: EventRow): EventItem {
     active: row.active ?? true,
     cancelled: row.cancelled ?? false,
     featured: row.featured ?? false,
+    publishAt: row.publish_at ?? null,
     maxPerOrder: row.max_per_order ?? 6,
     ticketing:
       row.ticketing_mode === "external"

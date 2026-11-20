@@ -74,6 +74,8 @@ export interface ProEventSummary {
   sold: number;
   active: boolean;
   cancelled: boolean;
+  /** Pending go-live time (#204), null unless scheduled. */
+  publishAt: string | null;
   external: boolean;
   /** This pro account booked and is paid for the show. */
   owned: boolean;
@@ -89,18 +91,33 @@ const EVENT_COLUMNS =
 
 type ProEventRow = EventRow & { pro_account_id: string | null };
 
+// publish_at (#204, addendum_071) is asked for separately so that a database
+// without it yet still returns the list: on "column does not exist" the query
+// is re-run with the columns every database has, and publishAt reads null.
+// The column list is a runtime string, so PostgREST's type parser can't name
+// the row - callers cast, as they did before.
+async function selectEvents(
+  run: (columns: string) => PromiseLike<{ data: unknown; error: { code?: string; message?: string } | null }>
+): Promise<{ data: unknown; error: { code?: string; message?: string } | null }> {
+  const first = await run(`${EVENT_COLUMNS}, publish_at`);
+  if (first.error && (first.error.code === "42703" || first.error.code === "PGRST204")) {
+    return run(EVENT_COLUMNS);
+  }
+  return first;
+}
+
 // Which shows this account may see at all. A promoter sees what it booked. A
 // venue sees everything in its room, whoever booked it.
 async function fetchScopedEventRows(
   admin: SupabaseClient,
   account: ProAccount
 ): Promise<ProEventRow[]> {
-  const base = admin.from("events").select(EVENT_COLUMNS);
-
-  const { data, error } =
-    account.type === "venue" && account.venueId
-      ? await base.or(`venue_id.eq.${account.venueId},pro_account_id.eq.${account.id}`)
-      : await base.eq("pro_account_id", account.id);
+  const { data, error } = await selectEvents((columns) => {
+    const base = admin.from("events").select(columns);
+    return account.type === "venue" && account.venueId
+      ? base.or(`venue_id.eq.${account.venueId},pro_account_id.eq.${account.id}`)
+      : base.eq("pro_account_id", account.id);
+  });
 
   if (error) {
     // events.pro_account_id missing, i.e. addendum_051 hasn't run here yet.
@@ -170,6 +187,7 @@ export async function fetchProEvents(
         sold: event.sold,
         active: event.active,
         cancelled: event.cancelled,
+        publishAt: event.publishAt,
         external: event.ticketing?.mode === "external",
         owned,
         revenue: owned ? (total?.revenue ?? 0) : null,
@@ -188,11 +206,9 @@ export async function fetchProEventForEdit(
   account: ProAccount,
   eventId: string
 ) {
-  const { data, error } = await admin
-    .from("events")
-    .select(EVENT_COLUMNS)
-    .eq("id", eventId)
-    .maybeSingle();
+  const { data, error } = await selectEvents((columns) =>
+    admin.from("events").select(columns).eq("id", eventId).maybeSingle()
+  );
 
   if (error || !data) return null;
   const row = data as ProEventRow;

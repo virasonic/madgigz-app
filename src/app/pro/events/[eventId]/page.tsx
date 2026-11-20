@@ -80,7 +80,7 @@ export default async function ProEditEventPage({ params }: PageProps<"/pro/event
         </div>
       ) : (
         <>
-          <ShowVisibility eventId={event.id} active={event.active} />
+          <ShowVisibility eventId={event.id} active={event.active} publishAt={event.publishAt} />
           {/* Door links (#218): hand the door to someone with no account. */}
           {!isExternal && <DoorLinks eventId={event.id} />}
           <div className="rounded-2xl bg-surface p-5">

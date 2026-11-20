@@ -476,6 +476,7 @@ export const en = {
   },
 
   profile: {
+    scheduled: "Scheduled",
     attended: "Attended",
     saved: "Saved",
     // The past-events poster wall (#116) - shows you were scanned in to.
@@ -922,6 +923,19 @@ export const en = {
   },
 
   addShow: {
+    // Scheduled publishing (#204)
+    publish: "When should it go live?",
+    publishNow: "Now",
+    publishNowHint: "Fans see it as soon as you add it.",
+    publishLater: "Schedule",
+    publishLaterHint:
+      "Stays hidden until the time you pick, then goes live and your followers are notified. Madrid time.",
+    publishDate: "Publish date",
+    publishTime: "Publish time",
+    errPublishInvalid: "Enter a valid publish date and time",
+    errPublishPast: "The publish time has to be in the future",
+    errPublishAfterShow: "The show has to be published before it starts",
+    errScheduleUnavailable: "Scheduling isn't available yet — publish it now instead.",
     title: "Add a show",
     cantSellTitle: "Before you start: you can't sell paid tickets yet",
     cantSellBody:
@@ -978,6 +992,11 @@ export const en = {
   },
 
   manageShow: {
+    // Scheduled publishing (#204)
+    scheduledNotice: "This show is scheduled to go live {when}.",
+    scheduledTitle: "Scheduled",
+    scheduledDesc: "Hidden until {when}, then it goes live and your followers are notified.",
+    publishNow: "Publish now",
     cancelledNotice: "This show has been cancelled.",
     hiddenNotice: "This show is currently hidden from fans.",
     tabOverview: "Overview",
@@ -1242,6 +1261,11 @@ export const en = {
   // English because it is MadGigz's own back office, these are THIRD PARTIES and
   // the panel follows the language their account was set up in.
   pro: {
+    // Scheduled publishing (#204)
+    statusScheduled: "Scheduled",
+    scheduledInApp: "Scheduled",
+    scheduledInAppHint: "Goes live {when} (Madrid time). Followers are notified then.",
+    publishNow: "Publish now",
     panelSuffix: "Pro",
     fanPhotos: "Fan photos",
     backToApp: "Back to app",
@@ -1386,6 +1410,19 @@ export const en = {
   // /pro follows the organiser's language; /admin pins its LocaleProvider to
   // English, so the same component renders English there without a second copy.
   organiserForm: {
+    // Scheduled publishing (#204)
+    publish: "Publishing",
+    publishNow: "Publish now",
+    publishNowHint: "Goes live in the app as soon as it's created.",
+    publishLater: "Schedule",
+    publishLaterHint:
+      "Stays hidden until the time you pick, then goes live and followers are notified. Madrid time.",
+    publishDate: "Publish date",
+    publishTime: "Publish time",
+    scheduledNotice: "Scheduled — goes live {when}. Change the time below, or publish it now.",
+    publishErrInvalid: "Enter a valid publish date and time",
+    publishErrPast: "The publish time has to be in the future",
+    publishErrAfterShow: "The show has to be published before it starts",
     showTitle: "Show title",
     billedAs: "Billed as",
     billedAsHint: "What fans see on the card. Any name, on the platform or not.",

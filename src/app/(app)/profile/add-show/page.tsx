@@ -28,6 +28,8 @@ import { uploadEventMedia } from "@/lib/supabase/storage";
 import { parseEuros } from "@/lib/pricing";
 import { AppUser, Genre, PublicArtistProfile, Venue } from "@/lib/types";
 import { createHouseShow, finaliseNewShow } from "../show-actions";
+import PublishPicker, { type PublishMode } from "@/components/organiser/PublishPicker";
+import { checkPublishAt, madridToIso } from "@/lib/schedule";
 import { canActAsArtist } from "@/lib/roles";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
@@ -77,6 +79,11 @@ export default function AddShowPage() {
   // draft, so an admin adding their own gig as an artist pays commission like
   // anyone else unless they deliberately flip it. The server re-checks the role.
   const [houseShow, setHouseShow] = useState(false);
+  // Scheduled publishing (#204): "now" is an ordinary show; "later" creates it
+  // hidden with a go-live time (Madrid clock), and the database publishes it.
+  const [publishMode, setPublishMode] = useState<PublishMode>("now");
+  const [publishDate, setPublishDate] = useState("");
+  const [publishTime, setPublishTime] = useState("20:00");
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -118,6 +125,11 @@ export default function AddShowPage() {
         setTicketingMode(draft.ticketingMode);
       }
       if (typeof draft.externalUrl === "string") setExternalUrl(draft.externalUrl);
+      if (draft.publishMode === "now" || draft.publishMode === "later") {
+        setPublishMode(draft.publishMode);
+      }
+      if (typeof draft.publishDate === "string") setPublishDate(draft.publishDate);
+      if (typeof draft.publishTime === "string") setPublishTime(draft.publishTime);
       setRestoredFromDraft(true);
     }
 
@@ -163,6 +175,9 @@ export default function AddShowPage() {
           accentColor,
           ticketingMode,
           externalUrl,
+          publishMode,
+          publishDate,
+          publishTime,
         })
       );
     } catch {
@@ -183,6 +198,9 @@ export default function AddShowPage() {
     accentColor,
     ticketingMode,
     externalUrl,
+    publishMode,
+    publishDate,
+    publishTime,
   ]);
 
   function handlePosterChange(event: ChangeEvent<HTMLInputElement>) {
@@ -260,6 +278,26 @@ export default function AddShowPage() {
       }
     }
 
+    // The go-live instant, or null for "now". Same check the server runs, so
+    // the complaint arrives before anything is uploaded and in the artist's
+    // language.
+    let publishAt: string | null = null;
+    if (publishMode === "later") {
+      const iso = madridToIso(publishDate, publishTime);
+      const problem = iso ? checkPublishAt(iso, { date, time }) : "invalid";
+      if (problem) {
+        nextErrors.publish = t(
+          problem === "past"
+            ? "addShow.errPublishPast"
+            : problem === "afterShow"
+              ? "addShow.errPublishAfterShow"
+              : "addShow.errPublishInvalid"
+        );
+      } else {
+        publishAt = iso;
+      }
+    }
+
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0 || !user) return;
 
@@ -285,6 +323,7 @@ export default function AddShowPage() {
           imageUrl,
           description,
           lineup: cleanedLineup,
+          publishAt,
         })
       : null;
 
@@ -320,13 +359,24 @@ export default function AddShowPage() {
       rating: 0,
       ticketing_mode: ticketingMode,
       ticketing_url: ticketingMode === "external" ? externalUrl.trim() : null,
+      // Scheduled (#204): created hidden, with its go-live time. Only sent when
+      // scheduling, so an ordinary show still works on a database where
+      // addendum_071 hasn't run - there, scheduling reports itself unavailable
+      // (42703 column missing, PGRST204 schema cache, 42501 column not granted).
+      ...(publishAt ? { active: false, publish_at: publishAt } : {}),
       })
       .select("id")
       .single();
 
     if (error || !created) {
       setSubmitting(false);
-      setErrors({ name: error?.message ?? t("addShow.errCreate") });
+      const scheduleMissing =
+        publishAt && ["42703", "PGRST204", "42501"].includes(error?.code ?? "");
+      setErrors(
+        scheduleMissing
+          ? { publish: t("addShow.errScheduleUnavailable") }
+          : { name: error?.message ?? t("addShow.errCreate") }
+      );
       return;
     }
 
@@ -595,6 +645,26 @@ export default function AddShowPage() {
             />
           )}
         </div>
+
+        <PublishPicker
+          mode={publishMode}
+          onModeChange={setPublishMode}
+          date={publishDate}
+          time={publishTime}
+          onDateChange={setPublishDate}
+          onTimeChange={setPublishTime}
+          error={errors.publish}
+          inputClassName="w-full rounded-2xl border border-muted/20 bg-surface px-4 py-3.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          labels={{
+            heading: t("addShow.publish"),
+            now: t("addShow.publishNow"),
+            nowHint: t("addShow.publishNowHint"),
+            later: t("addShow.publishLater"),
+            laterHint: t("addShow.publishLaterHint"),
+            date: t("addShow.publishDate"),
+            time: t("addShow.publishTime"),
+          }}
+        />
 
         <Button type="submit" className="mt-2" disabled={submitting}>
           {submitting ? t("addShow.submitting") : t("addShow.submit")}

@@ -7,6 +7,7 @@
 // Server-only: every function takes the service-role client.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ARTIST_CAPABLE_ROLES } from "@/lib/roles";
+import { checkPublishAt, type PublishAtProblem } from "@/lib/schedule";
 
 // Single-city for now; venues carry a city column so a second one is a filter
 // change rather than a migration.
@@ -149,5 +150,82 @@ export async function syncEventArtists(
     return "Couldn't update the lineup tags";
   }
 
+  return null;
+}
+
+// ============ Scheduled publishing (#204) ============
+
+
+/**
+ * What a form means by `publishAt` on the organiser payloads:
+ *   - a string: go live at that instant (ISO);
+ *   - null: live now - on create, an ordinary show; on edit, "Publish now" for
+ *     a show that is still scheduled;
+ *   - undefined: don't touch scheduling (an edit of a show that isn't pending).
+ */
+export type PublishAtInput = string | null | undefined;
+
+const PROBLEM_MESSAGE: Record<PublishAtProblem, string> = {
+  invalid: "Enter a valid publish date and time",
+  past: "The publish time has to be in the future",
+  afterShow: "The show has to be published before it starts",
+};
+
+/** The validation message for a chosen publish time, or null when it's fine. */
+export function publishAtError(
+  publishAt: PublishAtInput,
+  show: { date: string; time: string }
+): string | null {
+  if (typeof publishAt !== "string") return null;
+  const problem = checkPublishAt(publishAt, show);
+  return problem ? PROBLEM_MESSAGE[problem] : null;
+}
+
+/**
+ * The columns an INSERT adds for a scheduled show. Only sent when actually
+ * scheduling, so an ordinary show keeps working on a database where
+ * addendum_071 hasn't run; the trigger there also forces active = false, this
+ * just doesn't rely on it.
+ */
+export function scheduleInsertColumns(publishAt: PublishAtInput): { active?: false; publish_at?: string } {
+  return typeof publishAt === "string" ? { active: false, publish_at: publishAt } : {};
+}
+
+/** True when an insert failed because the schedule column isn't there yet. */
+export function isScheduleColumnMissing(
+  publishAt: PublishAtInput,
+  error: { code?: string } | null
+): boolean {
+  return typeof publishAt === "string" && (error?.code === "42703" || error?.code === "PGRST204");
+}
+
+/**
+ * Applies a schedule change on an existing show. Only a show that is still
+ * pending can be touched: a new time moves it, null publishes it now (the
+ * trigger clears publish_at and the follower notification fires). A live or
+ * hidden show is left exactly as it was - the form never sends a value for
+ * one, and a caller that does mustn't be able to un-hide a show through here.
+ * Reads publish_at on its own so a database without the column degrades to
+ * "not scheduled" instead of failing the whole save.
+ */
+export async function applyScheduleEdit(
+  admin: SupabaseClient,
+  eventId: string,
+  publishAt: PublishAtInput
+): Promise<string | null> {
+  if (publishAt === undefined) return null;
+
+  const { data } = await admin.from("events").select("publish_at").eq("id", eventId).maybeSingle();
+  const pending = (data as { publish_at?: string | null } | null)?.publish_at ?? null;
+  if (!pending) return null;
+
+  const { error } = await admin
+    .from("events")
+    .update(publishAt ? { publish_at: publishAt } : { active: true })
+    .eq("id", eventId);
+  if (error) {
+    console.error("applyScheduleEdit failed:", error);
+    return "Couldn't update when the show goes live";
+  }
   return null;
 }

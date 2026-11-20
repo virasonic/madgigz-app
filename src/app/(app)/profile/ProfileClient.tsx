@@ -28,6 +28,7 @@ import { useT } from "@/lib/i18n/LocaleProvider";
 import { LOCALES, LOCALE_LABELS } from "@/lib/i18n/config";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { dateLocale } from "@/lib/dates";
+import { isScheduled } from "@/lib/schedule";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 import type { ProAccountType } from "@/lib/pro";
 
@@ -308,7 +309,7 @@ function ShowRow({ show, onOpen }: { show: EventItem; onOpen: () => void }) {
           <p className="truncate font-heading text-sm text-foreground">{show.title}</p>
           {!show.active && (
             <span className="shrink-0 rounded-full bg-muted/15 px-2 py-0.5 text-[10px] font-heading uppercase tracking-wide text-muted">
-              {t("profile.hidden")}
+              {isScheduled(show) ? t("profile.scheduled") : t("profile.hidden")}
             </span>
           )}
         </div>

@@ -449,6 +449,7 @@ export const es: Messages = {
   },
 
   profile: {
+    scheduled: "Programado",
     attended: "Asistidos",
     saved: "Guardados",
     // El muro de carteles de eventos pasados (#116).
@@ -890,6 +891,19 @@ export const es: Messages = {
   },
 
   addShow: {
+    // Publicación programada (#204)
+    publish: "¿Cuándo se publica?",
+    publishNow: "Ahora",
+    publishNowHint: "Los fans lo ven en cuanto lo añades.",
+    publishLater: "Programar",
+    publishLaterHint:
+      "Se queda oculto hasta la hora que elijas; entonces se publica y avisamos a tus seguidores. Hora de Madrid.",
+    publishDate: "Fecha de publicación",
+    publishTime: "Hora de publicación",
+    errPublishInvalid: "Introduce una fecha y hora de publicación válidas",
+    errPublishPast: "La hora de publicación tiene que ser futura",
+    errPublishAfterShow: "El bolo tiene que publicarse antes de que empiece",
+    errScheduleUnavailable: "Programar aún no está disponible; publícalo ahora.",
     title: "Añadir un bolo",
     cantSellTitle: "Antes de empezar: aún no puedes vender entradas de pago",
     cantSellBody:
@@ -946,6 +960,11 @@ export const es: Messages = {
   },
 
   manageShow: {
+    // Publicación programada (#204)
+    scheduledNotice: "Este bolo está programado para publicarse {when}.",
+    scheduledTitle: "Programado",
+    scheduledDesc: "Oculto hasta {when}; entonces se publica y avisamos a tus seguidores.",
+    publishNow: "Publicar ahora",
     cancelledNotice: "Este bolo se ha cancelado.",
     hiddenNotice: "Este bolo está oculto para los fans ahora mismo.",
     tabOverview: "Resumen",
@@ -1210,6 +1229,11 @@ export const es: Messages = {
   // en inglés por ser el back office de MadGigz, aquí son TERCEROS y el panel
   // usa el idioma con el que se creó su cuenta.
   pro: {
+    // Publicación programada (#204)
+    statusScheduled: "Programado",
+    scheduledInApp: "Programado",
+    scheduledInAppHint: "Se publica {when} (hora de Madrid). Los seguidores reciben aviso entonces.",
+    publishNow: "Publicar ahora",
     panelSuffix: "Pro",
     fanPhotos: "Fotos de fans",
     backToApp: "Volver a la app",
@@ -1355,6 +1379,19 @@ export const es: Messages = {
   // catálogo porque /pro sigue el idioma del organizador; /admin fija su
   // LocaleProvider en inglés, así que el mismo componente sale en inglés allí.
   organiserForm: {
+    // Publicación programada (#204)
+    publish: "Publicación",
+    publishNow: "Publicar ahora",
+    publishNowHint: "Aparece en la app en cuanto se crea.",
+    publishLater: "Programar",
+    publishLaterHint:
+      "Se queda oculto hasta la hora que elijas; entonces se publica y avisamos a los seguidores. Hora de Madrid.",
+    publishDate: "Fecha de publicación",
+    publishTime: "Hora de publicación",
+    scheduledNotice: "Programado: se publica {when}. Cambia la hora abajo o publícalo ahora.",
+    publishErrInvalid: "Introduce una fecha y hora de publicación válidas",
+    publishErrPast: "La hora de publicación tiene que ser futura",
+    publishErrAfterShow: "El concierto tiene que publicarse antes de que empiece",
     showTitle: "Título del concierto",
     billedAs: "Nombre en cartel",
     billedAsHint: "Lo que ven los fans en la tarjeta. Cualquier nombre, esté o no en la plataforma.",

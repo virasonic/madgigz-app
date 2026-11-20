@@ -6,6 +6,7 @@ import { cancelEvent, toggleEventActive, toggleEventFeatured } from "../actions"
 import FilterTabs from "../FilterTabs";
 import { SortHeader, useTableSort, type SortAccessor } from "../table-sort";
 import type { EventItem } from "@/lib/types";
+import { formatPublishAt, isScheduled } from "@/lib/schedule";
 
 type EventFilter = "live" | "past" | "hidden" | "cancelled" | "all";
 
@@ -222,8 +223,15 @@ export default function EventsTable({
                       : "rounded-full bg-muted/15 px-2 py-0.5 text-xs text-muted"
                 }
               >
-                {e.cancelled ? "Cancelled" : e.active ? "Active" : "Hidden"}
+                {e.cancelled ? "Cancelled" : e.active ? "Active" : isScheduled(e) ? "Scheduled" : "Hidden"}
               </span>
+              {/* Scheduled (#204): hidden until this time, then published by
+                  the database and followers notified. */}
+              {isScheduled(e) && (
+                <span className="ml-1 text-xs text-muted">
+                  {formatPublishAt(e.publishAt as string, "en-GB")}
+                </span>
+              )}
               {e.featured && !e.cancelled && (
                 <span className="ml-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">
                   Featured
@@ -257,7 +265,7 @@ export default function EventsTable({
                     disabled={isPending && pendingId === e.id}
                     className="rounded-lg bg-primary/15 px-3 py-1 text-xs font-heading text-primary hover:bg-primary/25 disabled:opacity-50"
                   >
-                    {e.active ? "Hide" : "Unhide"}
+                    {e.active ? "Hide" : isScheduled(e) ? "Publish now" : "Unhide"}
                   </button>
                   <button
                     onClick={() => handleDelete(e)}

@@ -2,7 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
-import { resolveVenue, syncEventArtists, syncEventGenres } from "@/lib/show-sync";
+import {
+  applyScheduleEdit,
+  isScheduleColumnMissing,
+  publishAtError,
+  resolveVenue,
+  scheduleInsertColumns,
+  syncEventArtists,
+  syncEventGenres,
+  type PublishAtInput,
+} from "@/lib/show-sync";
 
 export interface AdminEventInput {
   title: string;
@@ -23,6 +32,12 @@ export interface AdminEventInput {
   ageRestriction: string;
   ticketingMode: "internal" | "external";
   ticketingUrl: string;
+  /**
+   * Scheduled publishing (#204). ISO = go live then (the show is created
+   * hidden); null = live now, or "Publish now" on a still-scheduled edit;
+   * undefined = leave as is. See PublishAtInput.
+   */
+  publishAt?: PublishAtInput;
 }
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -39,6 +54,9 @@ function validate(input: AdminEventInput): string | null {
     return "Max per order must be at least 1";
   }
   if (!HEX.test(input.accentColor)) return "Pick an accent colour";
+
+  const scheduleProblem = publishAtError(input.publishAt, { date: input.date, time: input.time });
+  if (scheduleProblem) return scheduleProblem;
 
   if (input.ticketingMode === "external") {
     // Validated rather than trusted: this URL is opened in the fan's browser.
@@ -107,11 +125,17 @@ export async function createAdminEvent(
       house_run: !external,
       active: true,
       cancelled: false,
+      // A scheduled show starts hidden and carries its go-live time (#204).
+      ...scheduleInsertColumns(input.publishAt),
     })
     .select("id")
     .single();
 
   if (error || !created) {
+    if (isScheduleColumnMissing(input.publishAt, error)) {
+      console.error("events.publish_at missing - run addendum_071:", error);
+      return { error: "Scheduling needs addendum_071 run on the database - run it, or publish now" };
+    }
     // 42703 = column missing, i.e. addendum_020 hasn't been run.
     if (error?.code === "42703") {
       console.error("events.house_run missing - run addendum_020:", error);
@@ -223,6 +247,9 @@ export async function updateAdminEvent(
     console.error("updateAdminEvent failed:", error);
     return { error: "Couldn't save the changes" };
   }
+
+  const scheduleError = await applyScheduleEdit(admin, eventId, input.publishAt);
+  if (scheduleError) return { error: scheduleError };
 
   const genreError = await syncEventGenres(admin, eventId, input.genreIds);
   const tagError = await syncEventArtists(admin, eventId, null, input.taggedArtistIds);

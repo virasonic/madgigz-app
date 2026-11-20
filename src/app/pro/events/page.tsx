@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { fetchProEvents, proClient, requirePro } from "@/lib/supabase/pro-queries";
 import { dateLocale } from "@/lib/dates";
+import { isScheduled } from "@/lib/schedule";
 import type { Locale } from "@/lib/i18n/config";
 
 function euros(amount: number): string {
@@ -134,6 +135,8 @@ export default async function ProEventsPage({ searchParams }: PageProps<"/pro/ev
                       <td className="py-3 text-right">
                         {event.cancelled ? (
                           <StatusPill label={t("pro.statusCancelled")} tone="danger" />
+                        ) : isScheduled(event) ? (
+                          <StatusPill label={t("pro.statusScheduled")} tone="muted" />
                         ) : !event.active ? (
                           <StatusPill label={t("pro.statusHidden")} tone="muted" />
                         ) : !event.owned ? (

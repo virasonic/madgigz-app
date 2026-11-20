@@ -28,6 +28,7 @@ import { updateShow } from "@/app/(app)/profile/show-actions";
 import LineupEditor, { LineupEntry, lineupToEntries } from "@/components/artist/LineupEditor";
 import ExtraTagPicker from "@/components/artist/ExtraTagPicker";
 import DateInput from "@/components/ui/DateInput";
+import { formatPublishAt, isScheduled } from "@/lib/schedule";
 import VenuePicker, { VenueSelection } from "@/components/artist/VenuePicker";
 import GenrePicker from "@/components/artist/GenrePicker";
 import {
@@ -99,6 +100,10 @@ export default function ManageShowModal({
   const [buyers, setBuyers] = useState<ShowBuyer[] | null>(null);
   const [ticketCounts, setTicketCounts] = useState<ShowTicketCounts | null>(null);
   const [active, setActive] = useState(show.active);
+  // Scheduled publishing (#204). The database clears publish_at the moment the
+  // show goes live, so "Publish now" drops it locally too.
+  const [publishAt, setPublishAt] = useState(show.publishAt);
+  const scheduled = isScheduled({ active, publishAt });
   const [togglingVisibility, setTogglingVisibility] = useState(false);
   const [visibilityError, setVisibilityError] = useState<string | undefined>();
 
@@ -330,6 +335,7 @@ export default function ManageShowModal({
     }
 
     setActive(next);
+    if (next) setPublishAt(null);
     onChanged();
   }
 
@@ -455,7 +461,11 @@ export default function ManageShowModal({
           <p className="mt-2 rounded-xl bg-primary/10 px-3 py-2 text-xs text-primary">
             {show.cancelled
               ? t("manageShow.cancelledNotice")
-              : t("manageShow.hiddenNotice")}
+              : isScheduled(show)
+                ? t("manageShow.scheduledNotice", {
+                    when: formatPublishAt(show.publishAt as string, dl),
+                  })
+                : t("manageShow.hiddenNotice")}
           </p>
         )}
 
@@ -759,10 +769,20 @@ export default function ManageShowModal({
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="font-heading text-sm text-foreground">
-                      {active ? t("manageShow.visibleToFans") : t("manageShow.hiddenFromFans")}
+                      {scheduled
+                        ? t("manageShow.scheduledTitle")
+                        : active
+                          ? t("manageShow.visibleToFans")
+                          : t("manageShow.hiddenFromFans")}
                     </p>
                     <p className="mt-0.5 text-xs text-muted">
-                      {active ? t("manageShow.visibleDesc") : t("manageShow.hiddenDesc")}
+                      {scheduled
+                        ? t("manageShow.scheduledDesc", {
+                            when: formatPublishAt(publishAt as string, dl),
+                          })
+                        : active
+                          ? t("manageShow.visibleDesc")
+                          : t("manageShow.hiddenDesc")}
                     </p>
                   </div>
                   {/* Deliberately not the Button component: its base class sets
@@ -775,7 +795,13 @@ export default function ManageShowModal({
                     disabled={togglingVisibility}
                     className="font-display shrink-0 rounded-full border border-muted/40 px-5 py-2.5 text-sm tracking-wide text-foreground transition-colors duration-150 hover:border-foreground disabled:border-muted/20 disabled:text-muted"
                   >
-                    {togglingVisibility ? t("common.saving") : active ? t("manageShow.hide") : t("manageShow.unhide")}
+                    {togglingVisibility
+                      ? t("common.saving")
+                      : scheduled
+                        ? t("manageShow.publishNow")
+                        : active
+                          ? t("manageShow.hide")
+                          : t("manageShow.unhide")}
                   </button>
                 </div>
                 {visibilityError && <p className="text-sm text-danger">{visibilityError}</p>}
