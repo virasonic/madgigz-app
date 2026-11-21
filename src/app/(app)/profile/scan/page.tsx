@@ -12,13 +12,23 @@ import {
   fetchShowsByArtist,
   fetchShowsByProAccount,
 } from "@/lib/supabase/queries";
-import { type AppUser, EventRow, mapEvent, mapTicket, TicketRow } from "@/lib/types";
+import {
+  type AppUser,
+  EventRow,
+  mapEvent,
+  mapTicket,
+  TicketRow,
+} from "@/lib/types";
 import { canActAsOrganiser, isArtistRole } from "@/lib/roles";
 import { todayInMadrid } from "@/lib/dates";
 import type { ScanEventOption } from "@/lib/guest-list";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import type { ScanOutcome } from "@/lib/scan-outcome";
-import { countAdmissions, type AdmissionCount, type AdmissionRow } from "@/lib/scan-stats";
+import {
+  countAdmissions,
+  type AdmissionCount,
+  type AdmissionRow,
+} from "@/lib/scan-stats";
 
 // The logged-in scanner: the organiser's own phone, looking tickets up through
 // their own Supabase client. RLS decides which tickets they can read and check
@@ -53,16 +63,28 @@ export default function ScanTicketsPage() {
     // the pre-addendum_037 window where the column errors (data comes back
     // null, and we fall through).
     let ticketRow: TicketRow | null = null;
-    const bySecret = await supabase.from("tickets").select("*").eq("qr_secret", scanned).maybeSingle();
+    const bySecret = await supabase
+      .from("tickets")
+      .select("*")
+      .eq("qr_secret", scanned)
+      .maybeSingle();
     ticketRow = (bySecret.data as TicketRow | null) ?? null;
     if (!ticketRow) {
-      const byId = await supabase.from("tickets").select("*").eq("id", scanned).maybeSingle();
+      const byId = await supabase
+        .from("tickets")
+        .select("*")
+        .eq("id", scanned)
+        .maybeSingle();
       ticketRow = (byId.data as TicketRow | null) ?? null;
     }
     if (!ticketRow) return { status: "invalid" };
     const ticket = mapTicket(ticketRow);
 
-    const { data: eventRow } = await supabase.from("events").select("*").eq("id", ticket.eventId).maybeSingle();
+    const { data: eventRow } = await supabase
+      .from("events")
+      .select("*")
+      .eq("id", ticket.eventId)
+      .maybeSingle();
     if (!eventRow) return { status: "invalid" };
     const event = mapEvent(eventRow as EventRow);
 
@@ -71,7 +93,11 @@ export default function ScanTicketsPage() {
     // price show, or if the tier row can't be read (degrade quietly).
     let tierName: string | null = null;
     if (ticket.tierId) {
-      const { data: tierRow } = await supabase.from("event_tiers").select("name").eq("id", ticket.tierId).maybeSingle();
+      const { data: tierRow } = await supabase
+        .from("event_tiers")
+        .select("name")
+        .eq("id", ticket.tierId)
+        .maybeSingle();
       tierName = (tierRow?.name as string | undefined) ?? null;
     }
 
@@ -103,23 +129,47 @@ export default function ScanTicketsPage() {
     return !error && !!data && data.length > 0;
   }, []);
 
+  // The undo for a check-in made by mistake. Same policies as the check-in
+  // (the column grant and the organiser's update policy don't care which way
+  // the stamp goes); only a stamped ticket is touched, so a double tap is a
+  // no-op rather than an error.
+  const undoCheckIn = useCallback(
+    async (ticketId: string): Promise<boolean> => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("tickets")
+        .update({ checked_in_at: null })
+        .eq("id", ticketId)
+        .not("checked_in_at", "is", null)
+        .select("id");
+      return !error && !!data && data.length > 0;
+    },
+    []
+  );
+
   // "N of M checked in" for the show of the last ticket scanned - this scanner
   // isn't tied to one show, so it can't know which until the first scan. The
   // same RLS that lets the organiser read a ticket here decides what is
   // counted; for a show they can't read it comes back 0 of 0.
-  const stats = useCallback(async (eventId: string): Promise<AdmissionCount | null> => {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("tickets")
-      .select("quantity, checked_in_at, refunded")
-      .eq("event_id", eventId);
-    if (error || !data) return null;
-    return countAdmissions(data as AdmissionRow[]);
-  }, []);
+  const stats = useCallback(
+    async (eventId: string): Promise<AdmissionCount | null> => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("tickets")
+        .select("quantity, checked_in_at, refunded")
+        .eq("event_id", eventId);
+      if (error || !data) return null;
+      return countAdmissions(data as AdmissionRow[]);
+    },
+    []
+  );
 
   // The guest list (#233): the same tickets RLS lets this organiser read, by
   // username, for a manual check-in when a QR won't scan or a phone is dead.
-  const guests = useCallback((eventId: string) => fetchGuestList(createClient(), eventId), []);
+  const guests = useCallback(
+    (eventId: string) => fetchGuestList(createClient(), eventId),
+    []
+  );
 
   // Before the first scan the scanner has no show, so the list asks which:
   // the same shows the profile lists for this role, minus cancelled ones and
@@ -130,16 +180,21 @@ export default function ScanTicketsPage() {
     const shows = isArtistRole(user.role)
       ? await fetchShowsByArtist(supabase, user.id)
       : user.role === "admin"
-        ? await fetchMadGigzShows(supabase)
-        : user.proType
-          ? await fetchShowsByProAccount(supabase, user.id)
-          : [];
+      ? await fetchMadGigzShows(supabase)
+      : user.proType
+      ? await fetchShowsByProAccount(supabase, user.id)
+      : [];
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const floor = todayInMadrid(yesterday);
     return shows
       .filter((s) => !s.cancelled && s.date.slice(0, 10) >= floor)
-      .map((s) => ({ id: s.id, title: s.title, venue: s.venue, date: s.date.slice(0, 10) }));
+      .map((s) => ({
+        id: s.id,
+        title: s.title,
+        venue: s.venue,
+        date: s.date.slice(0, 10),
+      }));
   }, [user]);
 
   if (!user) return null;
@@ -151,9 +206,12 @@ export default function ScanTicketsPage() {
       stats={stats}
       guests={guests}
       events={events}
+      undoCheckIn={undoCheckIn}
       header={
         <>
-          <h1 className="font-display text-2xl text-foreground">{t("scan.title")}</h1>
+          <h1 className="font-display text-2xl text-foreground">
+            {t("scan.title")}
+          </h1>
           <Link href="/profile" className="text-sm text-accent">
             {t("common.done")}
           </Link>

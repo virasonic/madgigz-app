@@ -26,6 +26,7 @@ export default function ScannerView({
   eventId,
   guests,
   events,
+  undoCheckIn,
 }: {
   /** Resolves a decoded QR value to what the door should see. */
   lookup: (code: string) => Promise<ScanOutcome>;
@@ -55,6 +56,11 @@ export default function ScannerView({
    * show to open. The door link never needs it.
    */
   events?: () => Promise<ScanEventOption[]>;
+  /**
+   * Clears a check-in made by mistake (the wrong person, a mis-tap). Optional;
+   * without it the list and the result card offer no undo.
+   */
+  undoCheckIn?: (ticketId: string) => Promise<boolean>;
 }) {
   const { t } = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -149,6 +155,23 @@ export default function ScannerView({
     setGuestRows(null);
     setEventOptions(null);
     if (!result) pausedRef.current = false;
+  }
+
+  async function undoFromList(ticketId: string): Promise<boolean> {
+    if (!undoCheckIn) return false;
+    const ok = await undoCheckIn(ticketId);
+    if (ok) setStatsTick((n) => n + 1);
+    return ok;
+  }
+
+  // Undo straight from the result card, for the tap that admitted the wrong
+  // ticket a second ago. Back to "valid ticket", with the counter re-read.
+  async function handleUndoCheckIn() {
+    if (!undoCheckIn || result?.status !== "valid" || !checkedInJustNow) return;
+    const ok = await undoCheckIn(result.ticketId);
+    if (!ok) return;
+    setCheckedInJustNow(false);
+    setStatsTick((n) => n + 1);
   }
 
   async function checkInFromList(ticketId: string): Promise<boolean> {
@@ -441,6 +464,17 @@ export default function ScannerView({
                 {result.status === "valid" && !checkedInJustNow && (
                   <Button onClick={handleCheckIn}>{t("scan.checkIn")}</Button>
                 )}
+                {result.status === "valid" &&
+                  checkedInJustNow &&
+                  undoCheckIn && (
+                    <button
+                      type="button"
+                      onClick={handleUndoCheckIn}
+                      className="text-sm text-accent"
+                    >
+                      {t("scan.undoCheckIn")}
+                    </button>
+                  )}
               </>
             )}
             <Button variant="ghost" onClick={handleScanNext}>
@@ -458,6 +492,7 @@ export default function ScannerView({
               setStatsTick((n) => n + 1);
             }}
             onCheckIn={checkInFromList}
+            onUndo={undoCheckIn ? undoFromList : undefined}
             onClose={closeList}
           />
         )}

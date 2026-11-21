@@ -1099,6 +1099,9 @@ export const en = {
     guestCheckIn: "Check in",
     guestInAt: "In · {time}",
     guestFailed: "Couldn't check in - already in, or the link has expired.",
+    guestUndo: "Undo",
+    guestUndoFailed: "Couldn't undo - try again.",
+    undoCheckIn: "Undo check-in",
   },
   doorLinks: {
     title: "Door links",

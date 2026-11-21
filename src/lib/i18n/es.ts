@@ -1067,6 +1067,9 @@ export const es: Messages = {
     guestCheckIn: "Dar entrada",
     guestInAt: "Dentro · {time}",
     guestFailed: "No se pudo dar entrada: ya está dentro o el enlace ha caducado.",
+    guestUndo: "Deshacer",
+    guestUndoFailed: "No se pudo deshacer. Inténtalo de nuevo.",
+    undoCheckIn: "Deshacer entrada",
   },
   doorLinks: {
     title: "Enlaces de puerta",

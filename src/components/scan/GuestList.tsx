@@ -26,6 +26,7 @@ export default function GuestList({
   events,
   onPickEvent,
   onCheckIn,
+  onUndo,
   onClose,
 }: {
   /** The rows, or null while loading. Ignored while `events` is set. */
@@ -37,13 +38,17 @@ export default function GuestList({
   events?: ScanEventOption[] | null;
   onPickEvent?: (eventId: string) => void;
   onCheckIn: (ticketId: string) => Promise<boolean>;
+  /** Clears a check-in made by mistake; false means it couldn't be (link died). */
+  onUndo?: (ticketId: string) => Promise<boolean>;
   onClose: () => void;
 }) {
   const { t, locale } = useT();
   const dl = dateLocale(locale);
   const [query, setQuery] = useState("");
-  const [stamped, setStamped] = useState<Record<string, string>>({});
-  const [failed, setFailed] = useState<Record<string, true>>({});
+  // What this panel changed since the rows were read: a time for a check-in,
+  // null for one undone. Laid over the rows so neither reorders the list.
+  const [stamped, setStamped] = useState<Record<string, string | null>>({});
+  const [failed, setFailed] = useState<Record<string, "checkIn" | "undo">>({});
   const [busy, setBusy] = useState<string | null>(null);
 
   async function handleCheckIn(ticketId: string) {
@@ -56,7 +61,21 @@ export default function GuestList({
     const ok = await onCheckIn(ticketId);
     setBusy(null);
     if (ok) setStamped((s) => ({ ...s, [ticketId]: new Date().toISOString() }));
-    else setFailed((f) => ({ ...f, [ticketId]: true }));
+    else setFailed((f) => ({ ...f, [ticketId]: "checkIn" }));
+  }
+
+  async function handleUndo(ticketId: string) {
+    if (!onUndo) return;
+    setBusy(ticketId);
+    setFailed((f) => {
+      const next = { ...f };
+      delete next[ticketId];
+      return next;
+    });
+    const ok = await onUndo(ticketId);
+    setBusy(null);
+    if (ok) setStamped((s) => ({ ...s, [ticketId]: null }));
+    else setFailed((f) => ({ ...f, [ticketId]: "undo" }));
   }
 
   const rows = guests
@@ -185,9 +204,21 @@ export default function GuestList({
                     )}
                   </div>
                   {g.checkedInAt ? (
-                    <span className="shrink-0 text-xs text-muted">
-                      {t("scan.guestInAt", { time: timeOf(g.checkedInAt) })}
-                    </span>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="text-xs text-muted">
+                        {t("scan.guestInAt", { time: timeOf(g.checkedInAt) })}
+                      </span>
+                      {onUndo && (
+                        <button
+                          type="button"
+                          disabled={busy === g.ticketId}
+                          onClick={() => handleUndo(g.ticketId)}
+                          className="text-xs text-accent disabled:text-muted"
+                        >
+                          {t("scan.guestUndo")}
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <button
                       type="button"

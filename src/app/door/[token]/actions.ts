@@ -9,12 +9,19 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { touchDoorLink, verifyDoorToken } from "@/lib/door-links";
 import type { ScanOutcome } from "@/lib/scan-outcome";
-import { countAdmissions, type AdmissionCount, type AdmissionRow } from "@/lib/scan-stats";
+import {
+  countAdmissions,
+  type AdmissionCount,
+  type AdmissionRow,
+} from "@/lib/scan-stats";
 import { mapTicket, type TicketRow } from "@/lib/types";
 import { fetchGuestList } from "@/lib/supabase/queries";
 import type { GuestEntry } from "@/lib/guest-list";
 
-export async function doorLookup(token: string, code: string): Promise<ScanOutcome> {
+export async function doorLookup(
+  token: string,
+  code: string
+): Promise<ScanOutcome> {
   const admin = createAdminClient();
   const link = await verifyDoorToken(admin, token);
   if (!link.ok) return { status: "linkExpired" };
@@ -28,14 +35,22 @@ export async function doorLookup(token: string, code: string): Promise<ScanOutco
   // No id fallback here, for that reason.
   const trimmed = code.trim();
   if (!/^[0-9a-f-]{36}$/i.test(trimmed)) return { status: "invalid" };
-  const { data } = await admin.from("tickets").select("*").eq("qr_secret", trimmed).maybeSingle();
+  const { data } = await admin
+    .from("tickets")
+    .select("*")
+    .eq("qr_secret", trimmed)
+    .maybeSingle();
   if (!data) return { status: "invalid" };
   const ticket = mapTicket(data as TicketRow);
   if (ticket.eventId !== link.event.id) return { status: "wrongShow" };
 
   let tierName: string | null = null;
   if (ticket.tierId) {
-    const { data: tier } = await admin.from("event_tiers").select("name").eq("id", ticket.tierId).maybeSingle();
+    const { data: tier } = await admin
+      .from("event_tiers")
+      .select("name")
+      .eq("id", ticket.tierId)
+      .maybeSingle();
     tierName = (tier?.name as string | undefined) ?? null;
   }
 
@@ -75,7 +90,10 @@ export async function doorStats(token: string): Promise<AdmissionCount | null> {
  * means someone else got there first - the caller flips to "already checked
  * in" rather than claiming a false admit.
  */
-export async function doorCheckIn(token: string, ticketId: string): Promise<boolean> {
+export async function doorCheckIn(
+  token: string,
+  ticketId: string
+): Promise<boolean> {
   const admin = createAdminClient();
   const link = await verifyDoorToken(admin, token);
   if (!link.ok) return false;
@@ -86,6 +104,27 @@ export async function doorCheckIn(token: string, ticketId: string): Promise<bool
     .eq("event_id", link.event.id)
     .eq("refunded", false)
     .is("checked_in_at", null)
+    .select("id");
+  return !error && !!data && data.length > 0;
+}
+
+/**
+ * Clears a check-in made by mistake, for THIS link's show only. Only a stamped
+ * ticket is touched, so a repeat tap is a no-op; a dead link does nothing.
+ */
+export async function doorUndoCheckIn(
+  token: string,
+  ticketId: string
+): Promise<boolean> {
+  const admin = createAdminClient();
+  const link = await verifyDoorToken(admin, token);
+  if (!link.ok) return false;
+  const { data, error } = await admin
+    .from("tickets")
+    .update({ checked_in_at: null })
+    .eq("id", ticketId)
+    .eq("event_id", link.event.id)
+    .not("checked_in_at", "is", null)
     .select("id");
   return !error && !!data && data.length > 0;
 }

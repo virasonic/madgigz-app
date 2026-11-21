@@ -952,7 +952,10 @@
       "guestSeat": "Seat {seat}",
       "guestCheckIn": "Check in",
       "guestInAt": "In · {time}",
-      "guestFailed": "Couldn't check in - already in, or the link has expired."
+      "guestFailed": "Couldn't check in - already in, or the link has expired.",
+      "guestUndo": "Undo",
+      "guestUndoFailed": "Couldn't undo - try again.",
+      "undoCheckIn": "Undo check-in"
     },
     "doorLinks": {
       "title": "Door links",
@@ -2255,7 +2258,10 @@
       "guestSeat": "Asiento {seat}",
       "guestCheckIn": "Dar entrada",
       "guestInAt": "Dentro · {time}",
-      "guestFailed": "No se pudo dar entrada: ya está dentro o el enlace ha caducado."
+      "guestFailed": "No se pudo dar entrada: ya está dentro o el enlace ha caducado.",
+      "guestUndo": "Deshacer",
+      "guestUndoFailed": "No se pudo deshacer. Inténtalo de nuevo.",
+      "undoCheckIn": "Deshacer entrada"
     },
     "doorLinks": {
       "title": "Enlaces de puerta",
