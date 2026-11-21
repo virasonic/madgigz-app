@@ -161,6 +161,14 @@
       "tapToShow": "Tap to show QR"
     },
     "ticket": {
+      "guestTitle": "Get tickets without an account",
+      "guestBody": "We'll email your ticket to this address. Afterwards you can create your account and keep it in the app.",
+      "guestEmail": "Email",
+      "guestConsent": "I'm 16 or over and I accept the {terms} and the {privacy}.",
+      "guestConsentRequired": "Confirm you're 16 or over and accept the terms to continue",
+      "guestHasAccount": "This email already has a MadGigz account.",
+      "guestSignIn": "Sign in to buy",
+      "guestOr": "Have an account?",
       "goingTitle": "You're going!",
       "summary": "{count} {tickets} for {title} at {venue}",
       "one": "ticket",
@@ -271,6 +279,10 @@
       "signIn": "Sign in"
     },
     "checkout": {
+      "guestTitle": "Your ticket is on its way",
+      "guestBody": "We've emailed it to {email}. The email also has a link to create your account, so your tickets stay in the app.",
+      "guestPending": "Payment is still being confirmed. Your ticket will be emailed to {email} once it is.",
+      "guestBrowse": "See more shows",
       "pendingTitle": "Almost there",
       "pendingBody": "This payment hasn't completed yet. Your ticket will appear once it does.",
       "errorBody": "We couldn't confirm this payment. If you were charged, your ticket will appear shortly.",
@@ -304,6 +316,7 @@
       "legalNotice": "By continuing you agree to the {terms} and the {privacy}."
     },
     "signup": {
+      "existingAccount": "This email already has a MadGigz account. We've emailed you a link to set a password and sign in.",
       "fanBadge": "Fan",
       "artistBadge": "Artist",
       "title": "Create your account",
@@ -662,6 +675,8 @@
       "resend": "Resend link"
     },
     "resetPassword": {
+      "guestTitle": "Choose a password",
+      "guestSubtitle": "Your account was created when you bought your ticket. Set a password to use it.",
       "title": "Set a new password",
       "subtitle": "You're verified — choose a new password.",
       "newPasswordLabel": "New password",
@@ -1232,6 +1247,8 @@
       "stripeDashboardError": "Couldn't open your Stripe dashboard."
     },
     "organiserForm": {
+      "guestCheckout": "Allow guest checkout",
+      "guestCheckoutHint": "Fans can buy with just an email, no account first. Paid tickets only - the ticket is emailed with a link to create the account.",
       "publish": "Publishing",
       "publishNow": "Publish now",
       "publishNowHint": "Goes live in the app as soon as it's created.",
@@ -1467,6 +1484,14 @@
       "tapToShow": "Toca para mostrar el QR"
     },
     "ticket": {
+      "guestTitle": "Entradas sin cuenta",
+      "guestBody": "Te enviaremos la entrada a este correo. Después podrás crear tu cuenta y tenerla en la app.",
+      "guestEmail": "Correo electrónico",
+      "guestConsent": "Tengo 16 años o más y acepto los {terms} y la {privacy}.",
+      "guestConsentRequired": "Confirma que tienes 16 años o más y aceptas las condiciones para continuar",
+      "guestHasAccount": "Este correo ya tiene una cuenta de MadGigz.",
+      "guestSignIn": "Inicia sesión para comprar",
+      "guestOr": "¿Ya tienes cuenta?",
       "goingTitle": "¡Vas a ir!",
       "summary": "{count} {tickets} para {title} en {venue}",
       "one": "entrada",
@@ -1577,6 +1602,10 @@
       "signIn": "Iniciar sesión"
     },
     "checkout": {
+      "guestTitle": "Tu entrada está en camino",
+      "guestBody": "La hemos enviado a {email}. En el correo también hay un enlace para crear tu cuenta y tener tus entradas en la app.",
+      "guestPending": "El pago aún se está confirmando. Enviaremos la entrada a {email} en cuanto se confirme.",
+      "guestBrowse": "Ver más conciertos",
       "pendingTitle": "Casi listo",
       "pendingBody": "Este pago aún no se ha completado. Tu entrada aparecerá en cuanto se complete.",
       "errorBody": "No pudimos confirmar el pago. Si se te cobró, tu entrada aparecerá en breve.",
@@ -1610,6 +1639,7 @@
       "legalNotice": "Al continuar aceptas los {terms} y la {privacy}."
     },
     "signup": {
+      "existingAccount": "Este correo ya tiene una cuenta de MadGigz. Te hemos enviado un enlace para elegir una contraseña e iniciar sesión.",
       "fanBadge": "Fan",
       "artistBadge": "Artista",
       "title": "Crea tu cuenta",
@@ -1968,6 +1998,8 @@
       "resend": "Reenviar enlace"
     },
     "resetPassword": {
+      "guestTitle": "Elige una contraseña",
+      "guestSubtitle": "Tu cuenta se creó al comprar la entrada. Elige una contraseña para usarla.",
       "title": "Crea una contraseña nueva",
       "subtitle": "Estás verificado: elige una contraseña nueva.",
       "newPasswordLabel": "Contraseña nueva",
@@ -2538,6 +2570,8 @@
       "stripeDashboardError": "No se ha podido abrir tu panel de Stripe."
     },
     "organiserForm": {
+      "guestCheckout": "Permitir compra sin cuenta",
+      "guestCheckoutHint": "Los fans pueden comprar solo con su correo, sin crear cuenta antes. Solo entradas de pago: la entrada se envía por correo con un enlace para crear la cuenta.",
       "publish": "Publicación",
       "publishNow": "Publicar ahora",
       "publishNowHint": "Aparece en la app en cuanto se crea.",

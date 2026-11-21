@@ -12,15 +12,28 @@ export async function GET(request: NextRequest) {
   // arrives from outside and goes straight into a redirect.
   const next = safeNext(searchParams.get("next"));
   const withNext = (path: string) =>
-    next ? `${path}${path.includes("?") ? "&" : "?"}next=${encodeURIComponent(next)}` : path;
+    next
+      ? `${path}${path.includes("?") ? "&" : "?"}next=${encodeURIComponent(
+          next
+        )}`
+      : path;
 
   if (tokenHash && type) {
     const supabase = await createClient();
-    const { error, data } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+    const { error, data } = await supabase.auth.verifyOtp({
+      type,
+      token_hash: tokenHash,
+    });
 
     if (!error && data.user) {
       if (type === "recovery") {
-        return NextResponse.redirect(`${origin}/signin/reset-password`);
+        // A guest-checkout claim link (#234) lands on the same screen, which
+        // then says "set a password" rather than "reset" - the account was
+        // made for them at checkout and has never had one they chose.
+        const guest = searchParams.get("guest") === "1";
+        return NextResponse.redirect(
+          `${origin}/signin/reset-password${guest ? "?guest=1" : ""}`
+        );
       }
 
       const { data: profile } = await supabase
@@ -32,7 +45,7 @@ export async function GET(request: NextRequest) {
       // The artist claim form outranks ?next for the same reason it does on
       // sign-in: an unclaimed artist account can't act on the gig anyway.
       const destination =
-        profile?.role === "artist" ? "/signup/artist-profile" : (next ?? "/feed");
+        profile?.role === "artist" ? "/signup/artist-profile" : next ?? "/feed";
       return NextResponse.redirect(`${origin}${destination}`);
     }
 
@@ -52,9 +65,14 @@ export async function GET(request: NextRequest) {
     // Which is reassuring depends on the link: a spent signup link means
     // "you're verified, go sign in", while a spent reset link means "ask for
     // another" - telling a locked-out user to sign in would be useless.
-    console.error("auth/confirm verifyOtp failed:", { type, message: error?.message });
+    console.error("auth/confirm verifyOtp failed:", {
+      type,
+      message: error?.message,
+    });
     const code = type === "recovery" ? "reset_link_spent" : "verify_link_spent";
-    return NextResponse.redirect(`${origin}${withNext(`/signin?notice=${code}`)}`);
+    return NextResponse.redirect(
+      `${origin}${withNext(`/signin?notice=${code}`)}`
+    );
   }
 
   // No token at all. The email templates used to link to {{ .ConfirmationURL }},
@@ -64,5 +82,7 @@ export async function GET(request: NextRequest) {
   // correct advice, not "your link looks broken". Emails sent before the
   // templates were fixed still land here, so this has to stay friendly.
   console.error("auth/confirm missing token_hash/type", { tokenHash, type });
-  return NextResponse.redirect(`${origin}${withNext("/signin?notice=verify_link_spent")}`);
+  return NextResponse.redirect(
+    `${origin}${withNext("/signin?notice=verify_link_spent")}`
+  );
 }

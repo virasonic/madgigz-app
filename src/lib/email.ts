@@ -1,15 +1,23 @@
 import { Resend } from "resend";
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL ?? "MadGigz <notifications@aurasonic.es>";
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
+const FROM_ADDRESS =
+  process.env.RESEND_FROM_EMAIL ?? "MadGigz <notifications@aurasonic.es>";
 
 // Best-effort - an email failure should never block the admin action that
 // triggered it (the approve/reject decision itself already happened).
-export async function sendArtistStatusEmail(email: string, status: "approved" | "rejected") {
+export async function sendArtistStatusEmail(
+  email: string,
+  status: "approved" | "rejected"
+) {
   if (!resend) return;
 
   const subject =
-    status === "approved" ? "You're approved on MadGigz!" : "Update on your MadGigz application";
+    status === "approved"
+      ? "You're approved on MadGigz!"
+      : "Update on your MadGigz application";
   const text =
     status === "approved"
       ? "Hey! Your MadGigz artist application was approved. You can now add shows and post content - head to your profile to get started."
@@ -36,12 +44,18 @@ export async function sendTicketEmail(input: {
   dateLabel: string;
   time: string;
   tierName?: string | null;
-  quantity: number;
-  ticketId: string;
-  qrPngBase64: string;
+  /** One per seat: each has its own QR (#036), and the door scans each. */
+  codes: { ticketId: string; qrPngBase64: string }[];
   appUrl: string;
+  /**
+   * Guest order (#234): the link that makes the account theirs. Null when it
+   * couldn't be minted - the email still carries the ticket, plus the
+   * "forgot password" fallback that always works.
+   */
+  claimUrl?: string | null;
 }): Promise<{ sent: boolean }> {
   if (!resend) return { sent: false };
+  if (input.codes.length === 0) return { sent: false };
 
   const es = input.locale === "es";
   const t = es
@@ -55,6 +69,13 @@ export async function sendTicketEmail(input: {
         openApp: "Abrir en la app de MadGigz",
         footer: "Guarda este correo — el código funciona sin conexión.",
         alt: "Código QR de tu entrada",
+        nth: (i: number, n: number) => `Entrada ${i} de ${n}`,
+        claimHeading: "Guárdala en la app",
+        claimBody:
+          "Hemos creado una cuenta de MadGigz con este correo. Elige una contraseña y tendrás tus entradas en la app, con más conciertos cerca de ti.",
+        claimButton: "Crear mi cuenta",
+        claimFallback:
+          "¿El enlace ha caducado? Entra en la app, pulsa «¿Has olvidado la contraseña?» y usa este correo.",
       }
     : {
         subject: `Your ticket for ${input.eventTitle}`,
@@ -64,36 +85,98 @@ export async function sendTicketEmail(input: {
         typeLabel: "Type",
         idLabel: "Ticket ID",
         openApp: "Open in the MadGigz app",
-        footer: "Keep this email — the code works offline.",
+        footer: "Keep this email â the code works offline.",
         alt: "Your ticket QR code",
+        nth: (i: number, n: number) => `Ticket ${i} of ${n}`,
+        claimHeading: "Keep it in the app",
+        claimBody:
+          "We've made a MadGigz account for this email. Choose a password and your tickets are in the app, with more gigs near you.",
+        claimButton: "Create my account",
+        claimFallback:
+          "Link expired? Open the app, tap “Forgot password?” and use this email.",
       };
 
-  // Inline QR via cid; a real attachment too, so every client can save it.
-  const cid = "ticket-qr";
-  const detail = [input.venue, input.dateLabel, input.time].filter(Boolean).join(" · ");
+  // Inline QRs via cid; real attachments too, so every client can save them.
+  const detail = [input.venue, input.dateLabel, input.time]
+    .filter(Boolean)
+    .join(" · ");
+  const n = input.codes.length;
+  const cidFor = (i: number) => `ticket-qr-${i + 1}`;
+
+  const qrBlocks = input.codes
+    .map(
+      (code, i) => `
+      <div style="text-align:center;padding:12px 24px 4px;">
+        ${
+          n > 1
+            ? `<p style="margin:0 0 8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#a2937f;">${t.nth(
+                i + 1,
+                n
+              )}</p>`
+            : ""
+        }
+        <div style="display:inline-block;background:#ffffff;border-radius:16px;padding:16px;">
+          <img src="cid:${cidFor(i)}" width="220" height="220" alt="${
+        t.alt
+      }" style="display:block;width:220px;height:220px;" />
+        </div>
+        <p style="margin:10px 0 0;font-size:12px;color:#6f6154;">${
+          t.idLabel
+        }: <span style="font-family:monospace;">${escapeHtml(
+        code.ticketId
+      )}</span></p>
+      </div>`
+    )
+    .join("");
+
+  const claimBlock = input.claimUrl
+    ? `
+      <div style="margin:0 24px 20px;padding:16px;border-radius:14px;background:#221a14;border:1px solid #322820;">
+        <p style="margin:0 0 6px;font-size:15px;font-weight:600;color:#f4ece0;">${t.claimHeading}</p>
+        <p style="margin:0 0 12px;font-size:13px;line-height:1.5;color:#a2937f;">${t.claimBody}</p>
+        <a href="${input.claimUrl}" style="display:inline-block;background:#e6812f;color:#17110d;text-decoration:none;font-weight:600;padding:11px 20px;border-radius:999px;font-size:14px;">${t.claimButton}</a>
+        <p style="margin:12px 0 0;font-size:12px;color:#6f6154;">${t.claimFallback}</p>
+      </div>`
+    : "";
 
   const html = `
   <div style="margin:0;padding:24px 12px;background:#0a0807;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
     <div style="max-width:420px;margin:0 auto;background:#17110d;border-radius:20px;overflow:hidden;border:1px solid #322820;">
       <div style="padding:24px 24px 8px;">
         <p style="margin:0 0 4px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#e6812f;">MadGigz</p>
-        <h1 style="margin:0;font-size:22px;line-height:1.15;color:#f4ece0;">${escapeHtml(input.eventTitle)}</h1>
-        <p style="margin:8px 0 0;font-size:14px;color:#a2937f;">${escapeHtml(detail)}</p>
+        <h1 style="margin:0;font-size:22px;line-height:1.15;color:#f4ece0;">${escapeHtml(
+          input.eventTitle
+        )}</h1>
+        <p style="margin:8px 0 0;font-size:14px;color:#a2937f;">${escapeHtml(
+          detail
+        )}</p>
       </div>
-      <div style="text-align:center;padding:12px 24px 4px;">
-        <div style="display:inline-block;background:#ffffff;border-radius:16px;padding:16px;">
-          <img src="cid:${cid}" width="220" height="220" alt="${t.alt}" style="display:block;width:220px;height:220px;" />
-        </div>
-        <p style="margin:14px 0 0;font-size:15px;color:#f4ece0;font-weight:600;">${t.intro}</p>
+      ${qrBlocks}
+      <div style="text-align:center;padding:4px 24px 0;">
+        <p style="margin:6px 0 0;font-size:15px;color:#f4ece0;font-weight:600;">${
+          t.intro
+        }</p>
       </div>
       <div style="padding:16px 24px 24px;font-size:13px;color:#a2937f;">
-        <p style="margin:0 0 4px;">${t.qtyLabel}: <span style="color:#f4ece0;">${input.quantity}</span>${
-          input.tierName ? ` &nbsp;·&nbsp; ${t.typeLabel}: <span style="color:#f4ece0;">${escapeHtml(input.tierName)}</span>` : ""
-        }</p>
-        <p style="margin:0 0 16px;">${t.idLabel}: <span style="font-family:monospace;color:#a2937f;">${escapeHtml(input.ticketId)}</span></p>
-        <a href="${input.appUrl}" style="display:inline-block;background:#e6812f;color:#17110d;text-decoration:none;font-weight:600;padding:11px 20px;border-radius:999px;font-size:14px;">${t.openApp}</a>
+        <p style="margin:0 0 16px;">${
+          t.qtyLabel
+        }: <span style="color:#f4ece0;">${n}</span>${
+    input.tierName
+      ? ` &nbsp;·&nbsp; ${
+          t.typeLabel
+        }: <span style="color:#f4ece0;">${escapeHtml(input.tierName)}</span>`
+      : ""
+  }</p>
+        <a href="${input.appUrl}" style="display:inline-block;background:${
+    input.claimUrl ? "#322820" : "#e6812f"
+  };color:${
+    input.claimUrl ? "#f4ece0" : "#17110d"
+  };text-decoration:none;font-weight:600;padding:11px 20px;border-radius:999px;font-size:14px;">${
+    t.openApp
+  }</a>
         <p style="margin:18px 0 0;font-size:12px;color:#6f6154;">${t.footer}</p>
       </div>
+      ${claimBlock}
     </div>
   </div>`;
 
@@ -102,10 +185,25 @@ export async function sendTicketEmail(input: {
     detail,
     "",
     t.intro,
-    `${t.qtyLabel}: ${input.quantity}${input.tierName ? ` · ${t.typeLabel}: ${input.tierName}` : ""}`,
-    `${t.idLabel}: ${input.ticketId}`,
+    `${t.qtyLabel}: ${n}${
+      input.tierName ? ` · ${t.typeLabel}: ${input.tierName}` : ""
+    }`,
+    ...input.codes.map((code, i) =>
+      n > 1
+        ? `${t.nth(i + 1, n)} · ${t.idLabel}: ${code.ticketId}`
+        : `${t.idLabel}: ${code.ticketId}`
+    ),
     "",
     `${t.openApp}: ${input.appUrl}`,
+    ...(input.claimUrl
+      ? [
+          "",
+          t.claimHeading,
+          t.claimBody,
+          `${t.claimButton}: ${input.claimUrl}`,
+          t.claimFallback,
+        ]
+      : []),
     t.footer,
   ].join("\n");
 
@@ -116,13 +214,11 @@ export async function sendTicketEmail(input: {
       subject: t.subject,
       html,
       text,
-      attachments: [
-        {
-          filename: `madgigz-ticket-${input.ticketId}.png`,
-          content: input.qrPngBase64,
-          contentId: cid,
-        },
-      ],
+      attachments: input.codes.map((code, i) => ({
+        filename: `madgigz-ticket-${code.ticketId}.png`,
+        content: code.qrPngBase64,
+        contentId: cidFor(i),
+      })),
     });
     return { sent: true };
   } catch (error) {
@@ -202,7 +298,11 @@ export async function sendLegalSubmission(input: {
       to: LEGAL_INBOX,
       replyTo: input.replyTo,
       subject: input.subject,
-      text: [...input.lines, "", `Received ${new Date().toISOString()} via the ${input.kind} form.`].join("\n"),
+      text: [
+        ...input.lines,
+        "",
+        `Received ${new Date().toISOString()} via the ${input.kind} form.`,
+      ].join("\n"),
     });
     if (error) {
       console.error(`Failed to send ${input.kind}:`, error);
@@ -244,8 +344,8 @@ export async function sendProInviteEmail(input: {
       ? "sala"
       : "promotor"
     : input.type === "venue"
-      ? "venue"
-      : "promoter";
+    ? "venue"
+    : "promoter";
 
   const copy = es
     ? {
@@ -259,7 +359,9 @@ export async function sendProInviteEmail(input: {
         action: input.existingAccount
           ? "Usa el enlace de abajo si necesitas una contraseña nueva; si no, entra como siempre."
           : "Crea tu contraseña con el enlace de abajo y entra.",
-        cta: input.existingAccount ? "Crear una contraseña nueva" : "Crear mi contraseña",
+        cta: input.existingAccount
+          ? "Crear una contraseña nueva"
+          : "Crear mi contraseña",
         body: "Desde el panel puedes publicar tus conciertos, vender entradas y seguir las ventas. El dinero de las entradas entra en tu propia cuenta de Stripe — te pediremos conectarla la primera vez que entres.",
         footer:
           "El enlace funciona una sola vez y caduca. Si ya se ha usado, pulsa «He olvidado mi contraseña» en la pantalla de inicio de sesión.",
@@ -296,15 +398,21 @@ export async function sendProInviteEmail(input: {
   const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#12100f;color:#f5efe6;padding:32px;border-radius:16px;max-width:520px;margin:0 auto">
       <h1 style="font-size:20px;margin:0 0 16px">${copy.heading}</h1>
-      <p style="margin:0 0 12px;line-height:1.55">${escapeHtml(copy.opening)}</p>
+      <p style="margin:0 0 12px;line-height:1.55">${escapeHtml(
+        copy.opening
+      )}</p>
       <p style="margin:0 0 20px;line-height:1.55">${copy.action}</p>
       <p style="margin:0 0 24px">
-        <a href="${input.setPasswordUrl}" style="display:inline-block;background:#d76616;color:#12100f;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">
+        <a href="${
+          input.setPasswordUrl
+        }" style="display:inline-block;background:#d76616;color:#12100f;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:999px">
           ${copy.cta}
         </a>
       </p>
       <p style="margin:0 0 12px;line-height:1.55;color:#a8a099">${copy.body}</p>
-      <p style="margin:0;line-height:1.55;color:#a8a099;font-size:13px">${copy.footer}</p>
+      <p style="margin:0;line-height:1.55;color:#a8a099;font-size:13px">${
+        copy.footer
+      }</p>
     </div>
   `;
 
@@ -327,7 +435,10 @@ export async function sendProInviteEmail(input: {
 // account for on its own - a dispute, or a dashboard refund that fits no ticket
 // (#229). Best-effort like the alerts above: the webhook has already recorded
 // what it could, and a Resend outage must not make Stripe retry the event.
-export async function sendOpsAlert(input: { subject: string; lines: string[] }) {
+export async function sendOpsAlert(input: {
+  subject: string;
+  lines: string[];
+}) {
   if (!resend) return;
 
   try {

@@ -49,7 +49,8 @@ export default function PublicEventActions({
     if (outcome === "failed") setFallbackUrl(absoluteUrl(eventPath(event.id)));
   }
 
-  const externalUrl = event.ticketing?.mode === "external" ? event.ticketing.url : undefined;
+  const externalUrl =
+    event.ticketing?.mode === "external" ? event.ticketing.url : undefined;
 
   function ticketButton() {
     if (event.cancelled) return null;
@@ -86,17 +87,26 @@ export default function PublicEventActions({
 
     if (soldOut) return <Button disabled>{t("publicEvent.soldOut")}</Button>;
 
-    if (!signedIn) {
+    // Guest checkout (#234): the sheet itself offers the email-only route on a
+    // show an admin opened to it, and falls back to sign-in on a €0 total.
+    if (!signedIn && !event.guestCheckout) {
       // ?next brings them back here after signing in, so the link they were
       // sent is still the thing they end up looking at.
       return (
-        <Link href={`/signin?next=${encodeURIComponent(eventPath(event.id))}`} className="block">
+        <Link
+          href={`/signin?next=${encodeURIComponent(eventPath(event.id))}`}
+          className="block"
+        >
           <Button>{t("publicEvent.signInToBuy")}</Button>
         </Link>
       );
     }
 
-    return <Button onClick={() => buyModal.open("1")}>{t("publicEvent.getTickets")}</Button>;
+    return (
+      <Button onClick={() => buyModal.open("1")}>
+        {t("publicEvent.getTickets")}
+      </Button>
+    );
   }
 
   return (
@@ -134,6 +144,7 @@ export default function PublicEventActions({
       {modalOpen && (
         <TicketModal
           event={event}
+          isGuest={!signedIn}
           onClose={buyModal.close}
           onPurchased={() => router.refresh()}
         />

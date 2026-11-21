@@ -2,14 +2,26 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import ClampText from "@/components/ui/ClampText";
+import Input from "@/components/ui/Input";
+import Turnstile, { TurnstileHandle } from "@/components/ui/Turnstile";
 import { LegalNotice } from "@/components/legal/LegalNotice";
-import { createCheckout, previewPromoCode } from "@/app/(app)/checkout-actions";
+import {
+  createCheckout,
+  createGuestCheckout,
+  previewPromoCode,
+} from "@/app/(app)/checkout-actions";
 import TicketEmailPrompt from "./TicketEmailPrompt";
 import { createClient } from "@/lib/supabase/client";
-import { EventItem, EventTier, EventTierRow, mapEventTier, tierIsAvailable } from "@/lib/types";
+import {
+  EventItem,
+  EventTier,
+  EventTierRow,
+  mapEventTier,
+  tierIsAvailable,
+} from "@/lib/types";
 import { eventPath } from "@/lib/site";
 import ShareEventButton from "./ShareEventButton";
 import FriendsGoingStrip from "@/components/friends/FriendsGoingStrip";
@@ -23,10 +35,15 @@ import { useLiveEventStats } from "@/lib/realtime";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
 import { openExternal } from "@/lib/native";
 import { recordEventLinkClick } from "@/lib/track";
-import { fetchPublicOrganiser, fetchTaggedArtistProfiles } from "@/lib/supabase/queries";
+import {
+  fetchPublicOrganiser,
+  fetchTaggedArtistProfiles,
+} from "@/lib/supabase/queries";
 import { buildLineupLinks, normName } from "@/lib/lineup-links";
 
 type Tab = "tickets" | "info";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 interface TicketModalProps {
   event: EventItem;
@@ -54,7 +71,13 @@ function formatDate(iso: string, dl: string) {
 
 function BackIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M15 19l-7-7 7-7"
         stroke="currentColor"
@@ -88,11 +111,22 @@ export default function TicketModal({
   // The just-issued free ticket's id, so the success screen can email it (#155).
   // Paid tickets redirect out to Stripe and land on /checkout/complete instead,
   // which carries its own copy of this action.
-  const [purchasedTicketId, setPurchasedTicketId] = useState<string | null>(null);
+  const [purchasedTicketId, setPurchasedTicketId] = useState<string | null>(
+    null
+  );
   const [buying, setBuying] = useState(false);
   const [buyError, setBuyError] = useState<string | undefined>();
   // "Send to a friend" (#149 Phase B): the in-app route beside the OS share.
   const [sendingToFriend, setSendingToFriend] = useState(false);
+
+  // Guest checkout (#234): email-only purchase, offered on shows an admin has
+  // opened to it. Everything else about the sheet is the signed-in one.
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestConsent, setGuestConsent] = useState(false);
+  const [guestError, setGuestError] = useState<string | undefined>();
+  const [guestHasAccount, setGuestHasAccount] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
 
   const [promoCode, setPromoCode] = useState("");
   const [promoLabel, setPromoLabel] = useState<string | null>(null);
@@ -115,7 +149,10 @@ export default function TicketModal({
   // app has no route to their profile at all, and the Follow button on it might
   // as well not exist. The public /e/ page has the same credit; this is the
   // surface fans are actually on.
-  const [organiser, setOrganiser] = useState<{ id: string; name: string } | null>(null);
+  const [organiser, setOrganiser] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -125,10 +162,14 @@ export default function TicketModal({
         fetchPublicOrganiser(supabase, event.proAccountId),
       ]);
       if (cancelled) return;
-      setLineupLinks(buildLineupLinks(tagged, { id: event.artistId, name: event.artist }));
+      setLineupLinks(
+        buildLineupLinks(tagged, { id: event.artistId, name: event.artist })
+      );
       // Returns null for a show with no pro owner, and for a pro account with
       // no public page - so the credit renders only when it links somewhere.
-      setOrganiser(presenter ? { id: presenter.id, name: presenter.name } : null);
+      setOrganiser(
+        presenter ? { id: presenter.id, name: presenter.name } : null
+      );
     })();
     return () => {
       cancelled = true;
@@ -148,7 +189,8 @@ export default function TicketModal({
         if (cancelled || error || !data) return;
         const rows = (data as EventTierRow[]).map(mapEventTier);
         setTiers(rows);
-        const firstAvailable = rows.find((tr) => tierIsAvailable(tr)) ?? rows[0] ?? null;
+        const firstAvailable =
+          rows.find((tr) => tierIsAvailable(tr)) ?? rows[0] ?? null;
         setSelectedTierId(firstAvailable?.id ?? null);
       });
     return () => {
@@ -157,7 +199,9 @@ export default function TicketModal({
   }, [event.id]);
 
   const tiered = tiers.length > 0;
-  const selectedTier = tiered ? (tiers.find((tr) => tr.id === selectedTierId) ?? null) : null;
+  const selectedTier = tiered
+    ? tiers.find((tr) => tr.id === selectedTierId) ?? null
+    : null;
   const unitPrice = selectedTier ? selectedTier.price : event.price;
 
   // The sold count is the one number here that goes stale while the sheet sits
@@ -189,16 +233,21 @@ export default function TicketModal({
     : remaining;
   // Types share the room pool (#151), so the seats actually buyable is the
   // smaller of this type's own remaining and the room's remaining.
-  const sellableRemaining = tiered ? Math.min(tierRemaining, remaining) : remaining;
+  const sellableRemaining = tiered
+    ? Math.min(tierRemaining, remaining)
+    : remaining;
   // Whichever runs out first: the per-order cap (the chosen type's for a tiered
   // show, the event's otherwise) or the seats left.
-  const perOrderCap = selectedTier ? selectedTier.maxPerOrder : event.maxPerOrder;
+  const perOrderCap = selectedTier
+    ? selectedTier.maxPerOrder
+    : event.maxPerOrder;
   const maxQuantity = Math.max(Math.min(sellableRemaining, perOrderCap), 1);
-  const tierUnavailable = tiered && (!selectedTier || !tierIsAvailable(selectedTier));
+  const tierUnavailable =
+    tiered && (!selectedTier || !tierIsAvailable(selectedTier));
   const buyBlocked = soldOut || tierUnavailable;
 
   const subtotal = unitPrice * quantity;
-  const total = buyBlocked ? 0 : (discountedTotal ?? subtotal);
+  const total = buyBlocked ? 0 : discountedTotal ?? subtotal;
 
   function selectTier(id: string) {
     setSelectedTierId(id);
@@ -207,7 +256,8 @@ export default function TicketModal({
     setDiscountedTotal(null);
   }
 
-  const externalUrl = event.ticketing?.mode === "external" ? event.ticketing.url : undefined;
+  const externalUrl =
+    event.ticketing?.mode === "external" ? event.ticketing.url : undefined;
   let externalHost = t("ticket.externalHostFallback");
   if (externalUrl) {
     try {
@@ -222,7 +272,12 @@ export default function TicketModal({
     setCheckingPromo(true);
     setPromoError(undefined);
 
-    const result = await previewPromoCode(event.id, quantity, promoCode, selectedTierId);
+    const result = await previewPromoCode(
+      event.id,
+      quantity,
+      promoCode,
+      selectedTierId
+    );
     setCheckingPromo(false);
 
     if (result.error || result.totalEuros === undefined) {
@@ -243,7 +298,12 @@ export default function TicketModal({
     setBuyError(undefined);
     recordEventLinkClick(event.id); // checkout-start interest signal (#clicks)
 
-    const result = await createCheckout(event.id, quantity, promoCode.trim() || null, selectedTierId);
+    const result = await createCheckout(
+      event.id,
+      quantity,
+      promoCode.trim() || null,
+      selectedTierId
+    );
 
     if (result.error) {
       setBuying(false);
@@ -260,6 +320,41 @@ export default function TicketModal({
     setPurchasedTicketId(result.freeTicketId ?? null);
     setPurchased(true);
     onPurchased?.();
+  }
+
+  async function handleGuestBuy() {
+    setGuestError(undefined);
+    setBuyError(undefined);
+    setGuestHasAccount(false);
+    if (!/^\S+@\S+\.\S+$/.test(guestEmail.trim())) {
+      setGuestError(t("signup.errorEmail"));
+      return;
+    }
+    if (!guestConsent) {
+      setBuyError(t("ticket.guestConsentRequired"));
+      return;
+    }
+    setBuying(true);
+    recordEventLinkClick(event.id);
+    const result = await createGuestCheckout(
+      event.id,
+      quantity,
+      promoCode.trim() || null,
+      selectedTierId,
+      { email: guestEmail.trim(), turnstileToken, locale }
+    );
+    if (result.url) {
+      window.location.href = result.url;
+      return;
+    }
+    setBuying(false);
+    turnstileRef.current?.reset();
+    setTurnstileToken(null);
+    if (result.code === "hasAccount") {
+      setGuestHasAccount(true);
+      return;
+    }
+    setBuyError(result.error ?? t("ticket.promoInvalid"));
   }
 
   function handleBuyExternal() {
@@ -284,7 +379,10 @@ export default function TicketModal({
             scrollable body so it never fights the sheet's own overflow scroll.
             Desktop (#211b): the sheet is a right-docked, full-height panel, so a
             sticky back arrow replaces the handle. */}
-        <div {...handleProps} className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3 lg:hidden">
+        <div
+          {...handleProps}
+          className="mx-auto -mt-3 mb-2 flex w-full justify-center pb-3 pt-3 lg:hidden"
+        >
           <div className="h-1 w-10 rounded-full bg-muted/30" />
         </div>
         <div className="sticky top-0 z-10 -mx-6 -mt-6 mb-1 hidden items-center bg-surface px-6 pb-3 pt-5 lg:flex">
@@ -307,7 +405,9 @@ export default function TicketModal({
             >
               ✓
             </div>
-            <h2 className="font-display text-2xl text-foreground">{t("ticket.goingTitle")}</h2>
+            <h2 className="font-display text-2xl text-foreground">
+              {t("ticket.goingTitle")}
+            </h2>
             <p className="text-sm text-muted">
               {t("ticket.summary", {
                 count: quantity,
@@ -321,7 +421,10 @@ export default function TicketModal({
                 drop a copy in their inbox too (#155). Shared with the paid
                 success page so the two stay identical. */}
             <div className="mt-4">
-              <TicketEmailPrompt ticketId={purchasedTicketId} accentColor={event.accentColor} />
+              <TicketEmailPrompt
+                ticketId={purchasedTicketId}
+                accentColor={event.accentColor}
+              />
             </div>
 
             {/* Who's already in, invite more, hand a spare on (#149 Phase B). */}
@@ -336,7 +439,13 @@ export default function TicketModal({
         ) : (
           <>
             <div className="relative mb-4 aspect-[3/4] w-full overflow-hidden rounded-2xl bg-background">
-              <Image src={event.image} alt={event.title} fill sizes="480px" className="object-contain" />
+              <Image
+                src={event.image}
+                alt={event.title}
+                fill
+                sizes="480px"
+                className="object-contain"
+              />
             </div>
 
             {/* Like and share both live here rather than on the cards behind
@@ -345,10 +454,17 @@ export default function TicketModal({
                 covers all three, and they sit next to the show they act on
                 rather than on a thumbnail of it. */}
             <div className="flex items-start justify-between gap-3">
-              <h2 className="font-display text-2xl text-foreground">{event.title}</h2>
+              <h2 className="font-display text-2xl text-foreground">
+                {event.title}
+              </h2>
               <div className="flex shrink-0 items-start gap-4 pt-1">
                 {onToggleLike && (
-                  <LikeButton event={event} liked={liked} onToggle={onToggleLike} showLabel />
+                  <LikeButton
+                    event={event}
+                    liked={liked}
+                    onToggle={onToggleLike}
+                    showLabel
+                  />
                 )}
                 <ShareEventButton event={event} showLabel />
                 {!isGuest && (
@@ -358,19 +474,40 @@ export default function TicketModal({
                     aria-label={t("friends.sendToFriend")}
                     className="flex flex-col items-center gap-1 text-foreground"
                   >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M21 3L10 14M21 3l-7 18-4-7-7-4z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M21 3L10 14M21 3l-7 18-4-7-7-4z"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
-                    <span className="whitespace-nowrap text-xs text-muted">{t("friends.sendShort")}</span>
+                    <span className="whitespace-nowrap text-xs text-muted">
+                      {t("friends.sendShort")}
+                    </span>
                   </button>
                 )}
               </div>
             </div>
             {sendingToFriend && (
-              <SendToFriendSheet mode="event" event={event} onClose={() => setSendingToFriend(false)} />
+              <SendToFriendSheet
+                mode="event"
+                event={event}
+                onClose={() => setSendingToFriend(false)}
+              />
             )}
             {event.artistId ? (
-              <Link href={`/profile/${event.artistId}`} className="mt-1 inline-block text-sm text-accent">
+              <Link
+                href={`/profile/${event.artistId}`}
+                className="mt-1 inline-block text-sm text-accent"
+              >
                 {event.artist}
               </Link>
             ) : (
@@ -389,7 +526,9 @@ export default function TicketModal({
               <button
                 onClick={() => setTab("tickets")}
                 className={`flex-1 rounded-full py-2 text-sm font-heading ${
-                  tab === "tickets" ? "bg-primary text-foreground" : "text-muted"
+                  tab === "tickets"
+                    ? "bg-primary text-foreground"
+                    : "text-muted"
                 }`}
               >
                 {t("ticket.getTicketsTab")}
@@ -419,7 +558,9 @@ export default function TicketModal({
                     Sold-out / past-cutoff tiers are shown but disabled. */}
                 {tiered && (
                   <div className="flex flex-col gap-2">
-                    <span className="font-heading text-sm text-muted">{t("ticket.chooseTier")}</span>
+                    <span className="font-heading text-sm text-muted">
+                      {t("ticket.chooseTier")}
+                    </span>
                     {tiers.map((tr) => {
                       // Unavailable if the type is exhausted/closed OR the shared
                       // room is full (#151).
@@ -430,14 +571,16 @@ export default function TicketModal({
                           ? t("ticket.tierSoldOut")
                           : t("ticket.tierClosed")
                         : tr.availableUntil
-                          ? t("ticket.tierUntil", {
-                              date: new Date(tr.availableUntil).toLocaleDateString(dl, {
-                                day: "numeric",
-                                month: "short",
-                                timeZone: "UTC",
-                              }),
-                            })
-                          : null;
+                        ? t("ticket.tierUntil", {
+                            date: new Date(
+                              tr.availableUntil
+                            ).toLocaleDateString(dl, {
+                              day: "numeric",
+                              month: "short",
+                              timeZone: "UTC",
+                            }),
+                          })
+                        : null;
                       return (
                         <button
                           key={tr.id}
@@ -445,12 +588,20 @@ export default function TicketModal({
                           onClick={() => available && selectTier(tr.id)}
                           disabled={!available}
                           className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors ${
-                            selected ? "border-primary bg-primary/10" : "border-muted/20 bg-background"
+                            selected
+                              ? "border-primary bg-primary/10"
+                              : "border-muted/20 bg-background"
                           } disabled:opacity-40`}
                         >
                           <span className="min-w-0">
-                            <span className="block font-heading text-sm text-foreground">{tr.name}</span>
-                            {subline && <span className="block text-xs text-muted">{subline}</span>}
+                            <span className="block font-heading text-sm text-foreground">
+                              {tr.name}
+                            </span>
+                            {subline && (
+                              <span className="block text-xs text-muted">
+                                {subline}
+                              </span>
+                            )}
                           </span>
                           <span className="shrink-0 font-display text-foreground">
                             €{tr.price.toFixed(2)}
@@ -462,7 +613,9 @@ export default function TicketModal({
                 )}
 
                 <div className="flex items-center justify-between">
-                  <span className="font-heading text-sm text-muted">{t("ticket.quantity")}</span>
+                  <span className="font-heading text-sm text-muted">
+                    {t("ticket.quantity")}
+                  </span>
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => {
@@ -497,11 +650,16 @@ export default function TicketModal({
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/20">
                       <div
                         className="h-full rounded-full"
-                        style={{ width: `${soldPercent}%`, backgroundColor: event.accentColor }}
+                        style={{
+                          width: `${soldPercent}%`,
+                          backgroundColor: event.accentColor,
+                        }}
                       />
                     </div>
                     {soldOut ? (
-                      <p className="mt-2 text-xs text-danger">{t("ticket.soldOutBar")}</p>
+                      <p className="mt-2 text-xs text-danger">
+                        {t("ticket.soldOutBar")}
+                      </p>
                     ) : (
                       almostGone && (
                         <p className="mt-2 text-xs text-danger">
@@ -514,7 +672,9 @@ export default function TicketModal({
 
                 {!buyBlocked && !isGuest && (
                   <div className="flex flex-col gap-1.5">
-                    <span className="font-heading text-sm text-muted">{t("ticket.promoCode")}</span>
+                    <span className="font-heading text-sm text-muted">
+                      {t("ticket.promoCode")}
+                    </span>
                     <div className="flex gap-2">
                       <input
                         value={promoCode}
@@ -535,14 +695,22 @@ export default function TicketModal({
                         {checkingPromo ? "..." : t("ticket.apply")}
                       </button>
                     </div>
-                    {promoError && <p className="text-sm text-danger">{promoError}</p>}
-                    {promoLabel && <p className="text-sm text-accent">{promoLabel}</p>}
+                    {promoError && (
+                      <p className="text-sm text-danger">{promoError}</p>
+                    )}
+                    {promoLabel && (
+                      <p className="text-sm text-accent">{promoLabel}</p>
+                    )}
                   </div>
                 )}
 
                 <div className="flex items-center justify-between border-t border-muted/15 pt-4">
-                  <span className="font-heading text-muted">{t("ticket.total")}</span>
-                  <span className="font-display text-xl text-foreground">€{total.toFixed(2)}</span>
+                  <span className="font-heading text-muted">
+                    {t("ticket.total")}
+                  </span>
+                  <span className="font-display text-xl text-foreground">
+                    €{total.toFixed(2)}
+                  </span>
                 </div>
                 {buyError && <p className="text-sm text-danger">{buyError}</p>}
 
@@ -555,11 +723,88 @@ export default function TicketModal({
                   </div>
                 )}
 
-                {isGuest && !buyBlocked ? (
+                {isGuest && !buyBlocked && event.guestCheckout && total > 0 ? (
+                  // Guest checkout (#234): the account is made for the email at
+                  // checkout and the ticket emailed, so there is somewhere to
+                  // issue it after all. A €0 total still needs an account (the
+                  // server refuses it too), hence the total > 0.
+                  <div className="flex flex-col gap-3 rounded-2xl bg-background p-4">
+                    <div>
+                      <p className="font-heading text-sm text-foreground">
+                        {t("ticket.guestTitle")}
+                      </p>
+                      <p className="mt-1 text-xs text-muted">
+                        {t("ticket.guestBody")}
+                      </p>
+                    </div>
+                    <Input
+                      label={t("ticket.guestEmail")}
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      error={guestError}
+                    />
+                    <div className="flex items-start gap-3">
+                      <input
+                        id="guest-consent"
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                        checked={guestConsent}
+                        onChange={(e) => setGuestConsent(e.target.checked)}
+                      />
+                      <label
+                        htmlFor="guest-consent"
+                        className="text-xs text-muted"
+                      >
+                        <LegalNotice messageKey="ticket.guestConsent" />
+                      </label>
+                    </div>
+                    {TURNSTILE_SITE_KEY && (
+                      <Turnstile
+                        ref={turnstileRef}
+                        siteKey={TURNSTILE_SITE_KEY}
+                        onVerify={(token) => setTurnstileToken(token)}
+                        onExpire={() => setTurnstileToken(null)}
+                      />
+                    )}
+                    {guestHasAccount && (
+                      <p className="text-sm text-foreground">
+                        {t("ticket.guestHasAccount")}{" "}
+                        <Link
+                          href={`/signin?next=${encodeURIComponent(
+                            eventPath(event.id)
+                          )}`}
+                          className="text-accent underline underline-offset-2"
+                        >
+                          {t("ticket.guestSignIn")}
+                        </Link>
+                      </p>
+                    )}
+                    <Button onClick={handleGuestBuy} disabled={buying}>
+                      {buying ? t("ticket.buyStarting") : t("ticket.buyPay")}
+                    </Button>
+                    <p className="text-center text-xs text-muted">
+                      {t("ticket.guestOr")}{" "}
+                      <Link
+                        href={`/signin?next=${encodeURIComponent(
+                          eventPath(event.id)
+                        )}`}
+                        className="text-accent"
+                      >
+                        {t("ticket.guestSignIn")}
+                      </Link>
+                    </p>
+                  </div>
+                ) : isGuest && !buyBlocked ? (
                   // No account, nowhere to issue a ticket - send them to sign in
                   // and back to this show's page (where they can complete it).
                   <Link
-                    href={`/signin?next=${encodeURIComponent(eventPath(event.id))}`}
+                    href={`/signin?next=${encodeURIComponent(
+                      eventPath(event.id)
+                    )}`}
                     className="block"
                   >
                     <Button>{t("publicEvent.signInToBuy")}</Button>
@@ -569,10 +814,10 @@ export default function TicketModal({
                     {buyBlocked
                       ? t("ticket.buySoldOut")
                       : buying
-                        ? t("ticket.buyStarting")
-                        : total === 0
-                          ? t("ticket.buyFree")
-                          : t("ticket.buyPay")}
+                      ? t("ticket.buyStarting")
+                      : total === 0
+                      ? t("ticket.buyFree")
+                      : t("ticket.buyPay")}
                   </Button>
                 )}
 
@@ -597,25 +842,38 @@ export default function TicketModal({
                 )}
 
                 <div>
-                  <h3 className="font-heading text-sm text-muted">{t("ticket.lineup")}</h3>
+                  <h3 className="font-heading text-sm text-muted">
+                    {t("ticket.lineup")}
+                  </h3>
                   <ol className="mt-2 flex flex-col gap-1.5">
                     {event.lineup.map((act, i) => {
                       const profileId = lineupLinks[normName(act)];
                       return (
-                        <li key={act} className="flex items-baseline gap-2 text-sm text-foreground">
+                        <li
+                          key={act}
+                          className="flex items-baseline gap-2 text-sm text-foreground"
+                        >
                           <span className="text-muted">{i + 1}.</span>
                           {profileId ? (
                             <Link
                               href={`/profile/${profileId}`}
-                              className={`text-accent hover:underline ${i === 0 ? "font-heading" : ""}`}
+                              className={`text-accent hover:underline ${
+                                i === 0 ? "font-heading" : ""
+                              }`}
                             >
                               {act}
                             </Link>
                           ) : (
-                            <span className={i === 0 ? "font-heading" : undefined}>{act}</span>
+                            <span
+                              className={i === 0 ? "font-heading" : undefined}
+                            >
+                              {act}
+                            </span>
                           )}
                           {i === 0 && (
-                            <span className="text-xs uppercase text-muted">{t("ticket.headliner")}</span>
+                            <span className="text-xs uppercase text-muted">
+                              {t("ticket.headliner")}
+                            </span>
                           )}
                         </li>
                       );
@@ -660,7 +918,9 @@ export default function TicketModal({
                       produce a number. */}
                 </div>
 
-                <Button onClick={() => setTab("tickets")}>{t("ticket.getTicketsTab")}</Button>
+                <Button onClick={() => setTab("tickets")}>
+                  {t("ticket.getTicketsTab")}
+                </Button>
               </div>
             )}
           </>

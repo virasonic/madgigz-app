@@ -26,7 +26,7 @@ export async function emailTicket(
   // row id in the pre-addendum_037 window.
   const { data: ticket } = await supabase
     .from("tickets")
-    .select("id, quantity, refunded, event_id, tier_id, qr_secret")
+    .select("id, refunded, event_id, tier_id, qr_secret")
     .eq("id", ticketId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -64,9 +64,7 @@ export async function emailTicket(
     dateLabel,
     time: event.time,
     tierName,
-    quantity: (ticket.quantity as number) ?? 1,
-    ticketId: ticket.id as string,
-    qrPngBase64,
+    codes: [{ ticketId: ticket.id as string, qrPngBase64 }],
     appUrl: absoluteUrl("/saved"),
   });
 

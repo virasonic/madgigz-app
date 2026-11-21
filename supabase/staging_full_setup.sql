@@ -5240,3 +5240,21 @@ $$;
 -- (cron.unschedule errors on an unknown name, hence the where.)
 select cron.unschedule(jobid) from cron.job where jobname = 'publish-scheduled-shows';
 select cron.schedule('publish-scheduled-shows', '* * * * *', $$select public.publish_due_shows()$$);
+
+
+-- ============ addendum_072_guest_checkout ============
+-- ============ 1. Which shows allow it ============
+
+alter table public.events
+  add column if not exists guest_checkout boolean not null default false;
+
+comment on column public.events.guest_checkout is
+  'Admin-only: fans may buy with just an email, no account first (#234). Paid shows only; the code refuses a €0 guest order.';
+
+-- ============ 2. Which profiles started life as a guest purchase ============
+
+alter table public.profiles
+  add column if not exists guest_checkout_at timestamptz;
+
+comment on column public.profiles.guest_checkout_at is
+  'Set when the account was created by a guest checkout (#234). onboarding_complete flips true once the person claims it. Service-role only.';

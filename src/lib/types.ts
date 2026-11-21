@@ -94,6 +94,11 @@ export interface EventItem {
    * Null on a database where addendum_071 hasn't run.
    */
   publishAt: string | null;
+  /**
+   * Fans may buy with only an email, no account first (#234). Admin-only
+   * toggle; paid shows only. False on a database where addendum_072 hasn't run.
+   */
+  guestCheckout: boolean;
   maxPerOrder: number;
   ticketing?: Ticketing;
   /**
@@ -331,6 +336,7 @@ export interface EventRow {
   featured?: boolean;
   /** Absent on a database where addendum_071 hasn't run. */
   publish_at?: string | null;
+  guest_checkout?: boolean;
 }
 
 export function mapEvent(row: EventRow): EventItem {
@@ -362,6 +368,7 @@ export function mapEvent(row: EventRow): EventItem {
     cancelled: row.cancelled ?? false,
     featured: row.featured ?? false,
     publishAt: row.publish_at ?? null,
+    guestCheckout: row.guest_checkout ?? false,
     maxPerOrder: row.max_per_order ?? 6,
     ticketing:
       row.ticketing_mode === "external"

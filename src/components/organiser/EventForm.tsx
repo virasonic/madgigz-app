@@ -7,17 +7,35 @@ import GenrePicker from "@/components/artist/GenrePicker";
 import LineupEditor, { LineupEntry } from "@/components/artist/LineupEditor";
 import ExtraTagPicker from "@/components/artist/ExtraTagPicker";
 import DateInput from "@/components/ui/DateInput";
-import PublishPicker, { type PublishMode } from "@/components/organiser/PublishPicker";
-import { checkPublishAt, formatPublishAt, isoToMadridFields, madridToIso } from "@/lib/schedule";
+import PublishPicker, {
+  type PublishMode,
+} from "@/components/organiser/PublishPicker";
+import {
+  checkPublishAt,
+  formatPublishAt,
+  isoToMadridFields,
+  madridToIso,
+} from "@/lib/schedule";
 import { dateLocale } from "@/lib/dates";
-import { createAdminEvent, updateAdminEvent } from "@/app/admin/events/event-actions";
+import {
+  createAdminEvent,
+  updateAdminEvent,
+} from "@/app/admin/events/event-actions";
 import { createProEvent, updateProEvent } from "@/app/pro/events/event-actions";
 import { setEventTiers } from "@/app/admin/events/tier-actions";
 import { setProEventTiers } from "@/app/pro/events/tier-actions";
 import { TierRowsFields } from "@/components/organiser/TierManager";
 import { tierRowIsBlank, tierRowsToInput, type TierRow } from "@/lib/tier-rows";
 import { validateTiers } from "@/lib/tiers-apply";
-import { breakdownFor, FEE_PERCENT, formatEuros, MIN_FEE_CENTS, parseEuros, toCents, VAT_PERCENT } from "@/lib/pricing";
+import {
+  breakdownFor,
+  FEE_PERCENT,
+  formatEuros,
+  MIN_FEE_CENTS,
+  parseEuros,
+  toCents,
+  VAT_PERCENT,
+} from "@/lib/pricing";
 import { uploadEventMedia } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -65,7 +83,9 @@ function Field({
 }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="font-heading text-xs uppercase tracking-wide text-muted">{label}</span>
+      <span className="font-heading text-xs uppercase tracking-wide text-muted">
+        {label}
+      </span>
       {children}
       {hint && <span className="text-xs text-muted">{hint}</span>}
     </label>
@@ -116,10 +136,16 @@ export default function EventForm({
   // show is still waiting to go live - once it's public there is nothing to
   // schedule. Seeded from the pending time so an unchanged save keeps it.
   const schedulable = !existing || existing.publishAt !== null;
-  const pendingFields = existing?.publishAt ? isoToMadridFields(existing.publishAt) : null;
-  const [publishMode, setPublishMode] = useState<PublishMode>(pendingFields ? "later" : "now");
+  const pendingFields = existing?.publishAt
+    ? isoToMadridFields(existing.publishAt)
+    : null;
+  const [publishMode, setPublishMode] = useState<PublishMode>(
+    pendingFields ? "later" : "now"
+  );
   const [publishDate, setPublishDate] = useState(pendingFields?.date ?? "");
-  const [publishTime, setPublishTime] = useState(pendingFields?.time ?? "20:00");
+  const [publishTime, setPublishTime] = useState(
+    pendingFields?.time ?? "20:00"
+  );
 
   const [title, setTitle] = useState(existing?.title ?? "");
   const [artistName, setArtistName] = useState(existing?.artist ?? "");
@@ -130,14 +156,26 @@ export default function EventForm({
   const [date, setDate] = useState(existing?.date ?? "");
   const [time, setTime] = useState(existing?.time?.slice(0, 5) ?? "21:00");
   const [price, setPrice] = useState(existing ? String(existing.price) : "0");
-  const [capacity, setCapacity] = useState(existing ? String(existing.capacity) : "100");
-  const [maxPerOrder, setMaxPerOrder] = useState(existing ? String(existing.maxPerOrder) : "6");
+  const [capacity, setCapacity] = useState(
+    existing ? String(existing.capacity) : "100"
+  );
+  const [maxPerOrder, setMaxPerOrder] = useState(
+    existing ? String(existing.maxPerOrder) : "6"
+  );
+  // Guest checkout (#234): admin-only, and only meaningful on a show MadGigz
+  // sells itself.
+  const [guestCheckout, setGuestCheckout] = useState(
+    existing?.guestCheckout ?? false
+  );
   const [description, setDescription] = useState(existing?.description ?? "");
   const [entries, setEntries] = useState<LineupEntry[]>(
     existing && existing.lineup.length > 0
       ? existing.lineup.map((name) => ({
           name,
-          profileId: artists.find((a) => a.artistName === name && initialTaggedIds.includes(a.id))?.id ?? null,
+          profileId:
+            artists.find(
+              (a) => a.artistName === name && initialTaggedIds.includes(a.id)
+            )?.id ?? null,
         }))
       : [{ name: "", profileId: null }]
   );
@@ -149,19 +187,31 @@ export default function EventForm({
       (existing?.lineup ?? [])
         .map(
           (name) =>
-            artists.find((a) => a.artistName === name && initialTaggedIds.includes(a.id))?.id
+            artists.find(
+              (a) => a.artistName === name && initialTaggedIds.includes(a.id)
+            )?.id
         )
         .filter((id): id is string => Boolean(id))
     );
     return initialTaggedIds.filter((id) => !onBill.has(id));
   });
   const [genreIds, setGenreIds] = useState<string[]>(initialGenreIds);
-  const [accentColor, setAccentColor] = useState(existing?.accentColor ?? ACCENT_SWATCHES[0].value);
-  const [ageRestriction, setAgeRestriction] = useState(existing?.ageRestriction ?? "18+");
-  const [ticketing, setTicketing] = useState<Ticketing>(
-    existing?.ticketing?.mode === "external" ? "external" : existing ? "internal" : "external"
+  const [accentColor, setAccentColor] = useState(
+    existing?.accentColor ?? ACCENT_SWATCHES[0].value
   );
-  const [ticketingUrl, setTicketingUrl] = useState(existing?.ticketing?.url ?? "");
+  const [ageRestriction, setAgeRestriction] = useState(
+    existing?.ageRestriction ?? "18+"
+  );
+  const [ticketing, setTicketing] = useState<Ticketing>(
+    existing?.ticketing?.mode === "external"
+      ? "external"
+      : existing
+      ? "internal"
+      : "external"
+  );
+  const [ticketingUrl, setTicketingUrl] = useState(
+    existing?.ticketing?.url ?? ""
+  );
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [posterPreview, setPosterPreview] = useState<string | null>(null);
   // Ticket types, on the CREATE screen only (#151). Editing an existing show
@@ -176,16 +226,23 @@ export default function EventForm({
   // stay editable, so a price typed here was silently thrown away - it looked
   // like the show had simply dropped an option. Show the derived number instead.
   const activeTierRows = tierRows.filter((r) => !tierRowIsBlank(r));
-  const tierPrices = activeTierRows.map((r) => parseEuros(r.price)).filter(Number.isFinite);
-  const cheapestTierPrice = tierPrices.length > 0 ? Math.min(...tierPrices) : null;
-  const priceFromTypes = !existing && ticketing === "internal" && cheapestTierPrice !== null;
+  const tierPrices = activeTierRows
+    .map((r) => parseEuros(r.price))
+    .filter(Number.isFinite);
+  const cheapestTierPrice =
+    tierPrices.length > 0 ? Math.min(...tierPrices) : null;
+  const priceFromTypes =
+    !existing && ticketing === "internal" && cheapestTierPrice !== null;
 
   // A promoter or venue sells on their own account and pays the commission; an
   // admin's internal show is a MadGigz house show, which pays none.
   const organiserSells = mode === "pro";
   const priceCents = toCents(Number(price));
   const breakdown =
-    organiserSells && ticketing === "internal" && Number.isFinite(priceCents) && priceCents > 0
+    organiserSells &&
+    ticketing === "internal" &&
+    Number.isFinite(priceCents) &&
+    priceCents > 0
       ? breakdownFor(priceCents)
       : null;
 
@@ -229,8 +286,8 @@ export default function EventForm({
               problem === "past"
                 ? "organiserForm.publishErrPast"
                 : problem === "afterShow"
-                  ? "organiserForm.publishErrAfterShow"
-                  : "organiserForm.publishErrInvalid"
+                ? "organiserForm.publishErrAfterShow"
+                : "organiserForm.publishErrInvalid"
             )
           );
           return;
@@ -245,7 +302,11 @@ export default function EventForm({
       let imageUrl = "";
       if (posterFile) {
         try {
-          imageUrl = await uploadEventMedia(createClient(), posterFile, "posters");
+          imageUrl = await uploadEventMedia(
+            createClient(),
+            posterFile,
+            "posters"
+          );
         } catch (uploadError) {
           console.error("Poster upload failed:", uploadError);
           setError(t("organiserForm.posterUploadError"));
@@ -258,7 +319,9 @@ export default function EventForm({
         .map((en) => en.profileId)
         .filter((id): id is string => Boolean(id));
       // Line-up tags plus the off-bill extra tags (#156), deduped.
-      const taggedArtistIds = [...new Set([...lineupTagIds, ...extraTaggedIds])];
+      const taggedArtistIds = [
+        ...new Set([...lineupTagIds, ...extraTaggedIds]),
+      ];
 
       const payload = {
         title,
@@ -282,6 +345,10 @@ export default function EventForm({
         ticketingMode: ticketing,
         ticketingUrl,
         publishAt,
+        guestCheckout:
+          mode === "admin"
+            ? guestCheckout && ticketing === "internal"
+            : undefined,
       };
 
       const { create, update, setTiers, listPath } = MODES[mode];
@@ -302,13 +369,19 @@ export default function EventForm({
       if (!existing && result.id && tierInput.length > 0) {
         const tierResult = await setTiers(result.id, tierInput);
         if (tierResult.error)
-          tierWarning = t("organiserForm.tierWarning", { reason: tierResult.error });
+          tierWarning = t("organiserForm.tierWarning", {
+            reason: tierResult.error,
+          });
       }
       // A partial success (show created, tags failed) still navigates - the show
       // exists, and stranding the organiser on a form for a show that was
       // already created is how duplicates get made.
       const warning = result.error ?? tierWarning;
-      router.push(warning ? `${listPath}?warning=${encodeURIComponent(warning)}` : listPath);
+      router.push(
+        warning
+          ? `${listPath}?warning=${encodeURIComponent(warning)}`
+          : listPath
+      );
       router.refresh();
     });
   }
@@ -316,7 +389,9 @@ export default function EventForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {error && (
-        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">{error}</p>
+        <p className="rounded-xl bg-primary/10 px-4 py-3 text-sm text-primary">
+          {error}
+        </p>
       )}
 
       {existing?.publishAt && (
@@ -329,9 +404,16 @@ export default function EventForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field label={t("organiserForm.showTitle")}>
-          <input className={inputClass} value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input
+            className={inputClass}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
         </Field>
-        <Field label={t("organiserForm.billedAs")} hint={t("organiserForm.billedAsHint")}>
+        <Field
+          label={t("organiserForm.billedAs")}
+          hint={t("organiserForm.billedAsHint")}
+        >
           <input
             className={inputClass}
             value={artistName}
@@ -347,7 +429,12 @@ export default function EventForm({
         {lockedVenue ? (
           <p className={`${inputClass} text-muted`}>{lockedVenue.name}</p>
         ) : (
-          <VenuePicker value={venue} onChange={setVenue} venues={venues} compact />
+          <VenuePicker
+            value={venue}
+            onChange={setVenue}
+            venues={venues}
+            compact
+          />
         )}
       </Field>
 
@@ -356,25 +443,49 @@ export default function EventForm({
           <DateInput className={inputClass} value={date} onChange={setDate} />
         </Field>
         <Field label={t("organiserForm.time")}>
-          <input type="time" className={inputClass} value={time} onChange={(e) => setTime(e.target.value)} />
+          <input
+            type="time"
+            className={inputClass}
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
         </Field>
         <Field
           label={t("organiserForm.capacity")}
-          hint={priceFromTypes ? t("organiserForm.capacityWithTypesHint") : undefined}
+          hint={
+            priceFromTypes
+              ? t("organiserForm.capacityWithTypesHint")
+              : undefined
+          }
         >
-          <input type="number" onWheel={blurOnWheel} min={1} className={inputClass} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+          <input
+            type="number"
+            onWheel={blurOnWheel}
+            min={1}
+            className={inputClass}
+            value={capacity}
+            onChange={(e) => setCapacity(e.target.value)}
+          />
         </Field>
         <Field label={t("organiserForm.age")}>
-          <select className={inputClass} value={ageRestriction} onChange={(e) => setAgeRestriction(e.target.value)}>
+          <select
+            className={inputClass}
+            value={ageRestriction}
+            onChange={(e) => setAgeRestriction(e.target.value)}
+          >
             {AGE_OPTIONS.map((a) => (
-              <option key={a} value={a}>{a}</option>
+              <option key={a} value={a}>
+                {a}
+              </option>
             ))}
           </select>
         </Field>
       </div>
 
       <div className="rounded-2xl bg-background p-4">
-        <p className="font-heading text-xs uppercase tracking-wide text-muted">{t("organiserForm.ticketing")}</p>
+        <p className="font-heading text-xs uppercase tracking-wide text-muted">
+          {t("organiserForm.ticketing")}
+        </p>
 
         {/* The two panels mean genuinely different things by "we sell it". An
             admin creating a show here is MadGigz running its own night: the
@@ -406,7 +517,11 @@ export default function EventForm({
               onChange={() => setTicketing("internal")}
             />
             <span>
-              {t(organiserSells ? "organiserForm.sellThrough" : "organiserForm.houseShow")}
+              {t(
+                organiserSells
+                  ? "organiserForm.sellThrough"
+                  : "organiserForm.houseShow"
+              )}
               <span className="block text-xs text-muted">
                 {organiserSells
                   ? t("organiserForm.sellThroughHint", {
@@ -431,6 +546,21 @@ export default function EventForm({
               />
             </Field>
           </div>
+        ) : mode === "admin" ? (
+          <label className="mt-4 flex items-start gap-3 text-sm text-foreground">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-primary"
+              checked={guestCheckout}
+              onChange={(e) => setGuestCheckout(e.target.checked)}
+            />
+            <span>
+              {t("organiserForm.guestCheckout")}
+              <span className="block text-xs text-muted">
+                {t("organiserForm.guestCheckoutHint")}
+              </span>
+            </span>
+          </label>
         ) : null}
       </div>
 
@@ -441,8 +571,8 @@ export default function EventForm({
             priceFromTypes
               ? t("organiserForm.priceFromTypesHint")
               : ticketing === "external"
-                ? t("organiserForm.priceExternalHint")
-                : undefined
+              ? t("organiserForm.priceExternalHint")
+              : undefined
           }
         >
           <input
@@ -474,7 +604,14 @@ export default function EventForm({
           )}
         </Field>
         <Field label={t("organiserForm.maxPerOrder")}>
-          <input type="number" onWheel={blurOnWheel} min={1} className={inputClass} value={maxPerOrder} onChange={(e) => setMaxPerOrder(e.target.value)} />
+          <input
+            type="number"
+            onWheel={blurOnWheel}
+            min={1}
+            className={inputClass}
+            value={maxPerOrder}
+            onChange={(e) => setMaxPerOrder(e.target.value)}
+          />
         </Field>
       </div>
 
@@ -486,19 +623,32 @@ export default function EventForm({
           label={t("organiserForm.ticketTypes")}
           hint={t("organiserForm.ticketTypesHint")}
         >
-          <TierRowsFields rows={tierRows} onChange={setTierRows} showNet={organiserSells} />
+          <TierRowsFields
+            rows={tierRows}
+            onChange={setTierRows}
+            showNet={organiserSells}
+          />
         </Field>
       )}
 
       <Field label={t("organiserForm.genres")}>
-        <GenrePicker genres={genres} selectedIds={genreIds} onChange={setGenreIds} />
+        <GenrePicker
+          genres={genres}
+          selectedIds={genreIds}
+          onChange={setGenreIds}
+        />
       </Field>
 
       <Field
         label={t("organiserForm.lineup")}
         hint={t("organiserForm.lineupHint")}
       >
-        <LineupEditor entries={entries} onChange={setEntries} artists={artists} compact />
+        <LineupEditor
+          entries={entries}
+          onChange={setEntries}
+          artists={artists}
+          compact
+        />
       </Field>
 
       <Field
@@ -510,7 +660,11 @@ export default function EventForm({
           selectedIds={extraTaggedIds}
           onChange={setExtraTaggedIds}
           excludeIds={
-            new Set(entries.map((en) => en.profileId).filter((id): id is string => Boolean(id)))
+            new Set(
+              entries
+                .map((en) => en.profileId)
+                .filter((id): id is string => Boolean(id))
+            )
           }
         />
       </Field>
@@ -548,7 +702,11 @@ export default function EventForm({
       )}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label={t(existing ? "organiserForm.replacePoster" : "organiserForm.poster")}>
+        <Field
+          label={t(
+            existing ? "organiserForm.replacePoster" : "organiserForm.poster"
+          )}
+        >
           <input
             type="file"
             accept="image/*"
@@ -580,7 +738,11 @@ export default function EventForm({
         // A blob: URL for a file that hasn't been uploaded yet - next/image
         // can't optimise something with no remote source.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={posterPreview} alt={t("organiserForm.posterPreview")} className="max-h-64 w-fit rounded-xl" />
+        <img
+          src={posterPreview}
+          alt={t("organiserForm.posterPreview")}
+          className="max-h-64 w-fit rounded-xl"
+        />
       )}
 
       <div className="flex gap-3">
@@ -591,7 +753,11 @@ export default function EventForm({
         >
           {isPending
             ? t("common.saving")
-            : t(existing ? "organiserForm.saveChanges" : "organiserForm.createShow")}
+            : t(
+                existing
+                  ? "organiserForm.saveChanges"
+                  : "organiserForm.createShow"
+              )}
         </button>
         <button
           type="button"

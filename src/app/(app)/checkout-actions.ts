@@ -13,12 +13,38 @@ import {
 } from "@/lib/checkout-holds";
 import { applyDiscount, validateDiscountCode } from "@/lib/supabase/queries";
 import { breakdownFor, formatEuros, toCents } from "@/lib/pricing";
-import { EventRow, EventTierRow, mapEvent, mapEventTier, tierIsAvailable } from "@/lib/types";
+import {
+  EventRow,
+  EventTierRow,
+  mapEvent,
+  mapEventTier,
+  tierIsAvailable,
+} from "@/lib/types";
+import { verifyTurnstileToken } from "@/app/(onboarding)/signup/turnstile-actions";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
+import { resolveGuestBuyer } from "@/lib/guest-checkout";
 
 export interface CheckoutResult {
   url?: string;
   freeTicketId?: string;
   error?: string;
+  /**
+   * Guest checkout only: the email already belongs to a finished MadGigz
+   * account, so the modal offers sign-in instead of showing `error` raw.
+   */
+  code?: "hasAccount";
+}
+
+/** Who the ticket is for. A guest's id is the account made for their email. */
+interface Buyer {
+  id: string;
+  email: string | undefined;
+}
+
+/** Set for a guest order (#234): what the webhook needs to email the ticket. */
+interface GuestOrder {
+  email: string;
+  locale: Locale;
 }
 
 // A destination charge sits on the platform account, so the fan's card
@@ -78,11 +104,97 @@ export async function createCheckout(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You need to be signed in to buy tickets" };
 
+  return startCheckout(
+    { id: user.id, email: user.email },
+    eventId,
+    quantity,
+    promoCode,
+    tierId,
+    null
+  );
+}
+
+// Guest checkout (#234): a ticket with only an email, for shows an admin has
+// opened to it. The account is made here, before any money moves, so the rest
+// of checkout is the signed-in path with a different buyer - and the ticket
+// row belongs to a real profile from the start. Paid shows only: a free ticket
+// with no payment step would be a bot's account farm, so a €0 total is refused
+// below. Turnstile stands in for the sign-in that normally gates this endpoint.
+export async function createGuestCheckout(
+  eventId: string,
+  quantity: number,
+  promoCode: string | null,
+  tierId: string | null,
+  guest: { email: string; turnstileToken: string | null; locale: string }
+): Promise<CheckoutResult> {
+  const email = guest.email.trim().toLowerCase();
+  if (!/^\S+@\S+\.\S+$/.test(email))
+    return { error: "Enter a valid email address" };
+
+  // Same fail-closed rule as signup: a configured secret with no token is a
+  // bot, not a glitch.
+  if (process.env.TURNSTILE_SECRET_KEY) {
+    const { success } = await verifyTurnstileToken(guest.turnstileToken ?? "");
+    if (!success)
+      return { error: "Couldn't verify you're human. Please try again." };
+  }
+
+  const admin = createAdminClient();
+  // Read with the service role so a database without addendum_072 answers
+  // "not offered" rather than erroring.
+  const { data: flag, error: flagError } = await admin
+    .from("events")
+    .select("guest_checkout")
+    .eq("id", eventId)
+    .maybeSingle();
+  if (flagError || !flag?.guest_checkout) {
+    return {
+      error: "Guest checkout isn't available for this show - sign in to buy",
+    };
+  }
+
+  const buyer = await resolveGuestBuyer(admin, email);
+  if (buyer.status === "hasAccount") {
+    return {
+      error: "This email already has a MadGigz account",
+      code: "hasAccount",
+    };
+  }
+  if (buyer.status === "error")
+    return { error: "Couldn't start checkout. Please try again." };
+
+  return startCheckout(
+    { id: buyer.id, email },
+    eventId,
+    quantity,
+    promoCode,
+    tierId,
+    {
+      email,
+      locale: isLocale(guest.locale) ? guest.locale : DEFAULT_LOCALE,
+    }
+  );
+}
+
+async function startCheckout(
+  user: Buyer,
+  eventId: string,
+  quantity: number,
+  promoCode: string | null,
+  tierId: string | null,
+  guest: GuestOrder | null
+): Promise<CheckoutResult> {
+  const supabase = await createClient();
+
   if (!Number.isInteger(quantity) || quantity < 1) {
     return { error: "Choose at least 1 ticket" };
   }
 
-  const { data: eventRow } = await supabase.from("events").select("*").eq("id", eventId).single();
+  const { data: eventRow } = await supabase
+    .from("events")
+    .select("*")
+    .eq("id", eventId)
+    .single();
   if (!eventRow) return { error: "That event no longer exists" };
   const event = mapEvent(eventRow as EventRow);
 
@@ -90,7 +202,8 @@ export async function createCheckout(
   // a tiered show caps per ticket type (#151), a single-price show per event.
   // Either way it's enforced against the database value, not the client's.
 
-  if (!event.active || event.cancelled) return { error: "That event is no longer on sale" };
+  if (!event.active || event.cancelled)
+    return { error: "That event is no longer on sale" };
   if (event.ticketing?.mode === "external") {
     return { error: "Tickets for this event are sold externally" };
   }
@@ -119,7 +232,9 @@ export async function createCheckout(
     .eq("profile_id", user.id)
     .maybeSingle();
   if (taggedSelf) {
-    return { error: "You're in this line-up, so you can't buy a ticket to this show" };
+    return {
+      error: "You're in this line-up, so you can't buy a ticket to this show",
+    };
   }
 
   // Who gets paid for this show. Promoters and venues are organisers too (#88),
@@ -130,7 +245,8 @@ export async function createCheckout(
   // Read through the admin client, not the buyer's: stripe_account_id is no
   // longer granted to authenticated (addendum_018), and a fan's session having
   // any route to another user's Stripe id was the wrong shape regardless.
-  const proAccountId = (eventRow as { pro_account_id?: string | null }).pro_account_id ?? null;
+  const proAccountId =
+    (eventRow as { pro_account_id?: string | null }).pro_account_id ?? null;
   const payeeId = proAccountId ?? event.artistId;
 
   const { data: payee } = await admin
@@ -147,7 +263,9 @@ export async function createCheckout(
     .from("event_tiers")
     .select("*")
     .eq("event_id", event.id);
-  const tiers = tiersError ? [] : ((tierRows as EventTierRow[]) ?? []).map(mapEventTier);
+  const tiers = tiersError
+    ? []
+    : ((tierRows as EventTierRow[]) ?? []).map(mapEventTier);
 
   let unitPriceEuros = event.price;
   let selectedTierId: string | null = null;
@@ -157,7 +275,8 @@ export async function createCheckout(
     if (!tier) return { error: "Choose a ticket type" };
     // Availability is re-checked here AND atomically at reservation below — this
     // gives a clean message, the reservation is what actually prevents oversell.
-    if (!tierIsAvailable(tier)) return { error: "That ticket type isn't available" };
+    if (!tierIsAvailable(tier))
+      return { error: "That ticket type isn't available" };
     unitPriceEuros = tier.price;
     selectedTierId = tier.id;
     maxPerOrder = tier.maxPerOrder;
@@ -166,7 +285,9 @@ export async function createCheckout(
   // Per-order cap: the chosen type's for a tiered show, the event's otherwise.
   if (quantity > maxPerOrder) {
     return {
-      error: `You can buy at most ${maxPerOrder} ${maxPerOrder === 1 ? "ticket" : "tickets"} per order`,
+      error: `You can buy at most ${maxPerOrder} ${
+        maxPerOrder === 1 ? "ticket" : "tickets"
+      } per order`,
     };
   }
 
@@ -177,11 +298,19 @@ export async function createCheckout(
   const discount = promoCode
     ? await validateDiscountCode(createAdminClient(), promoCode, event.id)
     : null;
-  if (promoCode && !discount) return { error: "That code isn't valid for this event" };
+  if (promoCode && !discount)
+    return { error: "That code isn't valid for this event" };
 
   const subtotalEuros = unitPriceEuros * quantity;
   const totalEuros = applyDiscount(subtotalEuros, discount);
   const totalCents = toCents(totalEuros);
+
+  // Paid shows only for guests (#234): the payment is the bot gate.
+  if (guest && totalCents === 0) {
+    return {
+      error: "Free tickets need a MadGigz account - sign in to get yours",
+    };
+  }
 
   // A paid checkout holds seats until it is paid or expires. End this fan's
   // earlier unpaid checkout for the same show first, so coming back to checkout
@@ -192,8 +321,14 @@ export async function createCheckout(
   // last seat can't both win. A tiered show reserves against the chosen tier
   // (which also bumps events.sold); a single-price show against the event.
   const { data: reserved, error: reserveError } = selectedTierId
-    ? await admin.rpc("reserve_tier_capacity", { p_tier_id: selectedTierId, p_quantity: quantity })
-    : await admin.rpc("reserve_event_capacity", { p_event_id: event.id, p_quantity: quantity });
+    ? await admin.rpc("reserve_tier_capacity", {
+        p_tier_id: selectedTierId,
+        p_quantity: quantity,
+      })
+    : await admin.rpc("reserve_event_capacity", {
+        p_event_id: event.id,
+        p_quantity: quantity,
+      });
   if (reserveError) {
     console.error("Capacity reservation failed:", reserveError);
     return { error: "Couldn't hold your tickets. Please try again." };
@@ -214,9 +349,15 @@ export async function createCheckout(
       return;
     }
     if (selectedTierId) {
-      await admin.rpc("release_tier_capacity", { p_tier_id: selectedTierId, p_quantity: quantity });
+      await admin.rpc("release_tier_capacity", {
+        p_tier_id: selectedTierId,
+        p_quantity: quantity,
+      });
     } else {
-      await admin.rpc("release_event_capacity", { p_event_id: event.id, p_quantity: quantity });
+      await admin.rpc("release_event_capacity", {
+        p_event_id: event.id,
+        p_quantity: quantity,
+      });
     }
   }
 
@@ -277,7 +418,8 @@ export async function createCheckout(
   if (hold.status === "full") {
     await release();
     return {
-      error: "You have too many checkouts open. Finish one, or try again in a few minutes.",
+      error:
+        "You have too many checkouts open. Finish one, or try again in a few minutes.",
     };
   }
   if (hold.status === "open") holdId = hold.holdId;
@@ -331,7 +473,9 @@ export async function createCheckout(
       // is a different intent. The descriptor suffix applies either way: a house
       // show still bills the fan from the platform account.
       payment_intent_data: {
-        ...(descriptorSuffix ? { statement_descriptor_suffix: descriptorSuffix } : {}),
+        ...(descriptorSuffix
+          ? { statement_descriptor_suffix: descriptorSuffix }
+          : {}),
         ...(houseRun
           ? {}
           : {
@@ -350,6 +494,12 @@ export async function createCheckout(
         tier_id: selectedTierId ?? "",
         // Lets the webhook release (or clear) exactly this hold, once.
         hold_id: holdId ?? "",
+        // A guest order (#234): the webhook emails the ticket (with the
+        // claim link) to this address in this language, since there is no
+        // app session to show it in.
+        guest: guest ? "1" : "",
+        guest_email: guest?.email ?? "",
+        guest_locale: guest?.locale ?? "",
       },
     });
 
@@ -384,7 +534,11 @@ export async function previewPromoCode(
     .single();
   if (!eventRow) return { error: "That event no longer exists" };
 
-  const discount = await validateDiscountCode(createAdminClient(), promoCode, eventId);
+  const discount = await validateDiscountCode(
+    createAdminClient(),
+    promoCode,
+    eventId
+  );
   if (!discount) return { error: "That code isn't valid for this event" };
 
   // A tiered show prices off the chosen tier, not events.price.

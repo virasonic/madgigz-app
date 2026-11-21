@@ -39,7 +39,9 @@ async function isUsernameAvailable(
   supabase: ReturnType<typeof createClient>,
   candidate: string
 ): Promise<boolean | null> {
-  const { data, error } = await supabase.rpc("username_available", { candidate });
+  const { data, error } = await supabase.rpc("username_available", {
+    candidate,
+  });
   if (error) {
     // Don't block signup on a failed check - the unique index is the real
     // guarantee, and the submit path handles the collision if it happens.
@@ -86,22 +88,25 @@ function SignUpForm() {
   const [submitting, setSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileHandle>(null);
+  const [existingNotice, setExistingNotice] = useState(false);
   // The answer is stored against the name it was for, so a slow reply about a
   // previous value can never be mistaken for the current one - and the status
   // below is derived rather than stored, so there's no second copy to keep in
   // sync (and no setState in the effect body).
-  const [checkedName, setCheckedName] = useState<{ name: string; available: boolean } | null>(
-    null
-  );
+  const [checkedName, setCheckedName] = useState<{
+    name: string;
+    available: boolean;
+  } | null>(null);
 
   const usernameFormatValid = USERNAME_PATTERN.test(username);
-  const usernameStatus: "idle" | "checking" | "available" | "taken" = !usernameFormatValid
-    ? "idle"
-    : checkedName?.name !== username
+  const usernameStatus: "idle" | "checking" | "available" | "taken" =
+    !usernameFormatValid
+      ? "idle"
+      : checkedName?.name !== username
       ? "checking"
       : checkedName.available
-        ? "available"
-        : "taken";
+      ? "available"
+      : "taken";
 
   // Debounced so typing doesn't fire a request per keystroke, and only once the
   // format is valid - no point asking the server about "ab".
@@ -134,9 +139,11 @@ function SignUpForm() {
     } else if (usernameStatus === "taken") {
       nextErrors.username = t("signup.usernameTaken");
     }
-    if (!/^\S+@\S+\.\S+$/.test(email)) nextErrors.email = t("signup.errorEmail");
+    if (!/^\S+@\S+\.\S+$/.test(email))
+      nextErrors.email = t("signup.errorEmail");
     if (password.length < 8) nextErrors.password = t("signup.errorPassword");
-    if (confirmPassword !== password) nextErrors.confirmPassword = t("signup.errorConfirm");
+    if (confirmPassword !== password)
+      nextErrors.confirmPassword = t("signup.errorConfirm");
 
     const age = calculateAge(dob);
     if (age === null) {
@@ -179,7 +186,7 @@ function SignUpForm() {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -189,6 +196,25 @@ function SignUpForm() {
         }`,
       },
     });
+    // The address already has an account - most likely one made for them by a
+    // guest checkout (#234), which they are now trying to "create". Supabase
+    // hides that from signUp (an obfuscated user with no identities, so the
+    // form can't be used to list addresses), so this is how it shows. Send
+    // the set-password link instead of a confirmation that would never come.
+    const existing =
+      (!error && data.user && (data.user.identities?.length ?? 0) === 0) ||
+      /already registered|already exists/i.test(error?.message ?? "");
+    if (existing) {
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/confirm`,
+      });
+      setSubmitting(false);
+      setExistingNotice(true);
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
+      return;
+    }
+
     setSubmitting(false);
 
     if (error) {
@@ -224,13 +250,17 @@ function SignUpForm() {
       <BackButton href={backHref} className="mb-4" />
       <span
         className={`w-fit rounded-full px-3 py-1 text-xs font-heading uppercase tracking-wide ${
-          role === "artist" ? "bg-accent-dark text-foreground" : "bg-primary text-foreground"
+          role === "artist"
+            ? "bg-accent-dark text-foreground"
+            : "bg-primary text-foreground"
         }`}
       >
         {role === "artist" ? t("signup.artistBadge") : t("signup.fanBadge")}
       </span>
 
-      <h1 className="font-display mt-6 text-3xl text-foreground">{t("signup.title")}</h1>
+      <h1 className="font-display mt-6 text-3xl text-foreground">
+        {t("signup.title")}
+      </h1>
       <p className="mt-1 text-sm text-muted">{t("signup.subtitle")}</p>
 
       {/* Above the form deliberately: it is three taps against seven fields,
@@ -251,7 +281,9 @@ function SignUpForm() {
 
       <div className="mt-6 flex items-center gap-3">
         <span className="h-px flex-1 bg-muted/20" />
-        <span className="text-xs uppercase tracking-wide text-muted">{t("signup.orWithEmail")}</span>
+        <span className="text-xs uppercase tracking-wide text-muted">
+          {t("signup.orWithEmail")}
+        </span>
         <span className="h-px flex-1 bg-muted/20" />
       </div>
 
@@ -266,11 +298,17 @@ function SignUpForm() {
         />
         {!errors.username &&
           (usernameStatus === "taken" ? (
-            <p className="-mt-3 text-xs text-danger">{t("signup.usernameTaken")}</p>
+            <p className="-mt-3 text-xs text-danger">
+              {t("signup.usernameTaken")}
+            </p>
           ) : usernameStatus === "available" ? (
-            <p className="-mt-3 text-xs text-accent">{t("signup.usernameAvailable")}</p>
+            <p className="-mt-3 text-xs text-accent">
+              {t("signup.usernameAvailable")}
+            </p>
           ) : (
-            <p className="-mt-3 text-xs text-muted">{t("signup.usernameHint")}</p>
+            <p className="-mt-3 text-xs text-muted">
+              {t("signup.usernameHint")}
+            </p>
           ))}
         <Input
           label={t("signup.emailLabel")}
@@ -303,6 +341,12 @@ function SignUpForm() {
           autoComplete="new-password"
         />
 
+        {existingNotice && (
+          <p className="rounded-2xl bg-surface px-4 py-3 text-sm text-foreground">
+            {t("signup.existingAccount")}
+          </p>
+        )}
+
         {TURNSTILE_SITE_KEY && (
           <div className="flex flex-col gap-1.5">
             <Turnstile
@@ -314,7 +358,9 @@ function SignUpForm() {
               }}
               onExpire={() => setTurnstileToken(null)}
             />
-            {errors.captcha && <p className="text-sm text-danger">{errors.captcha}</p>}
+            {errors.captcha && (
+              <p className="text-sm text-danger">{errors.captcha}</p>
+            )}
           </div>
         )}
 

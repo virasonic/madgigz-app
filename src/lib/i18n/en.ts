@@ -221,6 +221,16 @@ export const en = {
   },
 
   ticket: {
+    // Guest checkout (#234): email-only purchase on shows an admin opened to it.
+    guestTitle: "Get tickets without an account",
+    guestBody:
+      "We'll email your ticket to this address. Afterwards you can create your account and keep it in the app.",
+    guestEmail: "Email",
+    guestConsent: "I'm 16 or over and I accept the {terms} and the {privacy}.",
+    guestConsentRequired: "Confirm you're 16 or over and accept the terms to continue",
+    guestHasAccount: "This email already has a MadGigz account.",
+    guestSignIn: "Sign in to buy",
+    guestOr: "Have an account?",
     goingTitle: "You're going!",
     summary: "{count} {tickets} for {title} at {venue}",
     one: "ticket",
@@ -348,6 +358,11 @@ export const en = {
     signIn: "Sign in",
   },
   checkout: {
+    guestTitle: "Your ticket is on its way",
+    guestBody:
+      "We've emailed it to {email}. The email also has a link to create your account, so your tickets stay in the app.",
+    guestPending: "Payment is still being confirmed. Your ticket will be emailed to {email} once it is.",
+    guestBrowse: "See more shows",
     pendingTitle: "Almost there",
     pendingBody: "This payment hasn't completed yet. Your ticket will appear once it does.",
     errorBody: "We couldn't confirm this payment. If you were charged, your ticket will appear shortly.",
@@ -386,6 +401,8 @@ export const en = {
   },
 
   signup: {
+    existingAccount:
+      "This email already has a MadGigz account. We've emailed you a link to set a password and sign in.",
     fanBadge: "Fan",
     artistBadge: "Artist",
     title: "Create your account",
@@ -780,6 +797,8 @@ export const en = {
   },
 
   resetPassword: {
+    guestTitle: "Choose a password",
+    guestSubtitle: "Your account was created when you bought your ticket. Set a password to use it.",
     title: "Set a new password",
     subtitle: "You're verified — choose a new password.",
     newPasswordLabel: "New password",
@@ -1424,6 +1443,9 @@ export const en = {
   // /pro follows the organiser's language; /admin pins its LocaleProvider to
   // English, so the same component renders English there without a second copy.
   organiserForm: {
+    guestCheckout: "Allow guest checkout",
+    guestCheckoutHint:
+      "Fans can buy with just an email, no account first. Paid tickets only - the ticket is emailed with a link to create the account.",
     // Scheduled publishing (#204)
     publish: "Publishing",
     publishNow: "Publish now",

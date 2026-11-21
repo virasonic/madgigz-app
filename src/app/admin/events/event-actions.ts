@@ -38,6 +38,11 @@ export interface AdminEventInput {
    * undefined = leave as is. See PublishAtInput.
    */
   publishAt?: PublishAtInput;
+  /**
+   * Guest checkout (#234): fans may buy with only an email. Admin-only; the
+   * pro form never sends it. undefined = leave as is.
+   */
+  guestCheckout?: boolean;
 }
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -48,21 +53,27 @@ function validate(input: AdminEventInput): string | null {
   if (!input.artistName.trim()) return "Artist name is required";
   if (!input.date) return "Date is required";
   if (!input.time) return "Time is required";
-  if (!Number.isFinite(input.price) || input.price < 0) return "Price can't be negative";
-  if (!Number.isInteger(input.capacity) || input.capacity < 1) return "Capacity must be at least 1";
+  if (!Number.isFinite(input.price) || input.price < 0)
+    return "Price can't be negative";
+  if (!Number.isInteger(input.capacity) || input.capacity < 1)
+    return "Capacity must be at least 1";
   if (!Number.isInteger(input.maxPerOrder) || input.maxPerOrder < 1) {
     return "Max per order must be at least 1";
   }
   if (!HEX.test(input.accentColor)) return "Pick an accent colour";
 
-  const scheduleProblem = publishAtError(input.publishAt, { date: input.date, time: input.time });
+  const scheduleProblem = publishAtError(input.publishAt, {
+    date: input.date,
+    time: input.time,
+  });
   if (scheduleProblem) return scheduleProblem;
 
   if (input.ticketingMode === "external") {
     // Validated rather than trusted: this URL is opened in the fan's browser.
     try {
       const parsed = new URL(input.ticketingUrl.trim());
-      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error();
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:")
+        throw new Error();
     } catch {
       return "Enter a valid ticket link, starting with https://";
     }
@@ -127,19 +138,34 @@ export async function createAdminEvent(
       cancelled: false,
       // A scheduled show starts hidden and carries its go-live time (#204).
       ...scheduleInsertColumns(input.publishAt),
+      // Only written when on, so a database without addendum_072 still
+      // creates ordinary shows.
+      ...(input.guestCheckout ? { guest_checkout: true } : {}),
     })
     .select("id")
     .single();
 
   if (error || !created) {
+    if (input.guestCheckout && isColumnMissing(error)) {
+      console.error("events.guest_checkout missing - run addendum_072:", error);
+      return {
+        error:
+          "Guest checkout needs addendum_072 run on the database - run it, or untick it",
+      };
+    }
     if (isScheduleColumnMissing(input.publishAt, error)) {
       console.error("events.publish_at missing - run addendum_071:", error);
-      return { error: "Scheduling needs addendum_071 run on the database - run it, or publish now" };
+      return {
+        error:
+          "Scheduling needs addendum_071 run on the database - run it, or publish now",
+      };
     }
     // 42703 = column missing, i.e. addendum_020 hasn't been run.
     if (error?.code === "42703") {
       console.error("events.house_run missing - run addendum_020:", error);
-      return { error: "The database is missing addendum_020 - run it, then try again" };
+      return {
+        error: "The database is missing addendum_020 - run it, then try again",
+      };
     }
     console.error("createAdminEvent insert failed:", error);
     return { error: "Couldn't create the show" };
@@ -150,16 +176,22 @@ export async function createAdminEvent(
   const genreError = await syncEventGenres(admin, created.id, input.genreIds);
   // No owner to exclude: the show has no artist_id, so every tagged artist is
   // a genuine tag.
-  const tagError = await syncEventArtists(admin, created.id, null, input.taggedArtistIds);
+  const tagError = await syncEventArtists(
+    admin,
+    created.id,
+    null,
+    input.taggedArtistIds
+  );
 
   revalidatePath("/admin/events");
   revalidatePath("/explore");
   revalidatePath("/feed");
 
   const warning = genreError ?? tagError;
-  return warning ? { id: created.id, error: `Show created, but: ${warning}` } : { id: created.id };
+  return warning
+    ? { id: created.id, error: `Show created, but: ${warning}` }
+    : { id: created.id };
 }
-
 
 // Editing a MadGigz-created show. Price is editable here, unlike the artist's
 // own edit form - there the fee split is a promise already made to whoever is
@@ -182,19 +214,26 @@ export async function updateAdminEvent(
     .maybeSingle();
 
   if (!existing) return { error: "That show no longer exists" };
-  if (existing.cancelled) return { error: "That show is cancelled and can't be edited" };
+  if (existing.cancelled)
+    return { error: "That show is cancelled and can't be edited" };
   // Artist-owned shows belong to the artist's own Manage Show sheet. An admin
   // rewriting someone else's date or price behind their back is a different
   // feature with different rules, and not this one.
   if (existing.artist_id) {
-    return { error: "This show belongs to an artist - they edit it from their own profile" };
+    return {
+      error:
+        "This show belongs to an artist - they edit it from their own profile",
+    };
   }
   // Same for a promoter's or venue's show: artist_id is null there too, but it
   // is not a house show. Saving it from here would stamp house_run = true, and
   // later sales would stop paying into the promoter's Connect account while
   // the payout maths still credited them.
   if (existing.pro_account_id) {
-    return { error: "This show belongs to a promoter or venue - they edit it from the pro panel" };
+    return {
+      error:
+        "This show belongs to a promoter or venue - they edit it from the pro panel",
+    };
   }
 
   const { count: ticketCount } = await admin
@@ -212,7 +251,10 @@ export async function updateAdminEvent(
       .eq("id", eventId)
       .single();
     if (current && Number(current.price) !== input.price) {
-      return { error: "Tickets have been sold at the current price - it can't be changed now" };
+      return {
+        error:
+          "Tickets have been sold at the current price - it can't be changed now",
+      };
     }
   }
 
@@ -248,11 +290,37 @@ export async function updateAdminEvent(
     return { error: "Couldn't save the changes" };
   }
 
-  const scheduleError = await applyScheduleEdit(admin, eventId, input.publishAt);
+  const scheduleError = await applyScheduleEdit(
+    admin,
+    eventId,
+    input.publishAt
+  );
   if (scheduleError) return { error: scheduleError };
 
+  // Its own update so a database without addendum_072 still saves the rest:
+  // ticking the box there is the one thing that has to fail loudly.
+  if (input.guestCheckout !== undefined) {
+    const { error: guestError } = await admin
+      .from("events")
+      .update({ guest_checkout: input.guestCheckout })
+      .eq("id", eventId);
+    if (guestError && !(isColumnMissing(guestError) && !input.guestCheckout)) {
+      console.error("events.guest_checkout update failed:", guestError);
+      return {
+        error: isColumnMissing(guestError)
+          ? "Guest checkout needs addendum_072 run on the database - run it, or untick it"
+          : "Saved, but the guest checkout setting didn't stick",
+      };
+    }
+  }
+
   const genreError = await syncEventGenres(admin, eventId, input.genreIds);
-  const tagError = await syncEventArtists(admin, eventId, null, input.taggedArtistIds);
+  const tagError = await syncEventArtists(
+    admin,
+    eventId,
+    null,
+    input.taggedArtistIds
+  );
 
   revalidatePath("/admin/events");
   revalidatePath("/explore");
@@ -261,4 +329,9 @@ export async function updateAdminEvent(
 
   const warning = genreError ?? tagError;
   return warning ? { error: `Saved, but: ${warning}` } : {};
+}
+
+// What PostgREST says about a column that isn't there yet.
+function isColumnMissing(error: { code?: string } | null): boolean {
+  return error?.code === "42703" || error?.code === "PGRST204";
 }

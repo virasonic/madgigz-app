@@ -199,6 +199,15 @@ export const es: Messages = {
   },
 
   ticket: {
+    guestTitle: "Entradas sin cuenta",
+    guestBody:
+      "Te enviaremos la entrada a este correo. Después podrás crear tu cuenta y tenerla en la app.",
+    guestEmail: "Correo electrónico",
+    guestConsent: "Tengo 16 años o más y acepto los {terms} y la {privacy}.",
+    guestConsentRequired: "Confirma que tienes 16 años o más y aceptas las condiciones para continuar",
+    guestHasAccount: "Este correo ya tiene una cuenta de MadGigz.",
+    guestSignIn: "Inicia sesión para comprar",
+    guestOr: "¿Ya tienes cuenta?",
     goingTitle: "¡Vas a ir!",
     summary: "{count} {tickets} para {title} en {venue}",
     one: "entrada",
@@ -325,6 +334,11 @@ export const es: Messages = {
     signIn: "Iniciar sesión",
   },
   checkout: {
+    guestTitle: "Tu entrada está en camino",
+    guestBody:
+      "La hemos enviado a {email}. En el correo también hay un enlace para crear tu cuenta y tener tus entradas en la app.",
+    guestPending: "El pago aún se está confirmando. Enviaremos la entrada a {email} en cuanto se confirme.",
+    guestBrowse: "Ver más conciertos",
     pendingTitle: "Casi listo",
     pendingBody: "Este pago aún no se ha completado. Tu entrada aparecerá en cuanto se complete.",
     errorBody: "No pudimos confirmar el pago. Si se te cobró, tu entrada aparecerá en breve.",
@@ -361,6 +375,8 @@ export const es: Messages = {
   },
 
   signup: {
+    existingAccount:
+      "Este correo ya tiene una cuenta de MadGigz. Te hemos enviado un enlace para elegir una contraseña e iniciar sesión.",
     fanBadge: "Fan",
     artistBadge: "Artista",
     title: "Crea tu cuenta",
@@ -748,6 +764,8 @@ export const es: Messages = {
   },
 
   resetPassword: {
+    guestTitle: "Elige una contraseña",
+    guestSubtitle: "Tu cuenta se creó al comprar la entrada. Elige una contraseña para usarla.",
     title: "Crea una contraseña nueva",
     subtitle: "Estás verificado: elige una contraseña nueva.",
     newPasswordLabel: "Contraseña nueva",
@@ -1393,6 +1411,9 @@ export const es: Messages = {
   // catálogo porque /pro sigue el idioma del organizador; /admin fija su
   // LocaleProvider en inglés, así que el mismo componente sale en inglés allí.
   organiserForm: {
+    guestCheckout: "Permitir compra sin cuenta",
+    guestCheckoutHint:
+      "Los fans pueden comprar solo con su correo, sin crear cuenta antes. Solo entradas de pago: la entrada se envía por correo con un enlace para crear la cuenta.",
     // Publicación programada (#204)
     publish: "Publicación",
     publishNow: "Publicar ahora",
