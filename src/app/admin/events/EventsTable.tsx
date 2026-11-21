@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { cancelEvent, toggleEventActive, toggleEventFeatured } from "../actions";
+import {
+  cancelEvent,
+  toggleEventActive,
+  toggleEventFeatured,
+} from "../actions";
+import { toggleGuestCheckout } from "./event-actions";
 import FilterTabs from "../FilterTabs";
 import { SortHeader, useTableSort, type SortAccessor } from "../table-sort";
 import type { EventItem } from "@/lib/types";
@@ -50,12 +55,16 @@ export default function EventsTable({
 }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [result, setResult] = useState<{
+    kind: "ok" | "error";
+    text: string;
+  } | null>(null);
   // Defaults to live - what's actually on sale is the usual question.
   const [filter, setFilter] = useState<EventFilter>("live");
 
   const visible = useMemo(
-    () => (filter === "all" ? events : events.filter((e) => statusOf(e) === filter)),
+    () =>
+      filter === "all" ? events : events.filter((e) => statusOf(e) === filter),
     [events, filter]
   );
   const columns = useMemo<Record<string, SortAccessor<EventItem>>>(
@@ -110,10 +119,33 @@ export default function EventsTable({
     });
   }
 
+  // #234: let fans buy this show with just an email. Admin's call per show,
+  // on any MadGigz-sold show including an artist's own.
+  function handleToggleGuests(event: EventItem) {
+    setPendingId(event.id);
+    setResult(null);
+    startTransition(async () => {
+      const outcome = await toggleGuestCheckout(event.id, !event.guestCheckout);
+      setPendingId(null);
+      if (outcome.error) {
+        setResult({ kind: "error", text: outcome.error });
+        return;
+      }
+      setResult({
+        kind: "ok",
+        text: event.guestCheckout
+          ? `"${event.title}" now needs an account to buy`
+          : `"${event.title}" can now be bought as a guest (email only)`,
+      });
+    });
+  }
+
   function handleDelete(event: EventItem) {
     const message =
       event.sold > 0
-        ? `This event has ${event.sold} ${event.sold === 1 ? "ticket" : "tickets"} sold. Cancelling it will refund every buyer through Stripe and hide the event. This can't be undone. Continue?`
+        ? `This event has ${event.sold} ${
+            event.sold === 1 ? "ticket" : "tickets"
+          } sold. Cancelling it will refund every buyer through Stripe and hide the event. This can't be undone. Continue?`
         : "Delete this event permanently? This can't be undone.";
     if (!window.confirm(message)) return;
 
@@ -127,7 +159,9 @@ export default function EventsTable({
       } else if (outcome.failed > 0) {
         setResult({
           kind: "error",
-          text: `Refunded ${outcome.refunded}, but ${outcome.failed} failed: ${outcome.errors[0] ?? "unknown error"}. Re-run to retry the rest.`,
+          text: `Refunded ${outcome.refunded}, but ${outcome.failed} failed: ${
+            outcome.errors[0] ?? "unknown error"
+          }. Re-run to retry the rest.`,
         });
       } else {
         // The attended count is called out rather than folded into the total:
@@ -135,11 +169,15 @@ export default function EventsTable({
         // failed, when in fact two people had already been through the door.
         const attendedNote =
           outcome.attended > 0
-            ? ` ${outcome.attended} ${outcome.attended === 1 ? "ticket was" : "tickets were"} not refunded - already scanned in at the door.`
+            ? ` ${outcome.attended} ${
+                outcome.attended === 1 ? "ticket was" : "tickets were"
+              } not refunded - already scanned in at the door.`
             : "";
         setResult({
           kind: "ok",
-          text: `Event cancelled and ${outcome.refunded} ${outcome.refunded === 1 ? "ticket" : "tickets"} refunded.${attendedNote}`,
+          text: `Event cancelled and ${outcome.refunded} ${
+            outcome.refunded === 1 ? "ticket" : "tickets"
+          } refunded.${attendedNote}`,
         });
       }
     });
@@ -150,7 +188,9 @@ export default function EventsTable({
       {result && (
         <p
           className={`mb-4 rounded-xl px-4 py-3 text-sm ${
-            result.kind === "ok" ? "bg-accent/10 text-accent" : "bg-danger/10 text-danger"
+            result.kind === "ok"
+              ? "bg-accent/10 text-accent"
+              : "bg-danger/10 text-danger"
           }`}
         >
           {result.text}
@@ -169,118 +209,203 @@ export default function EventsTable({
       />
 
       <div className="overflow-x-auto">
-      <table className="w-full min-w-[900px] text-left text-sm">
-      <thead>
-        <tr className="border-b border-muted/15 text-muted">
-          <SortHeader label="Title" sortKey="title" sort={sort} onSort={toggle} />
-          <SortHeader label="Artist" sortKey="artist" sort={sort} onSort={toggle} />
-          <SortHeader label="Venue" sortKey="venue" sort={sort} onSort={toggle} />
-          <SortHeader label="Date" sortKey="date" sort={sort} onSort={toggle} />
-          <SortHeader label="Sold / Capacity" sortKey="sold" sort={sort} onSort={toggle} />
-          <SortHeader label="Saves" sortKey="saves" sort={sort} onSort={toggle} />
-          <SortHeader label="Clicks" sortKey="clicks" sort={sort} onSort={toggle} />
-          <SortHeader label="Shares" sortKey="shares" sort={sort} onSort={toggle} />
-          <SortHeader label="Status" sortKey="status" sort={sort} onSort={toggle} />
-          <th className="pb-2 font-heading" />
-        </tr>
-      </thead>
-      <tbody>
-        {sorted.length === 0 && (
-          <tr>
-            <td colSpan={10} className="py-4 text-muted">
-              No {filter === "all" ? "" : filter + " "}events.
-            </td>
-          </tr>
-        )}
-        {sorted.map((e) => (
-          <tr key={e.id} className="border-b border-muted/10 last:border-0">
-            <td className="py-2 text-foreground">
-              <Link href={`/admin/events/${e.id}`} className="hover:text-accent hover:underline">
-                {e.title}
-              </Link>
-            </td>
-            <td className="py-2 text-muted">{e.artist}</td>
-            <td className="py-2 text-muted">{e.venue}</td>
-            <td className="py-2 text-muted">
-              {/* Explicit locale, not undefined: the server resolves to en-US
+        <table className="w-full min-w-[900px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-muted/15 text-muted">
+              <SortHeader
+                label="Title"
+                sortKey="title"
+                sort={sort}
+                onSort={toggle}
+              />
+              <SortHeader
+                label="Artist"
+                sortKey="artist"
+                sort={sort}
+                onSort={toggle}
+              />
+              <SortHeader
+                label="Venue"
+                sortKey="venue"
+                sort={sort}
+                onSort={toggle}
+              />
+              <SortHeader
+                label="Date"
+                sortKey="date"
+                sort={sort}
+                onSort={toggle}
+              />
+              <SortHeader
+                label="Sold / Capacity"
+                sortKey="sold"
+                sort={sort}
+                onSort={toggle}
+              />
+              <SortHeader
+                label="Saves"
+                sortKey="saves"
+                sort={sort}
+                onSort={toggle}
+              />
+              <SortHeader
+                label="Clicks"
+                sortKey="clicks"
+                sort={sort}
+                onSort={toggle}
+              />
+              <SortHeader
+                label="Shares"
+                sortKey="shares"
+                sort={sort}
+                onSort={toggle}
+              />
+              <SortHeader
+                label="Status"
+                sortKey="status"
+                sort={sort}
+                onSort={toggle}
+              />
+              <th className="pb-2 font-heading" />
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.length === 0 && (
+              <tr>
+                <td colSpan={10} className="py-4 text-muted">
+                  No {filter === "all" ? "" : filter + " "}events.
+                </td>
+              </tr>
+            )}
+            {sorted.map((e) => (
+              <tr key={e.id} className="border-b border-muted/10 last:border-0">
+                <td className="py-2 text-foreground">
+                  <Link
+                    href={`/admin/events/${e.id}`}
+                    className="hover:text-accent hover:underline"
+                  >
+                    {e.title}
+                  </Link>
+                </td>
+                <td className="py-2 text-muted">{e.artist}</td>
+                <td className="py-2 text-muted">{e.venue}</td>
+                <td className="py-2 text-muted">
+                  {/* Explicit locale, not undefined: the server resolves to en-US
                   and the browser to en-GB, which rendered two different date
                   strings and failed hydration. en-GB matches the rest of app. */}
-              {new Date(e.date).toLocaleDateString("en-GB", { timeZone: "UTC" })}
-            </td>
-            <td className="py-2 text-muted">
-              {e.sold} / {e.capacity}
-            </td>
-            <td className="py-2 text-muted tabular-nums">{interest[e.id]?.saves ?? 0}</td>
-            <td className="py-2 tabular-nums text-accent">{interest[e.id]?.clicks ?? 0}</td>
-            <td className="py-2 text-muted tabular-nums">{interest[e.id]?.shares ?? 0}</td>
-            <td className="py-2">
-              <span
-                className={
-                  e.cancelled
-                    ? "rounded-full bg-danger/15 px-2 py-0.5 text-xs text-danger"
-                    : e.active
-                      ? "rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent"
-                      : "rounded-full bg-muted/15 px-2 py-0.5 text-xs text-muted"
-                }
-              >
-                {e.cancelled ? "Cancelled" : e.active ? "Active" : isScheduled(e) ? "Scheduled" : "Hidden"}
-              </span>
-              {/* Scheduled (#204): hidden until this time, then published by
+                  {new Date(e.date).toLocaleDateString("en-GB", {
+                    timeZone: "UTC",
+                  })}
+                </td>
+                <td className="py-2 text-muted">
+                  {e.sold} / {e.capacity}
+                </td>
+                <td className="py-2 text-muted tabular-nums">
+                  {interest[e.id]?.saves ?? 0}
+                </td>
+                <td className="py-2 tabular-nums text-accent">
+                  {interest[e.id]?.clicks ?? 0}
+                </td>
+                <td className="py-2 text-muted tabular-nums">
+                  {interest[e.id]?.shares ?? 0}
+                </td>
+                <td className="py-2">
+                  <span
+                    className={
+                      e.cancelled
+                        ? "rounded-full bg-danger/15 px-2 py-0.5 text-xs text-danger"
+                        : e.active
+                        ? "rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent"
+                        : "rounded-full bg-muted/15 px-2 py-0.5 text-xs text-muted"
+                    }
+                  >
+                    {e.cancelled
+                      ? "Cancelled"
+                      : e.active
+                      ? "Active"
+                      : isScheduled(e)
+                      ? "Scheduled"
+                      : "Hidden"}
+                  </span>
+                  {/* Scheduled (#204): hidden until this time, then published by
                   the database and followers notified. */}
-              {isScheduled(e) && (
-                <span className="ml-1 text-xs text-muted">
-                  {formatPublishAt(e.publishAt as string, "en-GB")}
-                </span>
-              )}
-              {e.featured && !e.cancelled && (
-                <span className="ml-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">
-                  Featured
-                </span>
-              )}
-            </td>
-            <td className="py-2 text-right">
-              {!e.cancelled && (
-                <div className="flex justify-end gap-2">
-                  {/* Only MadGigz-created shows. An artist's own show is edited
+                  {isScheduled(e) && (
+                    <span className="ml-1 text-xs text-muted">
+                      {formatPublishAt(e.publishAt as string, "en-GB")}
+                    </span>
+                  )}
+                  {e.featured && !e.cancelled && (
+                    <span className="ml-1 rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">
+                      Featured
+                    </span>
+                  )}
+                  {e.guestCheckout && !e.cancelled && (
+                    <span className="ml-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent">
+                      Guests
+                    </span>
+                  )}
+                </td>
+                <td className="py-2 text-right">
+                  {!e.cancelled && (
+                    <div className="flex justify-end gap-2">
+                      {/* Only MadGigz-created shows. An artist's own show is edited
                       from their profile, where the fee split they published
                       under still applies. */}
-                  {!e.artistId && (
-                    <Link
-                      href={`/admin/events/${e.id}/edit`}
-                      className="rounded-lg bg-surface-raised px-3 py-1 text-xs font-heading text-foreground hover:bg-muted/20"
-                    >
-                      Edit
-                    </Link>
+                      {!e.artistId && (
+                        <Link
+                          href={`/admin/events/${e.id}/edit`}
+                          className="rounded-lg bg-surface-raised px-3 py-1 text-xs font-heading text-foreground hover:bg-muted/20"
+                        >
+                          Edit
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => handleToggleFeatured(e)}
+                        disabled={isPending && pendingId === e.id}
+                        className="rounded-lg bg-surface-raised px-3 py-1 text-xs font-heading text-foreground hover:bg-muted/20 disabled:opacity-50"
+                        title="Pin this show to the top of Explore"
+                      >
+                        {e.featured ? "Unfeature" : "Feature"}
+                      </button>
+                      {/* Guest checkout (#234): MadGigz-sold shows only - an
+                      external link needs no account anyway. */}
+                      {e.ticketing?.mode !== "external" && (
+                        <button
+                          onClick={() => handleToggleGuests(e)}
+                          disabled={isPending && pendingId === e.id}
+                          className="whitespace-nowrap rounded-lg bg-surface-raised px-3 py-1 text-xs font-heading text-foreground hover:bg-muted/20 disabled:opacity-50"
+                          title="Let fans buy with just an email, no account first (paid tickets only)"
+                        >
+                          {e.guestCheckout ? "Guests: on" : "Guests: off"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleToggle(e.id, !e.active)}
+                        disabled={isPending && pendingId === e.id}
+                        className="rounded-lg bg-primary/15 px-3 py-1 text-xs font-heading text-primary hover:bg-primary/25 disabled:opacity-50"
+                      >
+                        {e.active
+                          ? "Hide"
+                          : isScheduled(e)
+                          ? "Publish now"
+                          : "Unhide"}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(e)}
+                        disabled={isPending && pendingId === e.id}
+                        className="rounded-lg bg-danger/15 px-3 py-1 text-xs font-heading text-danger hover:bg-danger/25 disabled:opacity-50"
+                      >
+                        {isPending && pendingId === e.id
+                          ? "Working..."
+                          : "Delete"}
+                      </button>
+                    </div>
                   )}
-                  <button
-                    onClick={() => handleToggleFeatured(e)}
-                    disabled={isPending && pendingId === e.id}
-                    className="rounded-lg bg-surface-raised px-3 py-1 text-xs font-heading text-foreground hover:bg-muted/20 disabled:opacity-50"
-                    title="Pin this show to the top of Explore"
-                  >
-                    {e.featured ? "Unfeature" : "Feature"}
-                  </button>
-                  <button
-                    onClick={() => handleToggle(e.id, !e.active)}
-                    disabled={isPending && pendingId === e.id}
-                    className="rounded-lg bg-primary/15 px-3 py-1 text-xs font-heading text-primary hover:bg-primary/25 disabled:opacity-50"
-                  >
-                    {e.active ? "Hide" : isScheduled(e) ? "Publish now" : "Unhide"}
-                  </button>
-                  <button
-                    onClick={() => handleDelete(e)}
-                    disabled={isPending && pendingId === e.id}
-                    className="rounded-lg bg-danger/15 px-3 py-1 text-xs font-heading text-danger hover:bg-danger/25 disabled:opacity-50"
-                  >
-                    {isPending && pendingId === e.id ? "Working..." : "Delete"}
-                  </button>
-                </div>
-              )}
-            </td>
-          </tr>
-        ))}
-        </tbody>
-      </table>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </>
   );

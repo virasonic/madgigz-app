@@ -335,3 +335,29 @@ export async function updateAdminEvent(
 function isColumnMissing(error: { code?: string } | null): boolean {
   return error?.code === "42703" || error?.code === "PGRST204";
 }
+
+// Guest checkout (#234) on ANY MadGigz-sold show, an artist's own included -
+// the edit form above only reaches MadGigz-listed shows, and an artist's show
+// is edited from their profile, which deliberately has no such switch (admin
+// decides which shows run it). Reported, not thrown, when addendum_072 is
+// still unrun, so the events table stays usable.
+export async function toggleGuestCheckout(
+  eventId: string,
+  enabled: boolean
+): Promise<{ error?: string }> {
+  await requireAdmin();
+  const admin = adminClient();
+  const { error } = await admin
+    .from("events")
+    .update({ guest_checkout: enabled })
+    .eq("id", eventId);
+  if (error) {
+    if (isColumnMissing(error))
+      return { error: "DB missing addendum_072 (events.guest_checkout)" };
+    console.error("toggleGuestCheckout failed:", error);
+    return { error: "Couldn't update guest checkout" };
+  }
+  revalidatePath("/admin/events");
+  revalidatePath(`/e/${eventId}`);
+  return {};
+}
