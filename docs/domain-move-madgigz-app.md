@@ -57,7 +57,7 @@ sign in again. Acceptable; say so in the release note.
 
 ## Phase 0 — code, ships before anything is pointed anywhere (me)
 
-**Built 23 Nov 2026** (on staging). All safe to deploy: nothing changes behaviour
+**On prod since 23 Nov 2026** (`a0af8e7`). All safe to deploy: nothing changes behaviour
 until the domain exists.
 
 0. Stripe return URLs (checkout success/cancel, Connect onboarding), door links
