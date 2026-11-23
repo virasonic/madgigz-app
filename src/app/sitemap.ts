@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@supabase/supabase-js";
-import { eventPath, siteOrigin } from "@/lib/site";
+import { siteOrigin } from "@/lib/site";
+import { eventPath } from "@/lib/event-url";
 
 // What Google is actually told to crawl. Deliberately narrow: almost every
 // route in this app is behind a session, so the sitemap lists only what a
 // logged-out stranger can genuinely read - the landing page, Explore, the
-// legal pages, and every upcoming show at /e/<id>.
+// legal pages, and every upcoming show at /event/yyyy/mm/dd/<slug> (#236).
 //
 // Kept in step with robots.ts: anything disallowed there must not appear here,
 // because a URL that is both submitted and blocked is the one combination
@@ -16,7 +17,7 @@ import { eventPath, siteOrigin } from "@/lib/site";
 // keeps a crawler hit from turning into a database query every time.
 export const revalidate = 3600;
 
-type EventSitemapRow = { id: string; created_at: string };
+type EventSitemapRow = { id: string; slug: string | null; event_date: string; created_at: string };
 
 // A plain anon client, not the cookie-bound one from @/lib/supabase/server:
 // reading cookies() would force this route dynamic and defeat `revalidate`.
@@ -31,22 +32,30 @@ async function upcomingEvents(): Promise<EventSitemapRow[]> {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data, error } = await supabase
-    .from("events")
-    .select("id, created_at")
-    // The same three conditions the public event page enforces before it
-    // renders: hidden, cancelled and finished shows are all soft-404s in
-    // spirit, and submitting them trains Google to distrust the sitemap.
-    .eq("active", true)
-    .eq("cancelled", false)
-    // Date-only compare in UTC, matching fetchEvents' upcomingOnly - >= keeps a
-    // show listed through its own day.
-    .gte("event_date", new Date().toISOString().slice(0, 10))
-    .order("event_date")
-    // The format's hard ceiling is 50,000 URLs; this cap is three orders of
-    // magnitude below it and exists only so a runaway import can't produce an
-    // oversized document. If it is ever hit, the answer is a sitemap index.
-    .limit(5000);
+  const query = (columns: string) =>
+    supabase
+      .from("events")
+      .select(columns)
+      // The same three conditions the public event page enforces before it
+      // renders: hidden, cancelled and finished shows are all soft-404s in
+      // spirit, and submitting them trains Google to distrust the sitemap.
+      .eq("active", true)
+      .eq("cancelled", false)
+      // Date-only compare in UTC, matching fetchEvents' upcomingOnly - >= keeps a
+      // show listed through its own day.
+      .gte("event_date", new Date().toISOString().slice(0, 10))
+      .order("event_date")
+      // The format's hard ceiling is 50,000 URLs; this cap is three orders of
+      // magnitude below it and exists only so a runaway import can't produce an
+      // oversized document. If it is ever hit, the answer is a sitemap index.
+      .limit(5000);
+
+  let { data, error } = await query("id, slug, event_date, created_at");
+  // A database where addendum_073 hasn't run has no slug column (42703). Fall
+  // back to the legacy shape rather than drop every show from the sitemap.
+  if (error?.code === "42703") {
+    ({ data, error } = await query("id, event_date, created_at"));
+  }
 
   // Best-effort: a sitemap that lists the static pages beats a 500 that tells
   // Google the whole file is broken.
@@ -54,7 +63,12 @@ async function upcomingEvents(): Promise<EventSitemapRow[]> {
     console.error("sitemap: could not load events", error.message);
     return [];
   }
-  return data ?? [];
+  return ((data ?? []) as unknown as Partial<EventSitemapRow>[]).map((row) => ({
+    id: row.id as string,
+    slug: row.slug ?? null,
+    event_date: row.event_date as string,
+    created_at: row.created_at as string,
+  }));
 }
 
 type ProfileSitemapRow = { username: string };
@@ -99,7 +113,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // points at.
     { url: origin, lastModified: now, changeFrequency: "daily", priority: 1 },
     // Guest-readable (see the (app) layout) and the natural "what's on in
-    // Madrid" hub - it links out to every /e/ page, so it is also how a
+    // Madrid" hub - it links out to every event page, so it is also how a
     // crawler finds shows between sitemap regenerations.
     { url: `${origin}/explore`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
     // The supply-side ads landing page. High priority because it is one of only
@@ -126,7 +140,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticRoutes,
     ...events.map((event) => ({
-      url: `${origin}${eventPath(event.id)}`,
+      url: `${origin}${eventPath({ id: event.id, slug: event.slug, date: event.event_date })}`,
       // events has no updated_at column, so created_at is the most honest
       // lastmod available. Overstating freshness (e.g. always "now") is worse
       // than a conservative date: Google learns to ignore the field entirely.

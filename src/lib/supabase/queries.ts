@@ -409,6 +409,26 @@ export async function fetchEventById(
   return data ? mapEvent(data as EventRow) : null;
 }
 
+/**
+ * The show behind a pretty URL (#236): /event/yyyy/mm/dd/<slug> resolves by
+ * slug alone, and the page compares the date itself so a rescheduled show 301s
+ * rather than 404s. Null when nothing matches - and null, not a throw, on a
+ * database where addendum_073 hasn't run (42703, undefined column): no such
+ * link can have been handed out there anyway.
+ */
+export async function fetchEventBySlug(
+  supabase: SupabaseClient,
+  slug: string
+): Promise<EventItem | null> {
+  const { data, error } = await supabase
+    .from("events")
+    .select("*, venues(address)")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) return null;
+  return data ? mapEvent(data as EventRow) : null;
+}
+
 export async function fetchContentPosts(supabase: SupabaseClient): Promise<ContentPost[]> {
   // select("*") already includes the headline/accent_color columns added in
   // addendum_029, so text announcements come through with no query change.

@@ -65,7 +65,7 @@ export default function NativeBridge() {
         }
 
         // 3. Universal / App Link into our own origin (#134): a tapped
-        //    https://madgigz.aurasonic.es/e/<id> or /profile/<name> link (and the
+        //    https://madgigz.app/event/... (or the old /e/<id>) or /profile/<name> link (and the
         //    AASA auth paths) opens the app here. The shell IS this origin, so
         //    route the webview to the link's path rather than leaving it on
         //    whatever screen it was on. Only same-origin links; anything else is

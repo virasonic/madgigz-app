@@ -1,5 +1,6 @@
 import { EventItem } from "@/lib/types";
-import { absoluteUrl, eventPath } from "@/lib/site";
+import { absoluteUrl } from "@/lib/site";
+import { eventPath } from "@/lib/event-url";
 import { recordEventShare } from "@/lib/track";
 
 export type ShareOutcome = "shared" | "copied" | "cancelled" | "failed";
@@ -46,7 +47,7 @@ export async function shareUrl(url: string, title: string): Promise<ShareOutcome
 }
 
 export async function shareEvent(event: EventItem): Promise<ShareOutcome> {
-  const url = absoluteUrl(eventPath(event.id));
+  const url = absoluteUrl(eventPath(event));
 
   if (prefersNativeSheet()) {
     try {

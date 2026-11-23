@@ -20,12 +20,8 @@ export function siteOrigin(): string {
   return "http://localhost:3000";
 }
 
-// Where a shared event link points. One definition, because it is written into
-// OG tags, copied to clipboards, and pasted into WhatsApp - three places that
-// must not disagree about what an event's URL is.
-export function eventPath(eventId: string): string {
-  return `/e/${eventId}`;
-}
+// Where a shared event link points lives in @/lib/event-url (eventPath) since
+// #236 - it needs the show's slug and date, not just its id.
 
 export function absoluteUrl(path: string): string {
   // In the browser the real origin beats anything configured: it keeps preview

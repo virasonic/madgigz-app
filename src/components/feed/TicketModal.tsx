@@ -22,7 +22,7 @@ import {
   mapEventTier,
   tierIsAvailable,
 } from "@/lib/types";
-import { eventPath } from "@/lib/site";
+import { eventPath } from "@/lib/event-url";
 import ShareEventButton from "./ShareEventButton";
 import FriendsGoingStrip from "@/components/friends/FriendsGoingStrip";
 import SendToFriendSheet from "@/components/friends/SendToFriendSheet";
@@ -775,7 +775,7 @@ export default function TicketModal({
                         {t("ticket.guestHasAccount")}{" "}
                         <Link
                           href={`/signin?next=${encodeURIComponent(
-                            eventPath(event.id)
+                            eventPath(event)
                           )}`}
                           className="text-accent underline underline-offset-2"
                         >
@@ -790,7 +790,7 @@ export default function TicketModal({
                       {t("ticket.guestOr")}{" "}
                       <Link
                         href={`/signin?next=${encodeURIComponent(
-                          eventPath(event.id)
+                          eventPath(event)
                         )}`}
                         className="text-accent"
                       >
@@ -803,7 +803,7 @@ export default function TicketModal({
                   // and back to this show's page (where they can complete it).
                   <Link
                     href={`/signin?next=${encodeURIComponent(
-                      eventPath(event.id)
+                      eventPath(event)
                     )}`}
                     className="block"
                   >

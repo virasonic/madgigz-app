@@ -23,7 +23,8 @@
 // the app; everything else keeps opening normally:
 //   /auth/confirm   — email verification link (the point of #134)
 //   /auth/callback  — OAuth return
-//   /e/*            — shared public event links
+//   /event/*        — shared public event links (#236 shape)
+//   /e/*            — the old shared-link shape, still 301s to the new one
 //   /profile/*      — shared artist/venue profiles (guest-open, #196)
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,8 @@ export function GET() {
               components: [
                 { "/": "/auth/confirm", comment: "email verification link opens the app" },
                 { "/": "/auth/callback", comment: "OAuth return opens the app" },
-                { "/": "/e/*", comment: "shared event links open the app" },
+                { "/": "/event/*", comment: "shared event links open the app (#236)" },
+                { "/": "/e/*", comment: "legacy shared event links (301 to /event/*) open the app" },
                 { "/": "/profile/*", comment: "shared artist/venue profiles open the app (#196 guest-open)" },
               ],
             },

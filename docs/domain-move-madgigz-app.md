@@ -69,8 +69,9 @@ until the domain exists.
 
 1. Replace the hardcoded `madgigz.aurasonic.es` in code with `madgigz.app`
    (email-template logos, importer User-Agent, poster scripts). The poster-wall
-   footer strings in the i18n catalog are left for the pretty-URL work, which
-   reworks the share surfaces anyway.
+   footer strings in the i18n catalog followed with the pretty-URL work (#236,
+   `addendum_073`), which also added `/event/*` to the AASA and Android App
+   Links claims alongside `/e/*`.
 2. Native config: `server.url`, `LIVE_URL`, entitlements and manifest → add the
    new host. Keep `applinks:madgigz.aurasonic.es` and the old Android
    `android:host` **as well** so links already in the wild still deep-link.

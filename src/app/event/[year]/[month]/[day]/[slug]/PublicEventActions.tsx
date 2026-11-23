@@ -6,7 +6,8 @@ import { useState } from "react";
 import Button from "@/components/ui/Button";
 import TicketModal from "@/components/feed/TicketModal";
 import { shareEvent } from "@/lib/share";
-import { absoluteUrl, eventPath } from "@/lib/site";
+import { absoluteUrl } from "@/lib/site";
+import { eventPath } from "@/lib/event-url";
 import { EventItem } from "@/lib/types";
 import { useUrlModal } from "@/lib/useUrlModal";
 import { useT } from "@/lib/i18n/LocaleProvider";
@@ -46,7 +47,7 @@ export default function PublicEventActions({
     // Neither the OS share sheet nor the clipboard was available - browsers
     // refuse clipboard writes without focus, and some refuse them outright.
     // Show the URL instead of a dead end: the person can still select it.
-    if (outcome === "failed") setFallbackUrl(absoluteUrl(eventPath(event.id)));
+    if (outcome === "failed") setFallbackUrl(absoluteUrl(eventPath(event)));
   }
 
   const externalUrl =
@@ -94,7 +95,7 @@ export default function PublicEventActions({
       // sent is still the thing they end up looking at.
       return (
         <Link
-          href={`/signin?next=${encodeURIComponent(eventPath(event.id))}`}
+          href={`/signin?next=${encodeURIComponent(eventPath(event))}`}
           className="block"
         >
           <Button>{t("publicEvent.signInToBuy")}</Button>
@@ -133,7 +134,7 @@ export default function PublicEventActions({
         <p className="text-center text-xs text-muted">
           {t("publicEvent.newHere")}{" "}
           <Link
-            href={`/?next=${encodeURIComponent(eventPath(event.id))}`}
+            href={`/?next=${encodeURIComponent(eventPath(event))}`}
             className="text-accent"
           >
             {t("publicEvent.createAccount")}

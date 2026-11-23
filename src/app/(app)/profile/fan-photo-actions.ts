@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateEventPage } from "@/lib/revalidate-event";
 import { createClient } from "@/lib/supabase/server";
 import type { FanPhotoStatus } from "@/lib/fan-photos";
 
@@ -12,7 +13,7 @@ import type { FanPhotoStatus } from "@/lib/fan-photos";
 type Result = { ok: boolean; error?: "not_signed_in" | "limit" | "not_attended" | "failed" };
 
 function refresh(eventId: string) {
-  revalidatePath(`/e/${eventId}`);
+  revalidateEventPage(eventId);
   revalidatePath(`/profile/fan-photos/${eventId}`);
   revalidatePath("/profile/[artistId]", "page");
   revalidatePath("/notifications");

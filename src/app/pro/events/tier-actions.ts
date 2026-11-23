@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateEventPage } from "@/lib/revalidate-event";
 import { proClient, requirePro } from "@/lib/supabase/pro-queries";
 import { applyEventTiers, type TierInput } from "@/lib/tiers-apply";
 
@@ -52,7 +53,7 @@ export async function setProEventTiers(
   if (!result.error) {
     revalidatePath(`/pro/events/${eventId}`);
     revalidatePath("/pro/events");
-    revalidatePath(`/e/${eventId}`);
+    revalidateEventPage(eventId);
   }
   return result;
 }

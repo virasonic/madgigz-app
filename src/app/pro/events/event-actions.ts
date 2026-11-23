@@ -2,6 +2,7 @@
 
 import { movesDateIntoPast } from "@/lib/dates";
 import { revalidatePath } from "next/cache";
+import { revalidateEventPage } from "@/lib/revalidate-event";
 import { proClient, requirePro } from "@/lib/supabase/pro-queries";
 import {
   applyScheduleEdit,
@@ -259,7 +260,7 @@ export async function updateProEvent(
   revalidatePath("/pro/events");
   revalidatePath("/explore");
   revalidatePath("/feed");
-  revalidatePath(`/e/${eventId}`);
+  revalidateEventPage(eventId);
 
   const warning = genreError ?? tagError;
   return warning ? { error: `Saved, but: ${warning}` } : {};

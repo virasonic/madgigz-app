@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateEventPage } from "@/lib/revalidate-event";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import { logDecision } from "@/lib/decision-ledger";
 
@@ -34,7 +35,7 @@ export async function tagArtistToEvent(
   }
 
   revalidatePath("/admin/matches");
-  revalidatePath(`/e/${eventId}`);
+  revalidateEventPage(eventId);
   await logDecision(admin, currentAdmin.id, {
     action: "artist_tagged",
     subjectType: "event",

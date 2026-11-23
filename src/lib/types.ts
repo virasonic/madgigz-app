@@ -59,6 +59,12 @@ export interface EventItem {
    */
   proAccountId: string | null;
   venueId: string | null;
+  /**
+   * URL slug for the pretty share link, /event/yyyy/mm/dd/<slug> (#236).
+   * Assigned once by the database at insert (addendum_073). Null on a database
+   * where that addendum hasn't run - eventPath() then falls back to /e/<id>.
+   */
+  slug: string | null;
   title: string;
   artist: string;
   venue: string;
@@ -337,6 +343,8 @@ export interface EventRow {
   /** Absent on a database where addendum_071 hasn't run. */
   publish_at?: string | null;
   guest_checkout?: boolean;
+  /** Absent on a database where addendum_073 hasn't run. */
+  slug?: string | null;
 }
 
 export function mapEvent(row: EventRow): EventItem {
@@ -345,6 +353,7 @@ export function mapEvent(row: EventRow): EventItem {
     artistId: row.artist_id,
     proAccountId: row.pro_account_id ?? null,
     venueId: row.venue_id ?? null,
+    slug: row.slug ?? null,
     title: row.title,
     artist: row.artist_name,
     venue: row.venue,

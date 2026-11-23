@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateEventPage } from "@/lib/revalidate-event";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import {
   applyScheduleEdit,
@@ -325,7 +326,7 @@ export async function updateAdminEvent(
   revalidatePath("/admin/events");
   revalidatePath("/explore");
   revalidatePath("/feed");
-  revalidatePath(`/e/${eventId}`);
+  revalidateEventPage(eventId);
 
   const warning = genreError ?? tagError;
   return warning ? { error: `Saved, but: ${warning}` } : {};
@@ -358,6 +359,6 @@ export async function toggleGuestCheckout(
     return { error: "Couldn't update guest checkout" };
   }
   revalidatePath("/admin/events");
-  revalidatePath(`/e/${eventId}`);
+  revalidateEventPage(eventId);
   return {};
 }
