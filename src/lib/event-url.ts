@@ -13,7 +13,7 @@
 /** The minimum an event needs to carry to have a URL. */
 export type EventLinkTarget = { id: string; slug: string | null; date: string };
 
-/** The legacy /e/<id> path. Still served - it 301s to the pretty URL. */
+/** The legacy /e/<id> path. Still served - it redirects (308, permanent) to the pretty URL. */
 export function legacyEventPath(eventId: string): string {
   return `/e/${eventId}`;
 }

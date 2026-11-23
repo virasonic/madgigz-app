@@ -24,7 +24,7 @@
 //   /auth/confirm   — email verification link (the point of #134)
 //   /auth/callback  — OAuth return
 //   /event/*        — shared public event links (#236 shape)
-//   /e/*            — the old shared-link shape, still 301s to the new one
+//   /e/*            — the old shared-link shape, still redirects to the new one
 //   /profile/*      — shared artist/venue profiles (guest-open, #196)
 export const dynamic = "force-dynamic";
 
@@ -48,7 +48,7 @@ export function GET() {
                 { "/": "/auth/confirm", comment: "email verification link opens the app" },
                 { "/": "/auth/callback", comment: "OAuth return opens the app" },
                 { "/": "/event/*", comment: "shared event links open the app (#236)" },
-                { "/": "/e/*", comment: "legacy shared event links (301 to /event/*) open the app" },
+                { "/": "/e/*", comment: "legacy shared event links (redirect to /event/*) open the app" },
                 { "/": "/profile/*", comment: "shared artist/venue profiles open the app (#196 guest-open)" },
               ],
             },

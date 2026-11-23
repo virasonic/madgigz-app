@@ -5,7 +5,7 @@
 -- The date part comes from event_date at request time; only the slug is stored.
 -- It is generated ONCE, at insert, from the title - and then never changes, so
 -- a link that has been pasted into WhatsApp keeps working even if the organiser
--- later corrects the title. If the DATE changes, the page 301s from the old
+-- later corrects the title. If the DATE changes, the page redirects from the old
 -- date to the new one (the app resolves by slug alone and compares the date).
 --
 -- Classification: PUBLIC. events keeps a table-level select grant (addendum_026

@@ -411,7 +411,7 @@ export async function fetchEventById(
 
 /**
  * The show behind a pretty URL (#236): /event/yyyy/mm/dd/<slug> resolves by
- * slug alone, and the page compares the date itself so a rescheduled show 301s
+ * slug alone, and the page compares the date itself so a rescheduled show redirects
  * rather than 404s. Null when nothing matches - and null, not a throw, on a
  * database where addendum_073 hasn't run (42703, undefined column): no such
  * link can have been handed out there anyway.

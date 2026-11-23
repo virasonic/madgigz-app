@@ -6,8 +6,8 @@ import { eventPath, legacyEventPath } from "@/lib/event-url";
 import { EventPageView, eventMetadata } from "../../event/[year]/[month]/[day]/[slug]/EventPageView";
 
 // The old share-link shape, /e/<uuid>. Links in this form are on posters, in
-// WhatsApp threads and in Google's index, so it is served forever - as a 301 to
-// the pretty URL (#236). The query string rides along: ?buy=1 opens the ticket
+// WhatsApp threads and in Google's index, so it is served forever - as a permanent redirect (308,
+// what Next's permanentRedirect emits; Google treats it as a 301) to the pretty URL (#236). The query string rides along: ?buy=1 opens the ticket
 // sheet on arrival, and a QR on a poster may well carry it.
 //
 // Until addendum_073 has run the show has no slug and eventPath() returns this

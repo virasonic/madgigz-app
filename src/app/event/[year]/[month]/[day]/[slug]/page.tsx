@@ -20,8 +20,8 @@ import { EventPageView, eventMetadata } from "./EventPageView";
 // slug is what identifies the
 // show; the date is there for the human reading the link. So the lookup is by
 // slug alone, and a date that doesn't match the show's current date - it was
-// rescheduled after the link went out - 301s to the right one rather than 404s.
-// The old /e/<id> shape 301s here too (src/app/e/[eventId]/page.tsx).
+// rescheduled after the link went out - 308s to the right one rather than 404s.
+// The old /e/<id> shape 308s here too (src/app/e/[eventId]/page.tsx).
 
 type Params = PageProps<"/event/[year]/[month]/[day]/[slug]">["params"];
 type SearchParams = PageProps<"/event/[year]/[month]/[day]/[slug]">["searchParams"];
