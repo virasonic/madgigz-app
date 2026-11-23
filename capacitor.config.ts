@@ -18,7 +18,11 @@ const config: CapacitorConfig = {
   ios: { backgroundColor: "#0a0807" },
   android: { backgroundColor: "#0a0807" },
   server: {
-    url: "https://madgigz.aurasonic.es",
+    // The app's home from #235 on. Builds before that loaded madgigz.aurasonic.es,
+    // which keeps serving the app until Phase 3 of the move turns it into a
+    // redirect - so this must NOT be rebuilt and shipped before madgigz.app is
+    // live (Phase 1), or the app opens on a parked page.
+    url: "https://madgigz.app",
     // Shown when the remote URL can't load - i.e. a no-connection cold launch.
     // Without this, a failed load leaves the WKWebView on its own blank error
     // instead of our shell, so the app "doesn't open" offline. On iOS this page
@@ -32,7 +36,11 @@ const config: CapacitorConfig = {
     // lands in Safari, stranding the fan outside the app (#131). Test-mode 3-D
     // Secure also stays on *.stripe.com. External ticket links are handled
     // separately - an in-app browser sheet, see `openExternal` in src/lib/native.ts.
-    allowNavigation: ["*.stripe.com"],
+    //
+    // The old host stays allowed so that anything still pointing at it (an old
+    // email, a bookmark, the eventual 308 redirect) is treated as our own
+    // navigation rather than kicked out to the system browser.
+    allowNavigation: ["*.stripe.com", "madgigz.aurasonic.es"],
   },
   plugins: {
     SplashScreen: {

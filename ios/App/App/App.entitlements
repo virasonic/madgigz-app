@@ -11,6 +11,9 @@
 	     it. NativeBridge's appUrlOpen routes the opened path into the webview. -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
+		<string>applinks:madgigz.app</string>
+		<!-- Kept: links already shared under the old host must still open the app
+		     (#235). Drop only once that host has been a redirect for a long while. -->
 		<string>applinks:madgigz.aurasonic.es</string>
 	</array>
 </dict>

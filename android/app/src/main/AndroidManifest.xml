@@ -53,6 +53,9 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="madgigz.app" />
+                <!-- Kept alongside the new host (#235): links already shared under
+                     the old domain must still open the app. -->
                 <data android:scheme="https" android:host="madgigz.aurasonic.es" />
                 <data android:pathPrefix="/e/" />
                 <data android:pathPrefix="/profile/" />

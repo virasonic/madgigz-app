@@ -1,5 +1,6 @@
 "use server";
 
+import { requestOrigin } from "@/lib/request-origin";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { payoutsReady, stripe } from "@/lib/stripe";
@@ -13,9 +14,6 @@ import { requirePro } from "@/lib/supabase/pro-queries";
 // guard differs (requirePro vs requireArtist) and the copy differs; the Stripe
 // shape is deliberately identical so /admin/payouts can treat both the same.
 
-function appUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-}
 
 // Stripe's own error text is written for developers and can contain fragments
 // of keys and account ids - it belongs in the logs, not in an organiser's face.
@@ -75,10 +73,11 @@ export async function startProPayoutOnboarding(): Promise<{ url: string | null; 
       await admin.from("profiles").update({ stripe_account_id: accountId }).eq("id", userId);
     }
 
+    const appUrl = await requestOrigin();
     const link = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${appUrl()}/pro/payouts?stripe=refresh`,
-      return_url: `${appUrl()}/pro/payouts?stripe=return`,
+      refresh_url: `${appUrl}/pro/payouts?stripe=refresh`,
+      return_url: `${appUrl}/pro/payouts?stripe=return`,
       type: "account_onboarding",
     });
 

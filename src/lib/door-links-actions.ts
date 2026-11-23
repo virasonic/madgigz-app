@@ -4,6 +4,7 @@
 // the caller is allowed to scan. Shared by the three places a show is managed
 // (the artist's manage sheet, /pro, /admin), so the ownership rule lives in one
 // spot (canScanEvent) rather than three.
+import { requestOrigin } from "@/lib/request-origin";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -14,9 +15,6 @@ import {
   type DoorLinkSummary,
 } from "@/lib/door-links";
 
-function appUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-}
 
 interface ScannableEvent {
   id: string;
@@ -70,7 +68,7 @@ export async function createDoorLink(eventId: string, label: string): Promise<Cr
       error: minted.error === "notReady" ? "Door links aren't available yet" : "Could not create the link",
     };
   }
-  return { ok: true, url: `${appUrl()}/door/${minted.token}`, link: minted.link };
+  return { ok: true, url: `${await requestOrigin()}/door/${minted.token}`, link: minted.link };
 }
 
 export async function listDoorLinks(

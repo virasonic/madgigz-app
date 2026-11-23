@@ -1,5 +1,6 @@
 "use server";
 
+import { requestOrigin } from "@/lib/request-origin";
 import { revalidatePath } from "next/cache";
 import { adminClient, requireAdmin } from "@/lib/supabase/admin-queries";
 import { logDecision } from "@/lib/decision-ledger";
@@ -37,9 +38,6 @@ export interface CreateProAccountResult {
   existingAccount?: boolean;
 }
 
-function appUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-}
 
 // profiles.username is `^[A-Za-z0-9._-]{3,30}$` and unique on lower(username)
 // (addenda 010/011), and handle_new_user copies it straight out of the signup
@@ -149,7 +147,7 @@ export async function createProAccount(
   // Our own /auth/confirm rather than Stripe-style action_link: it already
   // handles a spent token with copy written for a human, and sends a verified
   // recovery straight to the reset-password screen.
-  const setPasswordUrl = `${appUrl()}/auth/confirm?token_hash=${link.properties.hashed_token}&type=recovery`;
+  const setPasswordUrl = `${await requestOrigin()}/auth/confirm?token_hash=${link.properties.hashed_token}&type=recovery`;
 
   // Upsert, so re-running this for an address that already has a pro account
   // fixes a typo'd name or the wrong type instead of erroring on the primary
@@ -319,7 +317,7 @@ export async function createArtistAccount(
     console.error("createArtistAccount generateLink failed:", linkError);
     return { error: "Account made, but the invite link couldn't be created. Try again." };
   }
-  const inviteUrl = `${appUrl()}/auth/confirm?token_hash=${link.properties.hashed_token}&type=recovery`;
+  const inviteUrl = `${await requestOrigin()}/auth/confirm?token_hash=${link.properties.hashed_token}&type=recovery`;
 
   // Pre-approved: role=artist + artist_status=approved skips the evidence gate;
   // evidence_submitted=true stops the profile nagging them to finish onboarding.

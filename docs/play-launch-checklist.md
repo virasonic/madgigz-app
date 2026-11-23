@@ -37,7 +37,7 @@ Play asks three app-level questions first, then per-data-type detail.
 - Does your app collect or share any of the required user data types? → **Yes**
 - Is all of the user data collected by your app encrypted in transit? → **Yes**
 - Do you provide a way for users to request that their data be deleted? → **Yes**
-  (in-app: Settings → Delete my account; and web: `https://madgigz.aurasonic.es/delete-account`)
+  (in-app: Settings → Delete my account; and web: `https://madgigz.app/delete-account`)
 
 **Per data type** — for every type below: **Collected = Yes, Shared = No,**
 **Processed ephemerally = No.** ("Shared" in Play means transferred to another
@@ -96,7 +96,7 @@ any violent/sexual/substance content. Accept whatever IARC returns.
 
 ## 3. App content declarations (Play Console → "App content")
 
-- **Privacy policy:** `https://madgigz.aurasonic.es/privacy` (live, bilingual).
+- **Privacy policy:** `https://madgigz.app/privacy` (live, bilingual).
 - **Ads:** **No**, the app contains no ads.
 - **App access:** **All or some functionality is restricted** → provide the
   reviewer demo account + instructions from §4.

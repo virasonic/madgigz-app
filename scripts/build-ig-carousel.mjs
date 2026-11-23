@@ -21,7 +21,7 @@ fs.mkdirSync(OUT, { recursive: true });
 
 const CHROME_BIN =
   process.env.CHROME_BIN ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const SITE = "madgigz.aurasonic.es";
+const SITE = "madgigz.app";
 
 const b64 = (rel) => fs.readFileSync(path.join(ROOT, rel)).toString("base64");
 

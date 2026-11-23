@@ -47,8 +47,10 @@ const FEED =
 // Override per print run to tell venues apart:
 //   POSTER_PLACEMENT=sala-nebula node scripts/build-promo-posters.mjs
 const PLACEMENT = process.env.POSTER_PLACEMENT?.trim() || "general";
+// madgigz.app is the app's home from #235 on; QR codes printed with the old host
+// keep working through the permanent redirect set up in Phase 3 of that move.
 const QR_TARGET =
-  "https://madgigz.aurasonic.es/?utm_source=poster&utm_medium=qr" +
+  "https://madgigz.app/?utm_source=poster&utm_medium=qr" +
   `&utm_campaign=always-on&utm_content=${encodeURIComponent(PLACEMENT)}`;
 
 const QR = await QRCode.toDataURL(QR_TARGET, {

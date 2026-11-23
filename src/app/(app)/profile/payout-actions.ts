@@ -1,5 +1,6 @@
 "use server";
 
+import { requestOrigin } from "@/lib/request-origin";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -31,9 +32,6 @@ async function requireArtist() {
   return { user, profile };
 }
 
-function appUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-}
 
 // Stripe's own error text is written for developers and can contain fragments
 // of keys and account ids - it belongs in the logs, not in an artist's face.
@@ -86,10 +84,11 @@ export async function startPayoutOnboarding(): Promise<{ url: string | null; err
       await admin.from("profiles").update({ stripe_account_id: accountId }).eq("id", user.id);
     }
 
+    const appUrl = await requestOrigin();
     const link = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${appUrl()}/profile?payout=refresh`,
-      return_url: `${appUrl()}/profile?payout=return`,
+      refresh_url: `${appUrl}/profile?payout=refresh`,
+      return_url: `${appUrl}/profile?payout=return`,
       type: "account_onboarding",
     });
 

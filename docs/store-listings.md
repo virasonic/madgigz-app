@@ -157,8 +157,8 @@ Welcome to MadGigz! Discover local gigs through artist reels and buy tickets in 
 
 ### Promotional / URL fields
 ```
-Support URL:     https://madgigz.aurasonic.es
-Marketing URL:   https://madgigz.aurasonic.es
+Support URL:     https://madgigz.app
+Marketing URL:   https://madgigz.app
 Copyright:       2026 AuraSonic SL
 ```
 
@@ -224,7 +224,7 @@ MadGigz — el concierto local, en tu bolsillo.
 ## Google Play
 - **App category:** Music & Audio
 - **Tags:** live music, concerts, events, tickets, local (pick the closest offered)
-- **Contact email:** vir@aurasonic.es  ·  **Website:** https://madgigz.aurasonic.es
+- **Contact email:** vir@aurasonic.es  ·  **Website:** https://madgigz.app
 - **Privacy Policy URL:** ⚠️ REQUIRED — see To-dos below
 - **Contains ads:** No
 - **In-app purchases:** No (tickets are a real-world service paid via Stripe, not Google digital goods)
@@ -235,7 +235,7 @@ MadGigz — el concierto local, en tu bolsillo.
 ## Apple App Store
 - **Primary category:** Music  ·  **Secondary:** Entertainment
 - **Age rating:** complete the questionnaire. Expect **12+**, driven by **user-generated content**. Answer **No** to "Unrestricted Web Access" (the app only loads its own site). You must confirm you have **content moderation, a EULA, and block/report tools** for UGC — MadGigz has moderation + reporting, so this is fine.
-- **Support URL / Marketing URL:** https://madgigz.aurasonic.es
+- **Support URL / Marketing URL:** https://madgigz.app
 - **Sign-In required for review:** YES → provide a demo account (see To-dos)
 - **Export compliance:** the app uses only standard HTTPS encryption → normally **exempt** (answer "Yes, uses encryption" → "exempt / standard").
 - **Content rights:** you own or have rights to all content shown. Yes.
@@ -262,7 +262,7 @@ MadGigz — el concierto local, en tu bolsillo.
 
 **Security & rights (both stores):**
 - Data **encrypted in transit** (HTTPS): Yes
-- Users can **request deletion**: Yes — in-app (Settings) and at https://madgigz.aurasonic.es/delete-account
+- Users can **request deletion**: Yes — in-app (Settings) and at https://madgigz.app/delete-account
 - Data **not** used for third-party advertising or cross-app tracking
 - Apple "App Privacy": data is **linked to the user** but **not used to track** you across other companies' apps
 
@@ -294,7 +294,7 @@ work for both stores (Apple just needs them at the exact pixel sizes above).
 
 1. **⚠️ Privacy Policy URL — REQUIRED by both stores.** You have `/delete-account`
    but not a full privacy policy page yet. This is a hard gate. *(I can draft a
-   bilingual privacy-policy page for madgigz.aurasonic.es — just say the word.)*
+   bilingual privacy-policy page for madgigz.app — just say the word.)*
 2. **Demo account for review.** Both stores' reviewers need to log in. Create a
    test fan account with **email + password** (not Google — reviewers won't use
    your Google login), and note it in the review notes. Consider a second artist

@@ -1,5 +1,6 @@
 "use server";
 
+import { requestOrigin } from "@/lib/request-origin";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -430,7 +431,9 @@ async function startCheckout(
   const { feeCents, feeVatCents } = houseRun
     ? { feeCents: 0, feeVatCents: 0 }
     : breakdownFor(totalCents);
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  // The host this request came in on, not the canonical one: a Stripe return
+  // must land on the origin the user left from (see src/lib/request-origin.ts).
+  const appUrl = await requestOrigin();
   const descriptorSuffix = statementDescriptorSuffix(event.artist);
 
   // Bizum (#144) is Spain's dominant consumer method, but it must be ACTIVATED

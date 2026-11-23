@@ -59,8 +59,8 @@ export default function PrivacyPolicyPage() {
       <p className="mt-4 text-sm leading-relaxed text-foreground/85">
         This is a plain-language summary of how we handle your data. It applies to the MadGigz app
         and to our website, and it is published in full at both{" "}
-        <strong>aurasonic.es/privacy</strong> and <strong>madgigz.aurasonic.es/privacy</strong> —
-        the two pages are the same policy.
+        <strong>aurasonic.es/privacy</strong> and <strong>madgigz.app/privacy</strong> — the two
+        pages are the same policy.
       </p>
 
       <Section title="Who we are">
@@ -291,8 +291,8 @@ export default function PrivacyPolicyPage() {
       <p className="mt-4 text-sm leading-relaxed text-foreground/85">
         Este es un resumen en lenguaje claro de cómo tratamos tus datos. Se aplica a la app de
         MadGigz y a nuestra web, y se publica íntegro tanto en{" "}
-        <strong>aurasonic.es/privacy</strong> como en <strong>madgigz.aurasonic.es/privacy</strong>:
-        ambas páginas son la misma política.
+        <strong>aurasonic.es/privacy</strong> como en <strong>madgigz.app/privacy</strong>: ambas
+        páginas son la misma política.
       </p>
 
       <Section title="Quiénes somos">

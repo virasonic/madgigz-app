@@ -44,7 +44,7 @@ export async function rehostPoster(
     const res = await fetch(url, {
       signal: controller.signal,
       // Some CDNs reject an empty/absent User-Agent.
-      headers: { "User-Agent": "MadGigzImporter/1.0 (+https://madgigz.aurasonic.es)" },
+      headers: { "User-Agent": "MadGigzImporter/1.0 (+https://madgigz.app)" },
     });
     if (!res.ok) return null;
 
