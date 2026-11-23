@@ -3,7 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchEventById } from "@/lib/supabase/queries";
 import { eventPath, legacyEventPath } from "@/lib/event-url";
-import { EventPageView, eventMetadata } from "../../event/[year]/[month]/[day]/[slug]/page";
+import { EventPageView, eventMetadata } from "../../event/[year]/[month]/[day]/[slug]/EventPageView";
 
 // The old share-link shape, /e/<uuid>. Links in this form are on posters, in
 // WhatsApp threads and in Google's index, so it is served forever - as a 301 to
