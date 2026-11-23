@@ -114,6 +114,14 @@ Verify: `https://madgigz.app/api/health` → `appUrl` is the new domain, same
 `curl -s https://madgigz.app/.well-known/apple-app-site-association` lists the
 app when `APPLE_TEAM_ID` is set.
 
+## Search Console (after Phase 1, no code)
+
+Backlog #238 has the step list: add `madgigz.app` as a Domain property (DNS
+TXT at GoDaddy), submit `https://madgigz.app/sitemap.xml`, request indexing
+for `/`, `/explore` and a couple of event URLs, run one event URL through the
+Rich Results Test (the page carries schema.org `MusicEvent` JSON-LD). Leave the
+old host's property untouched until Phase 3, when Change of Address is filed.
+
 ## Phase 2 — native rebuild on the new host
 
 `npx cap sync`, Xcode + Android Studio builds, on-device test of: cold launch,

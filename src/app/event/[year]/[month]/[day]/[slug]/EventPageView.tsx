@@ -12,6 +12,7 @@ import {
 import { buildLineupLinks, normName } from "@/lib/lineup-links";
 import { absoluteUrl, mapsUrl } from "@/lib/site";
 import { eventPath } from "@/lib/event-url";
+import { eventJsonLd, jsonLdScript } from "@/lib/event-jsonld";
 import type { EventItem } from "@/lib/types";
 import PublicEventActions from "./PublicEventActions";
 import AttendedToggle from "./AttendedToggle";
@@ -138,8 +139,28 @@ export async function EventPageView({
 
   const soldOut = event.capacity - event.sold <= 0;
 
+  // schema.org MusicEvent (#238): the same facts the page shows, in the form
+  // Google's event rich results read. Performers are the line-up, linked to a
+  // profile where the act is a tagged MadGigz artist; the organiser is the
+  // promoter/venue when there is one, else the act whose show it is.
+  const jsonLd = eventJsonLd({
+    event,
+    url: absoluteUrl(eventPath(event)),
+    performers: event.lineup.map((act) => {
+      const profileId = lineupLinks[normName(act)];
+      return profileId ? { name: act, url: absoluteUrl(`/profile/${profileId}`) } : { name: act };
+    }),
+    organiser: organiser
+      ? { name: organiser.name, url: absoluteUrl(`/profile/${organiser.id}`) }
+      : event.artistId
+        ? { name: event.artist, url: absoluteUrl(`/profile/${event.artistId}`) }
+        : { name: event.artist },
+    soldOut,
+  });
+
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
       <header className="pt-safe-page flex items-center gap-3 px-5 pb-4">
         {/* Signed-in fans reach this from a notification, Explore or a reel, so
             they need a way back (#feedback). A logged-out stranger arriving on a
