@@ -86,6 +86,11 @@ until the domain exists.
 
 ## Phase 1 — both hosts live, new one canonical (you, dashboards)
 
+**Done 23 Nov 2026.** Two things learnt on the way: Vercel's "Redirect apex
+domains to www" box must be **unticked** (the apex is the real address; www is
+added separately as a 308 to it), and `NEXT_PUBLIC_APP_URL` had been saved as a
+sensitive variable, which can't be edited - delete and re-add it, not sensitive.
+
 1. **Vercel → project → Settings → Domains → Add** `madgigz.app` and
    `www.madgigz.app` (set www to redirect to the apex; Vercel offers this).
    Vercel shows the DNS records: an **A** record for the apex and a **CNAME** for
