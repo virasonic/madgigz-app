@@ -12,7 +12,7 @@ import { EventItem, Ticket } from "@/lib/types";
 import { saveOfflineTickets, type OfflineTicket } from "@/lib/offline-tickets";
 import { mirrorOfflineTicketsToNative } from "@/lib/offline-tickets-native";
 import { hideRefundedTicket } from "./actions";
-import { useUrlModal } from "@/lib/useUrlModal";
+import { useEventSheet } from "@/lib/useEventSheet";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
 
@@ -73,7 +73,7 @@ export default function SavedClient({
   // #102: a tapped liked-event opens ?ticket=<id> so back closes the sheet and
   // the link is shareable. The QR modal stays local state - it holds a specific
   // ticket, isn't a browse target, and there's nothing to deep-link to.
-  const ticketModal = useUrlModal("ticket");
+  const ticketModal = useEventSheet(initialEvents);
   const [activeTicket, setActiveTicket] = useState<{ ticket: Ticket; event: EventItem } | null>(
     null
   );
@@ -115,10 +115,7 @@ export default function SavedClient({
     [savedEvents]
   );
 
-  const activeEvent = useMemo(
-    () => initialEvents.find((event) => event.id === ticketModal.value) ?? null,
-    [initialEvents, ticketModal.value]
-  );
+  const activeEvent = ticketModal.active;
 
   const allTicketRows = useMemo(
     () =>
@@ -240,7 +237,7 @@ export default function SavedClient({
   const renderLikedEvent = (event: EventItem) => (
     <div key={event.id} className="flex items-center gap-3 rounded-2xl bg-surface p-3">
       <button
-        onClick={() => ticketModal.open(event.id)}
+        onClick={() => ticketModal.open(event)}
         className="flex min-w-0 flex-1 items-center gap-3 text-left"
       >
         <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl">

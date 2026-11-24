@@ -11,7 +11,7 @@ import FanPhotoStrip from "@/components/fan-photos/FanPhotoStrip";
 import type { FanPhoto } from "@/lib/fan-photos";
 import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
-import { useUrlModal } from "@/lib/useUrlModal";
+import { useEventSheet } from "@/lib/useEventSheet";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { dateLocale } from "@/lib/dates";
 import { EventItem } from "@/lib/types";
@@ -62,15 +62,13 @@ export default function FanProfileView({
     }
   }, [isGuest, card.username]);
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
-  const ticketModal = useUrlModal("ticket");
   const allShows = useMemo(
     () => (events ? [...events.going, ...events.interested, ...events.been] : []),
     [events]
   );
-  const activeEvent = useMemo(
-    () => allShows.find((s) => s.id === ticketModal.value) ?? null,
-    [allShows, ticketModal.value]
-  );
+  // #102/#237: the open ticket sheet is the show's own /event/... URL.
+  const ticketModal = useEventSheet(allShows);
+  const activeEvent = ticketModal.active;
 
   async function handleToggleSave(eventId: string) {
     if (!userId) return;
@@ -145,7 +143,7 @@ export default function FanProfileView({
             <div className="mt-4 grid grid-cols-2 gap-3">
               {events[tab].map((show) => (
                 <div key={show.id} className="relative">
-                  <EventCard event={show} onOpen={() => ticketModal.open(show.id)} />
+                  <EventCard event={show} onOpen={() => ticketModal.open(show)} />
                   {tab !== "been" && myGoingIds.includes(show.id) && (
                     <span className="pointer-events-none absolute left-2 top-2 rounded-full bg-primary/90 px-2 py-0.5 text-[10px] font-heading text-foreground">
                       {t("friends.youreGoingToo")}

@@ -9,7 +9,7 @@ import TicketModal from "@/components/feed/TicketModal";
 import FriendButton from "@/components/friends/FriendButton";
 import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
-import { useUrlModal } from "@/lib/useUrlModal";
+import { useEventSheet } from "@/lib/useEventSheet";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { EventItem } from "@/lib/types";
 import { FriendActivity, FriendLink, splitByKind } from "@/lib/friends";
@@ -35,11 +35,9 @@ export default function FriendsClient({
   const { t } = useT();
   const router = useRouter();
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
-  const ticketModal = useUrlModal("ticket");
-  const activeEvent = useMemo(
-    () => events.find((e) => e.id === ticketModal.value) ?? null,
-    [events, ticketModal.value]
-  );
+  // #102/#237: the open ticket sheet is the show's own /event/... URL.
+  const ticketModal = useEventSheet(events);
+  const activeEvent = ticketModal.active;
 
   const friends = links.filter((l) => l.status === "friends");
   const requestsIn = links.filter((l) => l.status === "pending_in");
@@ -144,7 +142,7 @@ export default function FriendsClient({
                 .slice(0, 3);
               return (
                 <div key={event.id} className="w-36 shrink-0">
-                  <EventCard event={event} onOpen={() => ticketModal.open(event.id)} />
+                  <EventCard event={event} onOpen={() => ticketModal.open(event)} />
                   <div className="mt-2 flex items-center gap-2">
                     <div className="flex">
                       {faces.map((f, i) => (

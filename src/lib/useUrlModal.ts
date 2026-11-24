@@ -15,11 +15,13 @@ import { useCallback, useRef } from "react";
  * feed back into `useSearchParams` (see the "Native History API" note in
  * node_modules/next/dist/docs/.../04-linking-and-navigating.md). That keeps the
  * update shallow: the server component doesn't re-run and the scroll position is
- * left alone - opening a ticket sheet must not jump the feed.
+ * left alone - opening a sheet must not jump the page. (The ticket sheet
+ * itself moved to its own URL in #237 - see useEventSheet, which explains why
+ * a *path* can't be pushed this way.)
  *
  * Opening pushes a history entry; closing mirrors it with `history.back()` so the
  * entry is popped cleanly and the two buttons behave identically. The one case
- * that can't go back is a *deep link* - someone landed on `?ticket=x` directly,
+ * that can't go back is a *deep link* - someone landed on `?settings=1` directly,
  * so there is no entry of ours to pop and `back()` would walk them off the site.
  * `pushedRef` tracks that: false on a fresh mount, so close falls back to
  * `replaceState`, which strips the param in place.

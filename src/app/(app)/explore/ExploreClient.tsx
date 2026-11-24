@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem, PublicArtistProfile } from "@/lib/types";
 import { scoreEvent, type FanPreferences } from "@/lib/fan-preferences";
-import { useUrlModal } from "@/lib/useUrlModal";
+import { useEventSheet } from "@/lib/useEventSheet";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import CityBadge from "@/components/ui/CityBadge";
 
@@ -44,13 +44,11 @@ export default function ExploreClient({
   const router = useRouter();
   const { promptSignup, sheet: guestSheet } = useGuestGate();
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
-  // #102: the open ticket sheet lives in ?ticket=<id> so back closes it and the
-  // link is shareable. Resolved from the param against the events on this page.
-  const ticketModal = useUrlModal("ticket");
-  const activeEvent = useMemo(
-    () => initialEvents.find((e) => e.id === ticketModal.value) ?? null,
-    [initialEvents, ticketModal.value]
-  );
+  // #102/#237: the open ticket sheet lives in the URL - the show's own
+  // /event/... path - so back closes it and the bar shows the shareable link.
+  // Resolved against the events on this page.
+  const ticketModal = useEventSheet(initialEvents);
+  const activeEvent = ticketModal.active;
   // The desktop SideNav search hands off here via ?q. Seed the box from it, and
   // re-sync when the param changes (searching again from the rail while already
   // on Explore doesn't remount this) using React's adjust-state-during-render
@@ -268,7 +266,7 @@ export default function ExploreClient({
               <EventCard
                 key={event.id}
                 event={event}
-                onOpen={() => ticketModal.open(event.id)}
+                onOpen={() => ticketModal.open(event)}
               />
             ))}
           </div>

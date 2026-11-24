@@ -7,7 +7,7 @@ import TicketModal from "@/components/feed/TicketModal";
 import { createClient } from "@/lib/supabase/client";
 import { toggleSavedEvent } from "@/lib/supabase/queries";
 import { EventItem } from "@/lib/types";
-import { useUrlModal } from "@/lib/useUrlModal";
+import { useEventSheet } from "@/lib/useEventSheet";
 import { useGuestGate } from "@/components/auth/GuestGate";
 import { useT } from "@/lib/i18n/LocaleProvider";
 
@@ -26,13 +26,11 @@ export default function ArtistShowsGrid({
   const router = useRouter();
   const { promptSignup, sheet } = useGuestGate();
   const [savedIds, setSavedIds] = useState<string[]>(initialSavedIds);
-  // #102: open ticket sheet is ?ticket=<id>, resolved from this artist's shows.
-  const ticketModal = useUrlModal("ticket");
+  // #102/#237: the open ticket sheet is the show's own /event/... URL,
+  // resolved from this artist's shows.
   const allShows = useMemo(() => [...upcoming, ...past], [upcoming, past]);
-  const activeEvent = useMemo(
-    () => allShows.find((s) => s.id === ticketModal.value) ?? null,
-    [allShows, ticketModal.value]
-  );
+  const ticketModal = useEventSheet(allShows);
+  const activeEvent = ticketModal.active;
 
   async function handleToggleSave(eventId: string) {
     // Guests can browse the shows but not save - the tap becomes the sign-up
@@ -64,7 +62,7 @@ export default function ArtistShowsGrid({
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {upcoming.map((show) => (
-            <EventCard key={show.id} event={show} onOpen={() => ticketModal.open(show.id)} />
+            <EventCard key={show.id} event={show} onOpen={() => ticketModal.open(show)} />
           ))}
         </div>
       )}
@@ -79,7 +77,7 @@ export default function ArtistShowsGrid({
           </h2>
           <div className="grid grid-cols-2 gap-3">
             {past.map((show) => (
-              <EventCard key={show.id} event={show} onOpen={() => ticketModal.open(show.id)} />
+              <EventCard key={show.id} event={show} onOpen={() => ticketModal.open(show)} />
             ))}
           </div>
         </>

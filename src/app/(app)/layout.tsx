@@ -13,7 +13,16 @@ import { fetchArtistIntro } from "@/lib/supabase/queries";
 import { fetchProAccount } from "@/lib/pro";
 import ActivityTouch from "@/components/analytics/ActivityTouch";
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({
+  children,
+  modal,
+}: {
+  children: React.ReactNode;
+  // The @modal parallel slot (#237): an intercepting route that claims
+  // /event/... inside the shell so the ticket sheet can carry the show's own
+  // URL while the screen underneath stays mounted. Renders nothing itself.
+  modal: React.ReactNode;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -118,6 +127,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           isGuest={isGuest}
         />
       </div>
+      {modal}
     </div>
   );
 }

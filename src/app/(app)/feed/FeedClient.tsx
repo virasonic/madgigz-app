@@ -17,6 +17,7 @@ import { canActAsOrganiser } from "@/lib/roles";
 import { audienceAllows } from "@/lib/announcement-audience";
 import { getSeenAnnouncements, markAnnouncementSeen } from "@/lib/seen-announcements";
 import { useUrlModal } from "@/lib/useUrlModal";
+import { useEventSheet } from "@/lib/useEventSheet";
 import { FEED_TO_TOP_EVENT } from "@/lib/ui-events";
 import { useT } from "@/lib/i18n/LocaleProvider";
 import { useDragToDismiss } from "@/components/ui/useDragToDismiss";
@@ -227,8 +228,8 @@ export default function FeedClient({
   );
   // #102: the open ticket and the announcements sheet live in the URL now, so
   // the back button closes them, they survive a refresh, and a ticket link is
-  // shareable. activeEvent is resolved from the ?ticket=<id> param below.
-  const ticketModal = useUrlModal("ticket");
+  // shareable. The ticket sheet's URL is the show's own /event/... path (#237).
+  const ticketModal = useEventSheet(initialEvents);
   const announcementsModal = useUrlModal("panel");
   const announcementsOpen = announcementsModal.value === "announcements";
   const [addContentOpen, setAddContentOpen] = useState(false);
@@ -395,10 +396,7 @@ export default function FeedClient({
 
   // The show behind ?ticket=<id>. Null when the param is absent or points at an
   // event this feed doesn't hold (e.g. a stale link) - the sheet just stays shut.
-  const activeEvent = useMemo(
-    () => initialEvents.find((e) => e.id === ticketModal.value) ?? null,
-    [initialEvents, ticketModal.value]
-  );
+  const activeEvent = ticketModal.active;
 
   // Don't show an artist their own intro reel as a discovery card. A guest has
   // no id, so nothing is excluded - they see the full set.
@@ -644,7 +642,7 @@ export default function FeedClient({
                       event={entry.event}
                       muted={reelsMuted}
                       onToggleMute={() => setReelsMuted((v) => !v)}
-                      onOpen={() => ticketModal.open(entry.event!.id)}
+                      onOpen={() => ticketModal.open(entry.event!)}
                       liked={savedIds.includes(entry.event.id)}
                       onToggleLike={() => handleToggleLike(entry.event!.id)}
                       preload={Math.abs(index - activeIndex) <= 1 ? "auto" : "none"}
@@ -716,7 +714,7 @@ export default function FeedClient({
                     {dayEvents.map((event) => (
                       <button
                         key={event.id}
-                        onClick={() => ticketModal.open(event.id)}
+                        onClick={() => ticketModal.open(event)}
                         className="flex items-center gap-3 rounded-2xl bg-surface p-3 text-left"
                       >
                         <div className="relative h-14 w-14 overflow-hidden rounded-xl">
