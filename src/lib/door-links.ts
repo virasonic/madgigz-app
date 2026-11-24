@@ -97,11 +97,14 @@ function toSummary(row: DoorLinkRow): DoorLinkSummary {
 }
 
 /**
- * May this signed-in user mint door links for this show? The same rule the
- * ticket RLS applies to scanning (addenda 026, 046, 052): the owner artist; a
- * pro account for a show it booked; an admin for an OWNERLESS (MadGigz house)
- * show. Not an admin for an artist's own show - that stays the artist's, exactly
- * as in show-actions' canManageEvent.
+ * May this signed-in user mint door links for this show? The owner artist; a
+ * pro account for a show it booked; and an admin for ANY show MadGigz sells
+ * tickets to. The admin case used to stop at ownerless (house) shows, mirroring
+ * the ticket RLS for the logged-in scanner (addenda 026, 046, 052) - but a door
+ * link runs on the service role, not RLS, and the operator being unable to hand
+ * a door to staff on an artist's show that MadGigz is selling was the actual
+ * problem (24 Nov 2026). Editing the show is still the artist's alone
+ * (show-actions' canManageEvent); this is only who may run its door.
  */
 export async function canScanEvent(
   admin: SupabaseClient,
@@ -117,11 +120,8 @@ export async function canScanEvent(
       .maybeSingle();
     if (data?.active) return true;
   }
-  if (event.artist_id === null) {
-    const { data } = await admin.from("profiles").select("role").eq("id", userId).maybeSingle();
-    return data?.role === "admin";
-  }
-  return false;
+  const { data } = await admin.from("profiles").select("role").eq("id", userId).maybeSingle();
+  return data?.role === "admin";
 }
 
 export type MintResult =

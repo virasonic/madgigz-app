@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DOOR_LINK_TTL_HOURS,
+  canScanEvent,
   doorLinkExpiry,
   hashDoorToken,
   isDoorLinksNotReady,
@@ -63,5 +65,51 @@ describe("isDoorLinksNotReady", () => {
     expect(isDoorLinksNotReady({ message: 'relation "public.door_links" does not exist' })).toBe(true);
     expect(isDoorLinksNotReady({ code: "23505", message: "duplicate key" })).toBe(false);
     expect(isDoorLinksNotReady(null)).toBe(false);
+  });
+});
+
+// Who may run a show's door. A stub of the two lookups the rule makes - the
+// caller's role and whether a pro account is active - so the rule is pinned
+// without a database: an admin may run ANY show's door (24 Nov 2026), an
+// artist only their own, a pro only a show it booked, a fan none.
+describe("canScanEvent", () => {
+  function fakeAdmin(roles: Record<string, string>, activePros: string[]): SupabaseClient {
+    const from = (table: string) => ({
+      select: () => ({
+        eq: (_col: string, id: string) => ({
+          maybeSingle: async () => ({
+            data:
+              table === "profiles"
+                ? roles[id]
+                  ? { role: roles[id] }
+                  : null
+                : table === "pro_accounts"
+                  ? activePros.includes(id)
+                    ? { active: true }
+                    : null
+                  : null,
+          }),
+        }),
+      }),
+    });
+    return { from } as unknown as SupabaseClient;
+  }
+  const admin = fakeAdmin({ adm: "admin", art: "artist", fan: "fan", pro: "fan" }, ["pro"]);
+  const artistShow = { artist_id: "art", pro_account_id: null };
+  const houseShow = { artist_id: null, pro_account_id: null };
+  const proShow = { artist_id: "someone", pro_account_id: "pro" };
+
+  it("lets an admin run the door of any show, not only a house show", async () => {
+    expect(await canScanEvent(admin, "adm", houseShow)).toBe(true);
+    expect(await canScanEvent(admin, "adm", artistShow)).toBe(true);
+    expect(await canScanEvent(admin, "adm", proShow)).toBe(true);
+  });
+
+  it("lets the owner artist and the booking pro account, and nobody else", async () => {
+    expect(await canScanEvent(admin, "art", artistShow)).toBe(true);
+    expect(await canScanEvent(admin, "pro", proShow)).toBe(true);
+    expect(await canScanEvent(admin, "art", proShow)).toBe(false);
+    expect(await canScanEvent(admin, "fan", artistShow)).toBe(false);
+    expect(await canScanEvent(admin, "fan", houseShow)).toBe(false);
   });
 });
