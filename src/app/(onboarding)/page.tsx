@@ -4,9 +4,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import RoleCard from "@/components/ui/RoleCard";
 import LanguageToggle from "@/components/ui/LanguageToggle";
-import { absoluteUrl, safeNext } from "@/lib/site";
+import { absoluteUrl, safeNext, siteOrigin } from "@/lib/site";
 import { getServerT } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
+import { jsonLdScript } from "@/lib/event-jsonld";
+import { siteJsonLd } from "@/lib/site-jsonld";
 
 function HeartIcon() {
   return (
@@ -73,7 +75,17 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
     redirect(next ?? "/feed");
   }
 
-  const { t } = await getServerT();
+  const { t, locale } = await getServerT();
+
+  // Who we are, for Google (#239): one Organization with the logo and the
+  // Instagram account as sameAs, plus the WebSite. The event pages carry their
+  // own MusicEvent blocks; this is the brand-level one, and the home page is
+  // the one URL every crawler reaches.
+  const jsonLd = siteJsonLd({
+    origin: siteOrigin(),
+    description: t("seo.homeDescription"),
+    language: locale,
+  });
 
   // justify-center balances the whole group in the middle of the screen. The
   // wordmark block deliberately has no flex-1: giving it one made it absorb
@@ -81,6 +93,7 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
   // bottom with a dead gap between them.
   return (
     <div className="flex flex-1 flex-col">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }} />
       {/* First-screen language switch (#176): a user who opened the app in the
           wrong language can fix it before signing up. Writes the same locale
           cookie the in-app Settings toggle uses, so the choice sticks. */}
@@ -128,6 +141,15 @@ export default async function LandingPage({ searchParams }: PageProps<"/">) {
       <p className="mt-6 text-center text-sm">
         <Link href="/feed" className="font-heading text-accent">
           {t("landing.browse")}
+        </Link>
+      </p>
+      {/* The plain-text "what's on tonight" page (#239). Linked from here so a
+          crawler finds it from the one URL it always has, and so a person who
+          landed on the sign-in screen from a "conciertos Madrid hoy" search
+          gets the answer without an account. */}
+      <p className="mt-3 text-center text-sm">
+        <Link href="/conciertos-hoy" className="text-muted underline underline-offset-2">
+          {t("landing.today")}
         </Link>
       </p>
       </div>

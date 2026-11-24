@@ -94,7 +94,14 @@
       "exploreTitle": "What's On in Madrid - Upcoming Gigs | MadGigz",
       "exploreDescription": "Every upcoming gig in Madrid on MadGigz: independent artists, local venues and live music you can book in seconds.",
       "feedTitle": "Live Music Feed - Madrid Artists | MadGigz",
-      "feedDescription": "New videos, announcements and shows from independent artists in Madrid. See what's happening this week on MadGigz."
+      "feedDescription": "New videos, announcements and shows from independent artists in Madrid. See what's happening this week on MadGigz.",
+      "eventTitle": "{artist} at {venue}, {city} · {date} · Tickets",
+      "eventWhere": "{acts} live at {venue} ({city}) on {date} at {time}.",
+      "eventPriceOn": "Tickets from {price} on MadGigz.",
+      "eventPrice": "Tickets from {price}.",
+      "eventFree": "Free entry.",
+      "todayTitle": "Live music in Madrid today ({date}) · MadGigz",
+      "todayDescription": "Every gig in Madrid tonight and this week: venues, times and prices. Updated daily."
     },
     "feed": {
       "forYou": "For You",
@@ -296,7 +303,21 @@
       "artistDescription": "Claim your profile, sell your shows",
       "artistBadge": "Artist",
       "haveAccount": "Already have an account?",
-      "browse": "Just looking? Browse shows"
+      "browse": "Just looking? Browse shows",
+      "today": "Live music in Madrid today"
+    },
+    "today": {
+      "heading": "Live music in Madrid today",
+      "updated": "Updated: {date}",
+      "intro": "Every gig on MadGigz in Madrid tonight, with venue, time and price. Tap a show for tickets and the full line-up.",
+      "tonight": "Tonight, {date}",
+      "nothingTonight": "No shows listed for tonight yet. Here is what's on in the next few days.",
+      "thisWeek": "Coming up this week",
+      "nothingThisWeek": "Nothing else listed this week yet - check back tomorrow.",
+      "free": "Free",
+      "from": "From {price}",
+      "browseAll": "See every upcoming gig",
+      "aria": "Live music in Madrid today"
     },
     "signin": {
       "title": "Welcome back",
@@ -1417,7 +1438,14 @@
       "exploreTitle": "Qué hay en Madrid - Próximos conciertos | MadGigz",
       "exploreDescription": "Todos los próximos bolos en Madrid: artistas independientes, salas locales y música en directo con entradas al instante.",
       "feedTitle": "Música en directo - Artistas de Madrid | MadGigz",
-      "feedDescription": "Vídeos, novedades y bolos de artistas independientes de Madrid. Descubre qué pasa esta semana en MadGigz."
+      "feedDescription": "Vídeos, novedades y bolos de artistas independientes de Madrid. Descubre qué pasa esta semana en MadGigz.",
+      "eventTitle": "{artist} en {venue}, {city} · {date} · Entradas",
+      "eventWhere": "{acts} en directo en {venue} ({city}), el {date} a las {time}.",
+      "eventPriceOn": "Entradas desde {price} en MadGigz.",
+      "eventPrice": "Entradas desde {price}.",
+      "eventFree": "Entrada gratis.",
+      "todayTitle": "Conciertos hoy en Madrid ({date}) · MadGigz",
+      "todayDescription": "Todos los conciertos de esta noche y de esta semana en Madrid: salas, horarios y precios. Actualizado cada día."
     },
     "feed": {
       "forYou": "Para ti",
@@ -1619,7 +1647,21 @@
       "artistDescription": "Reclama tu perfil, vende tus bolos",
       "artistBadge": "Artista",
       "haveAccount": "¿Ya tienes cuenta?",
-      "browse": "¿Solo mirando? Explora los bolos"
+      "browse": "¿Solo mirando? Explora los bolos",
+      "today": "Conciertos hoy en Madrid"
+    },
+    "today": {
+      "heading": "Conciertos hoy en Madrid",
+      "updated": "Actualizado: {date}",
+      "intro": "Todos los bolos de MadGigz en Madrid esta noche, con sala, hora y precio. Toca un concierto para ver las entradas y el cartel completo.",
+      "tonight": "Esta noche, {date}",
+      "nothingTonight": "Todavía no hay conciertos para esta noche. Esto es lo que viene en los próximos días.",
+      "thisWeek": "Próximos días",
+      "nothingThisWeek": "Nada más esta semana por ahora. Vuelve mañana.",
+      "free": "Gratis",
+      "from": "Desde {price}",
+      "browseAll": "Ver todos los próximos conciertos",
+      "aria": "Conciertos hoy en Madrid"
     },
     "signin": {
       "title": "Bienvenido de nuevo",

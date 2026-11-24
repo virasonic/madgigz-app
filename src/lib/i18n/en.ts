@@ -144,6 +144,18 @@ export const en = {
     feedTitle: "Live Music Feed - Madrid Artists | MadGigz",
     feedDescription:
       "New videos, announcements and shows from independent artists in Madrid. See what's happening this week on MadGigz.",
+    // The public event page's search snippet (#239). Search words first: the
+    // act, the venue, the city, the date, "tickets". The share preview (OG) is
+    // a separate, shorter line - see eventPage.shareBuy.
+    eventTitle: "{artist} at {venue}, {city} · {date} · Tickets",
+    eventWhere: "{acts} live at {venue} ({city}) on {date} at {time}.",
+    eventPriceOn: "Tickets from {price} on MadGigz.",
+    eventPrice: "Tickets from {price}.",
+    eventFree: "Free entry.",
+    // /conciertos-hoy (#239): the plain-text "what's on tonight" page.
+    todayTitle: "Live music in Madrid today ({date}) · MadGigz",
+    todayDescription:
+      "Every gig in Madrid tonight and this week: venues, times and prices. Updated daily.",
   },
 
   feed: {
@@ -378,6 +390,25 @@ export const en = {
     artistBadge: "Artist",
     haveAccount: "Already have an account?",
     browse: "Just looking? Browse shows",
+    today: "Live music in Madrid today",
+  },
+
+  // /conciertos-hoy (#239): a public, guest-readable list of tonight's and
+  // this week's shows, written as plain text so a search engine or an AI
+  // answer engine can quote it directly. Dates are interpolated, never built.
+  today: {
+    heading: "Live music in Madrid today",
+    updated: "Updated: {date}",
+    intro:
+      "Every gig on MadGigz in Madrid tonight, with venue, time and price. Tap a show for tickets and the full line-up.",
+    tonight: "Tonight, {date}",
+    nothingTonight: "No shows listed for tonight yet. Here is what's on in the next few days.",
+    thisWeek: "Coming up this week",
+    nothingThisWeek: "Nothing else listed this week yet - check back tomorrow.",
+    free: "Free",
+    from: "From {price}",
+    browseAll: "See every upcoming gig",
+    aria: "Live music in Madrid today",
   },
 
   signin: {

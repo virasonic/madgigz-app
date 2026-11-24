@@ -127,6 +127,14 @@ export const es: Messages = {
     feedTitle: "Música en directo - Artistas de Madrid | MadGigz",
     feedDescription:
       "Vídeos, novedades y bolos de artistas independientes de Madrid. Descubre qué pasa esta semana en MadGigz.",
+    eventTitle: "{artist} en {venue}, {city} · {date} · Entradas",
+    eventWhere: "{acts} en directo en {venue} ({city}), el {date} a las {time}.",
+    eventPriceOn: "Entradas desde {price} en MadGigz.",
+    eventPrice: "Entradas desde {price}.",
+    eventFree: "Entrada gratis.",
+    todayTitle: "Conciertos hoy en Madrid ({date}) · MadGigz",
+    todayDescription:
+      "Todos los conciertos de esta noche y de esta semana en Madrid: salas, horarios y precios. Actualizado cada día.",
   },
 
   feed: {
@@ -354,6 +362,22 @@ export const es: Messages = {
     artistBadge: "Artista",
     haveAccount: "¿Ya tienes cuenta?",
     browse: "¿Solo mirando? Explora los bolos",
+    today: "Conciertos hoy en Madrid",
+  },
+
+  today: {
+    heading: "Conciertos hoy en Madrid",
+    updated: "Actualizado: {date}",
+    intro:
+      "Todos los bolos de MadGigz en Madrid esta noche, con sala, hora y precio. Toca un concierto para ver las entradas y el cartel completo.",
+    tonight: "Esta noche, {date}",
+    nothingTonight: "Todavía no hay conciertos para esta noche. Esto es lo que viene en los próximos días.",
+    thisWeek: "Próximos días",
+    nothingThisWeek: "Nada más esta semana por ahora. Vuelve mañana.",
+    free: "Gratis",
+    from: "Desde {price}",
+    browseAll: "Ver todos los próximos conciertos",
+    aria: "Conciertos hoy en Madrid",
   },
 
   signin: {

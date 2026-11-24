@@ -13,6 +13,7 @@ import { buildLineupLinks, normName } from "@/lib/lineup-links";
 import { absoluteUrl, mapsUrl } from "@/lib/site";
 import { eventPath } from "@/lib/event-url";
 import { eventJsonLd, jsonLdScript } from "@/lib/event-jsonld";
+import { eventSeoDescription, eventSeoTitle } from "@/lib/event-seo";
 import type { EventItem } from "@/lib/types";
 import PublicEventActions from "./PublicEventActions";
 import AttendedToggle from "./AttendedToggle";
@@ -44,24 +45,34 @@ function formatDate(iso: string, dl: string) {
  * or hidden one. Shared with the legacy /e/<id> route, which serves the page
  * itself until addendum_073 gives the show a slug (#236).
  */
-export async function eventMetadata(event: EventItem | null): Promise<Metadata> {
+export async function eventMetadata(
+  event: EventItem | null,
+  supabase: SupabaseClient
+): Promise<Metadata> {
   if (!event || !event.active) {
     const { t } = await getServerT();
     return { title: t("eventPage.notFoundTitle") };
   }
 
-  const { t, locale } = await getServerT();
-  // This is the part that makes a link worth sending. Pasted into WhatsApp or
-  // iMessage, what sells the gig is the poster and the line underneath it - a
-  // bare URL converts nothing. Title = the concert itself; the line under it
-  // leads with the call to action, then the where/when (#feedback).
+  const [{ t, locale }, genres] = await Promise.all([
+    getServerT(),
+    fetchEventGenreNames(supabase, event.id),
+  ]);
+  // Two audiences, two sets of words (#239). The share preview is the part that
+  // makes a link worth sending: pasted into WhatsApp or iMessage, what sells
+  // the gig is the poster and the line underneath it - a bare URL converts
+  // nothing. OG title = the concert itself; the line under it leads with the
+  // call to action, then the where/when (#feedback). The document title and
+  // meta description are what Google shows instead, and there the words people
+  // search for come first: act, venue, city, date, price.
   const title = event.title;
   const description = `${t("eventPage.shareBuy")} · ${event.venue} · ${formatDate(event.date, dateLocale(locale))}`;
+  const seo = { event, genres, locale, t };
   const url = absoluteUrl(eventPath(event));
 
   return {
-    title,
-    description,
+    title: eventSeoTitle(seo),
+    description: eventSeoDescription(seo),
     alternates: { canonical: url },
     // og:image / twitter:image come from the generated card in
     // opengraph-image.tsx + twitter-image.tsx (#172) - don't also set images

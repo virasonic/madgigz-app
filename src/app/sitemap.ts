@@ -116,6 +116,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Madrid" hub - it links out to every event page, so it is also how a
     // crawler finds shows between sitemap regenerations.
     { url: `${origin}/explore`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    // The plain-text "conciertos hoy en Madrid" page (#239): the one written
+    // for the "what's on tonight" search and for AI answer engines to quote.
+    {
+      url: `${origin}/conciertos-hoy`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
     // The supply-side ads landing page. High priority because it is one of only
     // two pages here written to be found by someone who doesn't know MadGigz.
     {

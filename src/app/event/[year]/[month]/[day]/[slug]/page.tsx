@@ -69,7 +69,7 @@ export async function generateMetadata({
   // drop the query, and the page body (which has it) redirects first anyway.
   const event = await resolveEvent(supabase, params);
 
-  return eventMetadata(event);
+  return eventMetadata(event, supabase);
 }
 
 export default async function PublicEventPage({

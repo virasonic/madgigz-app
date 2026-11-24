@@ -18,7 +18,7 @@ export async function generateMetadata({
 }: PageProps<"/e/[eventId]">): Promise<Metadata> {
   const { eventId } = await params;
   const supabase = await createClient();
-  return eventMetadata(await fetchEventById(supabase, eventId));
+  return eventMetadata(await fetchEventById(supabase, eventId), supabase);
 }
 
 export default async function LegacyEventPage({
